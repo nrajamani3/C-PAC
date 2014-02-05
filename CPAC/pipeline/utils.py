@@ -1,6 +1,7 @@
 import os, yaml
 from CPAC.utils import Configuration
 
+
 def load_configuration(config_file):
     """
     Load the yaml file as a Configuration class.
@@ -51,14 +52,17 @@ def load_paths_from_subject_list(subject_list, subject_infos):
 # For cpac_group_analysis_pipeline.py
 ###
 
-def setup_group_subject_list(config_file, subject_infos, odir=None):
+def remove_missing_subjects(conf, subject_infos, odir=None):
     """
     Simple function that checks if the list of subjects actually have data.
+    When any subject doesn't have data, this program will exclude those subjects 
+    and continue with the remaining ones. A new subject list will be saved and
+    will replace the subject list file that is given in `config_file`.
     
     Parameters
     ----------
-    config_file : str
-        Path to model settings in yaml format
+    conf : object
+        The configuration file object containing all the variables specified in the configuration file.
     subject_infos : dict
         Mapping of output types (e.g., functional_mni) to information on each subject's associated output.
         Information on each subject's output is a list of length 4 and this includes pipeline_id, subject_id, 
@@ -69,15 +73,17 @@ def setup_group_subject_list(config_file, subject_infos, odir=None):
     
     Returns
     -------
-    model_files_directory : str
-        Path to directory with all the model files (e.g., mat, grp, con)
-    subject_list_file : str
-        Path to file with list of subjects
+    conf : object
+        Same as input except the subjectListFile attribute will have been modified.
     """
     
+    print "==============="
+    print "Filter Subject List"
+    
     # Setup
-    conf                            = load_configuration(config_file)
     p_id, s_ids, scan_ids, s_paths  = (list(tup) for tup in zip(*subject_infos))
+    if odir is None:
+        odir = config.outputModelFilesDirectory
     
     # Load list of subjects
     subject_list = load_subject_list(conf.subjectListFile)
@@ -102,26 +108,26 @@ def setup_group_subject_list(config_file, subject_infos, odir=None):
         print "-------------------------------------------"
         print '\n'
     
-    if odir is None:
-        # Directory for all the model files
-        odir = os.path.join(os.path.dirname(s_paths[0]).replace(s_ids[0], 'group_analysis_results/_grp_model_%s'%(conf.modelName)), 
-                        'model_files')
-    
     # Create directory and all sub-directories if needed
     if not os.path.exists(odir):
         os.makedirs(odir)
         print "Creating directory: %s" % odir
     
-    # Create a new subject path list within the model files output directory
+    # Create a new subject path list within the output directory
+    # And set the subject list file to this new file
     try:
         new_sub_file    = os.path.join(odir, os.path.basename(conf.subjectListFile))
         f               = open(new_sub_file, 'w')
         for sub in exist_paths:
             print >>f, sub
         f.close()
+        conf.subjectListFile = new_sub_file
+        print "Replacing original list with filtered one: %s" % new_sub_file
     except:
         print "Error: Could not open subject list file: %s\n" % new_sub_file
         raise Exception
+    
+    print "==============="
     
     return new_sub_file
 

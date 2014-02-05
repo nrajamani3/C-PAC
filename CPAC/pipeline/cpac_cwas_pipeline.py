@@ -94,11 +94,12 @@ def prep_cwas_workflow(c, subject_infos):
     if isinstance(c.cwas, dict):
         c.cwas = Configuration(c.cwas)
     
-    for config_file in c.modelConfigs:
+    for config_file in c.modelConfigs:  # getting the group analysis config file at each loop
         config              = load_configuration(config_file)
+        if config.remove_missing_subjects:
+            config          = remove_missing_subjects(config, subject_infos)
         subject_list        = load_subject_list(config.subjectListFile)
-        func_paths          = load_paths_from_subject_list(subject_list, 
-                                                           subject_infos)
+        func_paths          = load_paths_from_subject_list(subject_list, subject_infos)
         mat, cols, strata   = create_models_for_cwas(config)    # generate the regressor etc
         
         # setup for CWAS (only some things)
