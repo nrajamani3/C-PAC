@@ -1275,10 +1275,10 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
                                             'functional_brain_mask_to_standard':(functional_brain_mask_to_standard, 'out_file'), 
                                             'mean_functional_in_mni':(mean_functional_warp, 'out_file')})
                 strat.append_name(func_mni_warp.name)
+                
                 if c.fwhm != None:
                     strat.update_resource_pool({'functional_mni_smooth':(func_mni_smooth, 'out_file')})
                     strat.append_name(func_mni_smooth.name)
-                strat.update_resource_pool()
                 
                 create_log_node(func_mni_warp, 'out_file', num_strat)
             
@@ -1323,8 +1323,7 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
                 warp_images = pe.Node(ants.WarpTimeSeriesImageMultiTransform(), name='func_mni_ants_warp_images_%d' % num_strat)
                 warp_images.inputs.reference_image = c.standardResolutionBrain
                 warp_images.inputs.dimension = 4
- 
-
+                
                 #collects series of transformations to be applied to the moving images
                 collect_transforms_mask = pe.Node(util.Merge(3), name='collect_transforms_mask_%d' % num_strat)
 
@@ -1342,7 +1341,11 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
                 mean_functional_ants_warp = pe.Node(ants.WarpImageMultiTransform(), name='mean_func_ants_warp_%d' % num_strat)
                 mean_functional_ants_warp.inputs.reference_image = c.standardResolutionBrain
                 mean_functional_ants_warp.inputs.dimension = 3
-
+                
+                # smooths func_mni
+                func_mni_smooth = pe.Node(interface=fsl.MultiImageMaths(),
+                                          name='func_mni_smooth_%d' % num_strat)
+                
     
                 try:
 
@@ -1374,6 +1377,19 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
                     workflow.connect(node, out_file, warp_images, 'input_image')
 
                     workflow.connect(collect_transforms, 'out', warp_images, 'transformation_series')
+                    
+                    
+                    
+                    # SMOOTH
+                    
+                    # Apply smoothing to 4D data
+                    if c.fwhm != None:
+                        workflow.connect(warp_images, 'output_image',
+                                         func_mni_smooth, 'in_file')
+                        workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),   # takes in the fwhm and transforms to sigma
+                                         func_mni_smooth, 'op_string')
+                        workflow.connect(warp_images_mask, 'output_image',      # applies a brain mask
+                                         func_mni_smooth, 'operand_files')
 
 
 
@@ -1451,6 +1467,10 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
 
                 strat.append_name(warp_images.name)
                 create_log_node(warp_images, 'output_image', num_strat)
+                
+                if c.fwhm != None:
+                    strat.update_resource_pool({'functional_mni_smooth':(func_mni_smooth, 'out_file')})
+                    strat.append_name(func_mni_smooth.name)
             
                 num_strat += 1
 
@@ -4276,31 +4296,32 @@ def prep_workflow(sub_dict, c, strategies, run, p_name=None):
         print >>timing, "Subject workflow: ", wfname
         print >>timing, "\n"
     
+        workflow.run(plugin='MultiProc', plugin_args={'n_procs': c.numCoresPerSubject})
     
-        # Actually run the pipeline now
-        try:
-
-            workflow.run(plugin='MultiProc', plugin_args={'n_procs': c.numCoresPerSubject})
-            
-        except:
-            
-            crashString = "\n\n" + "ERROR: CPAC run stopped prematurely with an error - see above.\n" + ("pipeline configuration- %s \n" % c.pipelineName) + \
-            ("subject workflow- %s \n\n" % wfname) + ("Elapsed run time before crash (minutes): %s \n\n" % ((time.time() - pipeline_start_time)/60)) + \
-            ("Timing information saved in %s/cpac_timing_%s.txt \n" % (c.outputDirectory, c.pipelineName)) + \
-            ("System time of start:      %s \n" % pipeline_start_datetime) + ("System time of crash: %s" % strftime("%Y-%m-%d %H:%M:%S")) + "\n\n"
-            
-            logger.info(crashString)
-                 
-            print >>timing, "ERROR: CPAC run stopped prematurely with an error."
-            print >>timing, "Pipeline configuration: %s" % c.pipelineName
-            print >>timing, "Subject workflow: %s" % wfname
-            print >>timing, "\n" + "Elapsed run time before crash (minutes): ", ((time.time() - pipeline_start_time)/60)
-            print >>timing, "System time of crash: ", strftime("%Y-%m-%d %H:%M:%S")
-            print >>timing, "\n\n"
-    
-            timing.close()
-            
-            raise Exception     
+        ## Actually run the pipeline now
+        #try:
+        #
+        #    
+        #    
+        #except:
+        #    
+        #    crashString = "\n\n" + "ERROR: CPAC run stopped prematurely with an error - see above.\n" + ("pipeline configuration- %s \n" % c.pipelineName) + \
+        #    ("subject workflow- %s \n\n" % wfname) + ("Elapsed run time before crash (minutes): %s \n\n" % ((time.time() - pipeline_start_time)/60)) + \
+        #    ("Timing information saved in %s/cpac_timing_%s.txt \n" % (c.outputDirectory, c.pipelineName)) + \
+        #    ("System time of start:      %s \n" % pipeline_start_datetime) + ("System time of crash: %s" % strftime("%Y-%m-%d %H:%M:%S")) + "\n\n"
+        #    
+        #    logger.info(crashString)
+        #         
+        #    print >>timing, "ERROR: CPAC run stopped prematurely with an error."
+        #    print >>timing, "Pipeline configuration: %s" % c.pipelineName
+        #    print >>timing, "Subject workflow: %s" % wfname
+        #    print >>timing, "\n" + "Elapsed run time before crash (minutes): ", ((time.time() - pipeline_start_time)/60)
+        #    print >>timing, "System time of crash: ", strftime("%Y-%m-%d %H:%M:%S")
+        #    print >>timing, "\n\n"
+        #
+        #    timing.close()
+        #    
+        #    raise Exception     
     
     
         """
