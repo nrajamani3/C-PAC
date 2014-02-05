@@ -1,15 +1,12 @@
-import os
+import os, yaml
 from CPAC.utils import Configuration
 
 def load_configuration(config_file):
     """
     Load the yaml file as a Configuration class.
     """
-    try:
-    	yaml_content = yaml.load(open(os.path.realpath(config_file), 'r'))
-    	return Configuration(yaml_content)
-    except:
-        raise Exception("Error in reading %s configuration file" % config_file)
+    yaml_content = yaml.load(open(os.path.realpath(config_file), 'r'))
+    return Configuration(yaml_content)
 
 def load_subject_list(subject_list_file):
     """
@@ -23,14 +20,30 @@ def load_subject_list(subject_list_file):
 
 def load_paths_from_subject_list(subject_list, subject_infos):
     """
-    Load paths to data based on subject list and info/paths for all possible subjects
+    Load paths to data based on subject list and info/paths for all possible subjects.
+    Order of the paths will be the same as the order of subjects in `subject_list`.
+    If any subject is missing a path, then the function will raise an Exception.
     """
     p_id, s_ids, scan_ids, s_paths  = (list(tup) for tup in zip(*subject_infos))
+    
+    # We get the paths in the order of the requested subjects
+    # Any missing paths are saved for later
     ordered_paths = []
+    missing_paths = {}
     for sub in subject_list:
         for path in s_paths:
             if sub in path:
                 ordered_paths.append(path)
+            else:
+                missing_paths[sub] = path
+    
+    # Fail if any paths are missing
+    if missing_paths:
+        print "Check that following missing paths:"
+        for sub,path in missing_paths.iteritems():
+            print sub, " : ", path
+        raise Exception("Missing paths for %i subjects" % len(missing_paths.keys()))
+    
     return ordered_paths
 
 
@@ -38,9 +51,9 @@ def load_paths_from_subject_list(subject_list, subject_infos):
 # For cpac_group_analysis_pipeline.py
 ###
 
-def setup_group_subject_list(config_file, subject_infos):
+def setup_group_subject_list(config_file, subject_infos, odir=None):
     """
-    Simple function that filters the list of subjects based on if the input paths exist.
+    Simple function that checks if the list of subjects actually have data.
     
     Parameters
     ----------
@@ -50,6 +63,9 @@ def setup_group_subject_list(config_file, subject_infos):
         Mapping of output types (e.g., functional_mni) to information on each subject's associated output.
         Information on each subject's output is a list of length 4 and this includes pipeline_id, subject_id, 
         scan_id, and subject_path.
+    odir : str
+        Path for the output directory of the subject file. If this is None, then
+        it will default to within the sink directory of the input subject_infos files.
     
     Returns
     -------
@@ -75,35 +91,30 @@ def setup_group_subject_list(config_file, subject_infos):
     
     # Check to see if any derivatives of subjects are missing
     # This doesn't do anything except print some information
-    if len(list(set(subject_list) - set(exist_paths))) >0:
+    test_missing = list(set(subject_list) - set(exist_paths))
+    if len(test_missing) >0:
         print "-------------------------------------------"
-        print "List of outputs missing for subjects:"
-        print list(set(subject_list) - set(exist_paths))
-        print "\n"
-        print "..for derivatives:"
-        print resource
+        print "List of outputs missing for %i/%i subjects:" % (len(test_missing), len(set(subject_list)))
+        print list(test_missing)
         print "\n"
         print "..at paths:"
         print os.path.dirname(s_paths[0]).replace(s_ids[0], '*')
         print "-------------------------------------------"
         print '\n'
     
-    # Directory for all the model files
-    mod_path = os.path.join(os.path.dirname(s_paths[0]).replace(s_ids[0], 'group_analysis_results/_grp_model_%s'%(conf.modelName)), 
-                            'model_files')
+    if odir is None:
+        # Directory for all the model files
+        odir = os.path.join(os.path.dirname(s_paths[0]).replace(s_ids[0], 'group_analysis_results/_grp_model_%s'%(conf.modelName)), 
+                        'model_files')
     
     # Create directory and all sub-directories if needed
-    try:
-        os.makedirs(mod_path)
-        print "Creating directory: %s" % mod_path
-    except:
-        print "Attempted to create directory, but path already exists:"
-        print mod_path
-        print '\n'
+    if not os.path.exists(odir):
+        os.makedirs(odir)
+        print "Creating directory: %s" % odir
     
     # Create a new subject path list within the model files output directory
     try:
-        new_sub_file    = os.path.join(mod_path, os.path.basename(conf.subjectListFile))
+        new_sub_file    = os.path.join(odir, os.path.basename(conf.subjectListFile))
         f               = open(new_sub_file, 'w')
         for sub in exist_paths:
             print >>f, sub
@@ -182,19 +193,23 @@ def create_models_for_cwas(conf):
 # For cpac_group_runner.py
 ###
 
-def gen_file_map(base_path, resource_paths=None):
+def gen_file_map(sink_dir, resource_paths=None):
     """
     Generate the mapping of different resources (e.g., functional_mni or sca) 
-    to the file paths of those resources across subjects/scans.
+    to the file paths of those resources across subjects/scans. Note that this
+    will only work with functional paths that have a scan_id in their path and
+    will fail for any anatomical resources since those are assumed to only have
+    one scan.
     
     Parameters
     ----------
-    base_path : string
-        Path to CPAC output directory containing preprocessed data for individual subjects
+    sink_dir : string
+        Path to CPAC output or sink directory containing different pipeline 
+        directories each with preprocessed data for individual subjects
     resource_paths : None or string or list (default = None)
         Path to file(s) in each subject's CPAC directory containing path information.
         Can include glob-style * or ? that will be expanded and can be a string or list.
-        If this is None, then it will autoset to `os.path.join(base_path, 'pipeline_*', '*', 'path_files_here', '*.txt')`.
+        If this is None, then it will autoset to `os.path.join(sink_dir, 'pipeline_*', '*', 'path_files_here', '*.txt')`.
     
     Returns
     -------
@@ -208,7 +223,7 @@ def gen_file_map(base_path, resource_paths=None):
     from CPAC.pipeline.cpac_group_runner import split_folders
     
     if resource_paths is None:
-        resource_paths = os.path.join(base_path, 'pipeline_*', '*', 'path_files_here', '*.txt')
+        resource_paths = os.path.join(sink_dir, 'pipeline_*', '*', 'path_files_here', '*.txt')
     
     if isinstance(resource_paths, str):
         resource_paths = [resource_paths]
@@ -238,21 +253,26 @@ def gen_file_map(base_path, resource_paths=None):
     # pipeline_id, subject_id, scan_id, and subject_path
     for subject_path in subject_paths:
         # Removes the base path
-        rs_path     = subject_path.replace(base_path, "", 1)
+        if subject_path.find(sink_dir) == -1:
+            print "WARNING: Couldn't find sink_dir: %s in subject's path: %s" % (sink_dir, subject_path)
+        rs_path     = subject_path.replace(sink_dir, "", 1)
         rs_path     = rs_path.lstrip('/')
         
         # Split the path into a list (of folders)
         folders     = split_folders(rs_path)
-        
+                
         # If there aren't at least 4 sub-folders, then something is amiss
-        if len(folders) < 4:
-            raise Exception("Incorrect subject path, only %i sub-folders found: %s" % (len(folders), subject_path))
+        if len(folders) < 3:
+            raise Exception("Incorrect subject path, need 3-4 but only %i sub-folders found: %s" % (len(folders), subject_path))
         
         # Extract the desired elements
         pipeline_id = folders[0]
         subject_id  = folders[1]
         resource_id = folders[2]    # e.g., functional_mni, falff, etc
-        scan_id     = folders[3]
+        if len(folders) == 3:
+            scan_id = ""
+        else:
+            scan_id = folders[3]
         
         # Add to the mappings (seperate one for group analysis)
         # Note that the key is actually a tuple of the resource_id and key
