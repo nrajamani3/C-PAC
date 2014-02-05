@@ -16,7 +16,7 @@ def test_gen_file_map():
     For now, this just calls the gen_file_map function and make's sure it 
     returns something reasonable.
     """
-    datadir = '/home/data/Projects/CPAC_Regression_Test/2013-08-19-20_v0-3-1/output'
+    datadir = '/data/Projects/temp_CPAC_Regression_Test/v_0-3-3/out'
     subject_infos = utils.gen_file_map(datadir, 'path_files/*/*.txt')
     
 
@@ -26,32 +26,53 @@ def test_setup_group_list():
     # will check conf.subjectListFile
     # and see overlap with subject_infos
     
-    config_file     = "files/config_fsl.yml"
-    subject_infos   = utils.gen_file_map()
-    os.path.join(base_path, 'pipeline_*', '*', 'path_files_here', '*.txt')
+    # the base_path should contain pipeline folders within it!
+    sink_dir         = '/data/Projects/temp_CPAC_Regression_Test/v_0-3-3/out'
+    config_file      = "files/config_fsl.yml"
     
-    curdir = os.getcwd()
-    os.chdir(__file__)
-    
+    curdir           = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    analysis_map     = utils.gen_file_map(sink_dir, os.path.join('path_files', '*', '*.txt'))
+    analysis_key     = [ (k,v) for k,v in analysis_map.keys()[2:] if k == 'functional_mni' ][0] # pick an element of analysis_map
     conf             = utils.load_configuration(config_file)
-    old_subject_file = utils.load_subject_list(conf.subjectListFile)
-    new_subject_file = utils.setup_group_subject_list(config_file, subject_infos)
-    
     os.chdir(curdir)
     
-    # All should be right here
-    assert_equal(np.array(old_subject_file), np.array(new_subject_file))
+    old_subject_file = conf.subjectListFile
+    old_subjects     = utils.load_subject_list(old_subject_file)
     
-    # Case where only one path is correct
+    new_subject_file = utils.setup_group_subject_list(config_file, analysis_map[analysis_key], odir='/tmp/cpac_testing')
+    new_subjects     = utils.load_subject_list(new_subject_file)
     
+    # Old shouldn't be the same as new
+    ok_(len(old_subjects) > len(new_subjects))
     
-    """
-    I want to test a couple of cases:
-    - If nothing changes
-    - If the subject list actually has subjects with missing data, it detects that
-        (here I can actually just modify the subject_infos or actually recall gen_file_map with a list of subject's desired)
-    """
+    # Should only match with the first two subjects
+    assert_equal(np.array(old_subjects[:2]), np.array(new_subjects))
     
+    # Clean up
+    os.remove(new_subject_file)
+    os.rmdir("/tmp/cpac_testing")
     
+    return    
     
+def test_load_paths_from_subject_list():
     
+    base_path        = '/data/Projects/temp_CPAC_Regression_Test/v_0-3-3/out'
+    config_file      = "files/config_fsl.yml"
+    
+    curdir           = os.getcwd()
+    os.chdir(__file__)
+    analysis_map     = utils.gen_file_map(base_path, os.path.join('path_files', '*', '*.txt'))
+    analysis_key     = [ (k,v) for k,v in analysis_map.keys()[2:] if k == 'functional_mni' ][0] # pick an element
+    conf             = utils.load_configuration(config_file)
+    os.chdir(curdir)
+    
+    old_subject_list = utils.load_subject_list(conf.subjectListFile)
+    new_subject_file = utils.setup_group_subject_list(config_file, analysis_map[analysis_key], odir="/tmp/cpac_testing")
+    new_subject_list = utils.load_subject_list(new_subject_file)
+    
+    old_func_paths   = utils.load_paths_from_subject_list(old_subject_list, analysis_map[analysis_key])
+    new_func_paths   = utils.load_paths_from_subject_list(new_subject_list, analysis_map[analysis_key])
+    
+    assert_equal(np.array(old_func_paths), np.array(new_func_paths))
+
