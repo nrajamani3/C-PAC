@@ -60,7 +60,7 @@ def cwas_workflow(c):
 def alt_prep_cwas_workflow(c):
     print 'Preparing CWAS workflow'
     
-    from string import Template
+    
     
     if isinstance(c.cwas, dict):
         c.cwas = Configuration(c.cwas)
@@ -93,6 +93,13 @@ def prep_cwas_workflow(c, subject_infos):
     
     if isinstance(c.cwas, dict):
         c.cwas = Configuration(c.cwas)
+    
+    from string import Template
+    # Auto-complete base
+    fields = ["prior_mask_file", "file_with_functional_paths", "regressor_file"]
+    for field in fields:
+        s = Template(getattr(c.cwas, field))
+        c.cwas.update(field, s.substitute(base=c.cwas.base))
     
     for config_file in c.modelConfigs:  # getting the group analysis config file at each loop
         config              = load_configuration(config_file)
