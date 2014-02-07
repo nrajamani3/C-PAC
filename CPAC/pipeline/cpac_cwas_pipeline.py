@@ -86,7 +86,7 @@ def alt_prep_cwas_workflow(c):
 def prep_cwas_workflow(c, subject_infos):
     print 'Preparing CWAS workflow'
     from CPAC.pipeline.utils import load_configuration, \
-                                    setup_group_subject_list, \
+                                    remove_missing_subjects, \
                                     load_subject_list, \
                                     load_paths_from_subject_list, \
                                     create_models_for_cwas

@@ -71,7 +71,7 @@ groupingVariable :  None
 modelName :  newtest2 
 
 # Full path to the directory where CPAC should place model files.
-outputModelFilesDirectory :  output/ 
+outputModelFilesDirectory :  output/
 
 # In addition to the standard FSL model files, CPAC will output a .csv containing the subjects and EVs specified above.
 # 
