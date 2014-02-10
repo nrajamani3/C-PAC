@@ -33,20 +33,24 @@ def load_paths_from_subject_list(subject_list, subject_infos, remove_duplicates=
     # We get the paths in the order of the requested subjects
     # Any missing paths are saved for later
     ordered_paths = []
-    missing_paths = {}
+    missing_subjs = []
     for sub in subject_list:
+        subject_found = False
         for path in s_paths:
             if sub in path:
                 ordered_paths.append(path)
-            else:
-                missing_paths[sub] = path
+                subject_found = True
+        if not subject_found:
+            missing_subjs.append(sub)
     
     # Fail if any paths are missing
-    if missing_paths:
-        print "Check that following missing paths:"
-        for sub,path in missing_paths.iteritems():
-            print sub, " : ", path
-        raise Exception("Missing paths for %i subjects" % len(missing_paths.keys()))
+    if missing_subjs:
+        print "----"
+        print "The following subjects are missing paths (e.g., %s)" % s_paths[0]
+        for sub in missing_subjs:
+            print sub
+        print "----"
+        raise Exception("Missing paths for %i subjects" % len(missing_subjs))
     
     return ordered_paths
 
