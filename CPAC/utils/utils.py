@@ -48,7 +48,7 @@ files_folders_wf = {
     'power_params':'parameters',
     'scrubbed_preprocessed':'func',
     'functional_mni':'func',
-    'functional_mni_smooth':'func'
+    'functional_mni_smooth':'func',
     'functional_brain_mask_to_standard':'func',
     'functional_to_anat_linear_xfm':'registration',
     'functional_to_mni_linear_xfm':'registration',
