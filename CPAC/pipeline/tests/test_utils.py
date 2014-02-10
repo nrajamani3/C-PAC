@@ -7,8 +7,8 @@ from numpy.testing import *
 from nose.tools import ok_, eq_, raises, with_setup
 from nose.plugins.attrib import attr    # http://nose.readthedocs.org/en/latest/plugins/attrib.html
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import utils
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from CPAC.pipeline import utils
 
 def test_gen_file_map():
     """
@@ -16,8 +16,10 @@ def test_gen_file_map():
     For now, this just calls the gen_file_map function and make's sure it 
     returns something reasonable.
     """
-    datadir = '/data/Projects/temp_CPAC_Regression_Test/v_0-3-3/out'
-    subject_infos = utils.gen_file_map(datadir, 'path_files/*/*.txt')
+    datadir         = '/data/Projects/temp_CPAC_Regression_Test/v_0-3-3/out'
+    analysis_map    = utils.gen_file_map(datadir, 'path_files/*/*.txt')
+    analysis_key    = [ (k,v) for k,v in analysis_map.keys()[2:] if k == 'functional_mni' ][0] # pick an element of analysis_map
+    subject_infos   = analysis_map[analysis_key]
     
 
 @attr('configs', 'group')

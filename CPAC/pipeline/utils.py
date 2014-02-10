@@ -19,13 +19,16 @@ def load_subject_list(subject_list_file):
                                 if not (line == '\n') and not line.startswith('#') ]
     return subject_list
 
-def load_paths_from_subject_list(subject_list, subject_infos):
+def load_paths_from_subject_list(subject_list, subject_infos, remove_duplicates=True):
     """
     Load paths to data based on subject list and info/paths for all possible subjects.
     Order of the paths will be the same as the order of subjects in `subject_list`.
     If any subject is missing a path, then the function will raise an Exception.
     """
-    p_id, s_ids, scan_ids, s_paths  = (list(tup) for tup in zip(*subject_infos))
+    _, _, _, s_paths  = (list(tup) for tup in zip(*subject_infos))
+    
+    if remove_duplicates: # duplicate paths
+        s_paths = list(set(s_paths))
     
     # We get the paths in the order of the requested subjects
     # Any missing paths are saved for later
