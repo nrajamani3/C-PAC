@@ -142,7 +142,7 @@ def calc_subdists(subjects_data, voxel_range, voxel_block=1, dtype='float64', df
         S0   = replace_autocorrelations(S)
         S0   = fischers_transform(S0)
         for ij,j in enumerate(subvox_inds[i]):
-            D[j] = compute_distances(S0[:,ij,:])
+            D[j] = compute_distances(S0[:,ij,:].T)
     
     return D
 
