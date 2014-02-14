@@ -516,7 +516,7 @@ def create_con_ftst_file(con_file, model_name, outputModelFilesDirectory):
     """
     Create the contrasts and fts file
     """
-
+    
     evs = open(con_file, 'r').readline()
     evs = evs.rstrip('\r\n').split(',')
     count_ftests = 0
@@ -539,7 +539,8 @@ def create_con_ftst_file(con_file, model_name, outputModelFilesDirectory):
 
 
     lst = data.tolist()
-
+    if isinstance(lst, tuple):
+        lst = [lst]
 
     ftst = []
     contrasts = []
@@ -548,14 +549,10 @@ def create_con_ftst_file(con_file, model_name, outputModelFilesDirectory):
     length = None
     length = len(list(lst[0]))
 
-
     for tp in lst:
-
         contrast_names.append(tp[0])
         contrasts.append(list(tp)[1:length-count_ftests])
-
         ftst.append(list(tp[length-count_ftests: length]))
-
 
     contrasts = np.array(contrasts, dtype=np.float16)
 
@@ -883,19 +880,19 @@ def run(config, CPAC_run = False):
     except:
         print "Error: Could not create .mat file."
         print ""
-        raise Exception
+        raise
 
     try:
         create_grp_file(data, model_name, gp_var, c.outputModelFilesDirectory)
     except:
         print "Error: Could not create .grp file."
         print ""
-        raise Exception
+        raise
 
     try:
         create_con_ftst_file(con, model_name, c.outputModelFilesDirectory)
     except:
         print "Error: Could not create ftst file."
         print ""
-        raise Exception
+        raise
 

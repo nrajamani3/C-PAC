@@ -1,4 +1,5 @@
 import os, yaml
+import numpy as np
 from CPAC.utils import Configuration
 
 
@@ -176,14 +177,14 @@ def create_models_for_cwas(conf):
     con = np.loadtxt(con_file, skiprows=line_skip)
     
     # Ensure that only one contrast exists and has 0s and 1s
-    if con.shape[0] != 1:
+    if len(con.shape) != 1:
         raise Exception("You can only have one contrast for CWAS. For multiple contrasts, create a new config file.")
-    for i in set(con[0,:]):
+    for i in set(con):
         if i not in [0,1]:
             raise Exception("You can only have 0's and 1's in contrasts for CWAS.")
     
     # Convert into a list of column indices
-    cols = con[0,:].nonzero()
+    cols = con.nonzero()
     
     
     ## Strata
