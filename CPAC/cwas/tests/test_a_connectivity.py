@@ -17,6 +17,47 @@ sys.path.insert(1, "/Users/zarrar/Code/C-PAC")
 #sys.path.insert(1, "/home2/data/Projects/CPAC_Regression_Test/2013-05-30_cwas/C-PAC")
 #sys.path.append("/home/data/PublicProgram/epd-7.2-2-rh5-x86_64/lib/python2.7/site-packages")
 
+class TestNormalize:
+    @attr('cwas', 'transformation', 'normalize', 'stimulation')
+    def test_normalize_on_simulated_single_subject(self, nrows=200, ncols=100):
+        """
+        Test for `norm_cols` on simulated data
+        """
+        
+        from CPAC.cwas.subdist import norm_cols
+        from scipy.stats.mstats import zscore
+        
+        seedMaps    = np.random.random((nrows, ncols))
+
+        ref         = zscore(seedMaps)/np.sqrt(nrows)
+        comp        = norm_cols(seedMaps)
+        
+        assert_allclose(ref, comp)
+    
+    @attr('cwas', 'transformation', 'normalize', 'stimulation', 'r')
+    def test_normalize_on_simulated_single_subject_against_r(self, nrows=200, ncols=200):
+        """
+        Test for `norm_cols` on simulated data against version in R
+        """
+        
+        from CPAC.cwas.subdist import norm_cols
+        from rpy2_header import *
+        
+        base        = importr('base')
+        bigmemory   = importr('bigmemory')
+        connectir   = importr('connectir')
+        bigextensions  = importr('bigextensions')
+
+        seedMaps_np = np.random.random((nrows, ncols))
+        seedMaps_r  = base.as_matrix(seedMaps_np)
+        seedMaps_b  = bigmemory.as_big_matrix(seedMaps_r)
+
+        ref         = bigextensions.scale_fast(seedMaps_b, True)
+        ref         = np.array(bigmemory.as_matrix(ref)) / np.sqrt(nrows-1)
+        comp        = norm_cols(seedMaps_np)
+
+        assert_allclose(ref, comp)
+        
 
 class TestConnectivity:
     @attr('cwas', 'connectivity', 'simulation')

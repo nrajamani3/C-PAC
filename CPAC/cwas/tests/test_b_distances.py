@@ -43,3 +43,22 @@ class TestDistances:
             
             assert_allclose(ref, comp)
     
+    @attr('cwas', 'distances', 'simulation', 'r')
+    def test_computing_distances_on_simulated_data_against_r(self, nsubs=20, nvoxs=200):
+        from CPAC.cwas.subdist import compute_distances
+        from rpy2_header import *
+        base        = importr('base')
+        bigmemory   = importr('bigmemory')
+        connectir   = importr('connectir')
+
+        seedMaps_np = np.random.random((nvoxs, nsubs))
+
+        seedMaps_r  = base.as_matrix(seedMaps_np)
+        seedMaps    = bigmemory.as_big_matrix(seedMaps_r)
+        dmats       = bigmemory.big_matrix(nsubs**2, nvoxs, init=0)
+        ref         = np.array(connectir.test_sdist(seedMaps, dmats, 1)).reshape(nsubs,nsubs)
+        
+        comp = compute_distances(seedMaps_np)
+
+        assert_allclose(ref, comp)
+        
