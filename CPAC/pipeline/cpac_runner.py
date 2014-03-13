@@ -184,10 +184,13 @@ def build_strategies(configuration):
 
 
 def run_sge_jobs(c, config_file, strategies_file, subject_list_file, p_name):
-
-
     import commands
     from time import strftime
+    
+    def makedirs_if_not_exist(path):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return
 
     try:
         sublist = yaml.load(open(os.path.realpath(subject_list_file), 'r'))
@@ -198,10 +201,9 @@ def run_sge_jobs(c, config_file, strategies_file, subject_list_file, p_name):
     
     # Put each subject's SGE output and scripts into the log directory
     log_dir = os.path.join(c.outputDirectory, 'logs')
-    if not os.path.exists(log_dir):
-        os.makedirs(os.path.join(log_dir))
+    makedirs_if_not_exist(log_dir)
     
-    date_suffix = str(strftime("%Y-%m-%d_%H-%M-%S"))
+    date_string = str(strftime("%Y-%m-%d_%H-%M-%S"))
     
     # Loops through each subject and submits job for that subject one at a time
     pids = []; subs = []
@@ -210,10 +212,10 @@ def run_sge_jobs(c, config_file, strategies_file, subject_list_file, p_name):
         print "Preparing to submit: %s" % sub
         subs.append(sub)
         
-        subject_dir = os.path.join(log_dir, sub, "sge", date_suffix)
-        os.makedirs(subject_dir)
+        subject_dir = os.path.join(log_dir, sub, "sge", "pipeline_%s" % p_name)
+        makedirs_if_not_exist(subject_dir)
         
-        subject_bash_file = os.path.join(subject_dir, "submit_%s.sge" % sub)
+        subject_bash_file = os.path.join(subject_dir, "sge_%s.script" % date_string)
         f = open(subject_bash_file, 'w')
         
         print >>f, '#! %s' % shell
@@ -222,8 +224,8 @@ def run_sge_jobs(c, config_file, strategies_file, subject_list_file, p_name):
         print >>f, '#$ -V'
         print >>f, '#$ -q %s' % c.queue
         print >>f, '#$ -pe %s %d' % (c.parallelEnvironment, c.numCoresPerSubject)
-        print >>f, '#$ -e %s' % os.path.join(subject_dir, 'c-pac_%s.err' % sub)
-        print >>f, '#$ -o %s' % os.path.join(subject_dir, 'c-pac_%s.out' % sub)
+        print >>f, '#$ -e %s' % os.path.join(subject_dir, 'sge_%s.err' % date_string)
+        print >>f, '#$ -o %s' % os.path.join(subject_dir, 'sge_%s.out' % date_string)
         print >>f, 'source ~/.bashrc'
 
         print >>f, "python -c \"import CPAC; CPAC.pipeline.cpac_pipeline.run(\\\"%s\\\" , \\\"%s\\\", %i, \\\"%s\\\", \\\"%s\\\" , \\\"%s\\\", \\\"%s\\\", \\\"%s\\\") \" " % (str(config_file), subject_list_file, i+1, strategies_file, c.maskSpecificationFile, c.roiSpecificationFile, c.templateSpecificationFile, p_name)
@@ -241,27 +243,27 @@ def run_sge_jobs(c, config_file, strategies_file, subject_list_file, p_name):
             print ""
             raise Exception
         print out
-        pid = re.search("Your job \d+", out).group(0)
+        pid = re.search("Your job \d+", out).group(0)   # TODO: should group(0) just be group(1)
         pid = pid.replace("Your job ", "")
         pids.append(pid)
     
-    sge_dir = os.path.join(c.outputDirectory, 'sge', date_suffix)
-    os.makedirs(sge_dir)
+    sge_dir = os.path.join(c.outputDirectory, 'sge', 'pipeline_%s' % p_name)
+    makedirs_if_not_exist(sge_dir)
     
     # Save the job ids
-    p = open(os.path.join(sge_dir, 'pid.txt'), 'w') 
+    p = open(os.path.join(sge_dir, '%s_pid.txt' % date_string), 'w') 
     for pid in pids:
         print >> p, pid
     p.close()
     
     # Save the subject ids (should be in the same order as job ids)
-    s = open(os.path.join(sge_dir, 'subs.txt'), 'w') 
+    s = open(os.path.join(sge_dir, '%s_subs.txt' % date_string), 'w') 
     for sub in subs:
         print >> s, sub
     s.close()
     
     # Save a combination of the two
-    sp = open(os.path.join(sge_dir, 'subs_and_pids.txt'), 'w') 
+    sp = open(os.path.join(sge_dir, '%s_subs_and_pids.txt' % date_string), 'w') 
     for sub,pid in zip(subs,pids):
         print >> sp, sub + " " + pid
     sp.close()    
