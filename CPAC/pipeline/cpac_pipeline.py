@@ -475,6 +475,20 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 strat = tmp
                 new_strat_list.append(strat)
 
+            # Run subcortical segmentation (via FSL's FIRST)
+            if 1 in c.runSubcortSegmentation:
+                # Instantiate the workflow
+                subcort_seg = create_subcort_seg('subcort_seg_%d' % num_strat)
+                # Get the pipeline node and file for reoriented anatomical image
+                node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
+                subcort_seg.connect(node, out_file, subcort_seg, 'inputspec.reor_brain')
+                
+                # And update resource pool
+                strat.update_resource_pool({'subcort_vtkout' : (subcort_seg, 'outputspec.vtk_out'),
+                                            'subcort_bvarsout' : (subcort_seg, 'outputspec.bvars_out'),
+                                            'subcort_origout' : (subcort_seg, 'outputspec.orig_out'),
+                                            'subcort_segout' : (subcort_seg, 'outputspec.seg_out')})
+                
             strat.append_name(seg_preproc.name)
             strat.update_resource_pool({'anatomical_gm_mask' : (seg_preproc, 'outputspec.gm_mask'),
                                         'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
