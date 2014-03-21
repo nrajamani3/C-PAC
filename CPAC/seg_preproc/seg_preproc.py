@@ -43,7 +43,7 @@ def create_subcort_seg(wf_name = 'subcort_seg'):
     subcort_wf.connect(funcNode,'bvars',outputNode,'bvars_out')
     subcort_wf.connect(funcNode,'original_segmentations',outputNode,'orig_out')
     subcort_wf.connect(funcNode,'segmentation_file',outputNode,'seg_out')
-    
+
     # Return the workflow
     return subcort_wf
 

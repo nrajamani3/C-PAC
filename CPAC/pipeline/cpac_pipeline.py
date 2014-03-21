@@ -17,7 +17,7 @@ import pkg_resources as p
 import CPAC
 from CPAC.anat_preproc.anat_preproc import create_anat_preproc
 from CPAC.func_preproc.func_preproc import create_func_preproc
-from CPAC.seg_preproc.seg_preproc import create_seg_preproc
+from CPAC.seg_preproc.seg_preproc import create_seg_preproc, create_subcort_seg
 
 from CPAC.registration import create_nonlinear_register, create_register_func_to_anat, create_bbregister_func_to_anat, \
                               create_ants_nonlinear_xfm, create_apply_ants_xfm
@@ -481,7 +481,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 subcort_seg = create_subcort_seg('subcort_seg_%d' % num_strat)
                 # Get the pipeline node and file for reoriented anatomical image
                 node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
-                subcort_seg.connect(node, out_file, subcort_seg, 'inputspec.reor_brain')
+                workflow.connect(node, out_file, subcort_seg, 'inputspec.reor_brain')
                 
                 # And update resource pool
                 strat.update_resource_pool({'subcort_vtkout' : (subcort_seg, 'outputspec.vtk_out'),
@@ -4250,7 +4250,7 @@ def run(config, subject_list_file, indx, strategies, \
      maskSpecificationFile, roiSpecificationFile, templateSpecificationFile, p_name = None):
     import commands
     commands.getoutput('source ~/.bashrc')
-    import pickle
+    #import pickle
     import yaml
 
 
