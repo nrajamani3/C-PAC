@@ -14,7 +14,7 @@ from CPAC.seg_preproc.utils import *
 # Workflow for running FSL FIRST
 def create_subcort_seg(wf_name = 'subcort_seg'):
     """
-    Run FIRST segmentation/registration tool workflow
+    Create FIRST segmentation/registration tool workflow
     """
     
     # Create the workflow
