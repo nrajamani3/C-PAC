@@ -1,3 +1,4 @@
+# Import packages
 import os
 import sys
 import commands
@@ -21,28 +22,52 @@ def create_subcort_seg(wf_name = 'subcort_seg'):
     subcort_wf = pe.Workflow(name=wf_name)
     
     # Input node - load in the reoriented brain (original space, non-registered)
-    inputNode = pe.Node(interface=util.IdentityInterface(fields=['reor_brain']),
+    inputNode = pe.Node(interface=util.IdentityInterface(fields=['reor_brain','flirt_template']),
                         name='inputspec')
     
     # FIRST Interface node
-    funcNode = pe.Node(interface=fsl.FIRST(),
-                        name='first_seg')
-    # Set '-d' flag to keep intermediate files
-    funcNode.inputs.no_cleanup = True
-
-    # Output node - four outputs in FIRST we must define in the node
-    outputNode = pe.Node(interface=util.IdentityInterface(fields=['vtk_out',
-                                                                  'bvars_out',
-                                                                  'orig_out',
-                                                                  'seg_out']),
-                         name='outputspec')
+    segNode = pe.Node(interface=fsl.FIRST(),
+                       name='first_seg')
     
-    # Connect the nodes together to form the workflow
-    subcort_wf.connect(inputNode,'reor_brain',funcNode,'in_file')
-    subcort_wf.connect(funcNode,'vtk_surfaces',outputNode,'vtk_out')
-    subcort_wf.connect(funcNode,'bvars',outputNode,'bvars_out')
-    subcort_wf.connect(funcNode,'original_segmentations',outputNode,'orig_out')
-    subcort_wf.connect(funcNode,'segmentation_file',outputNode,'seg_out')
+    # Connect the input to the FIRST segmenting node
+    subcort_wf.connect(inputNode,'reor_brain',segNode,'in_file')
+    
+    # Volume count node
+    volNode = pe.Node(util.Function(input_names=['seg_nifti_file'],
+                                output_names=['vol_dic'],
+                                function=vol_ctr),
+                  name='volspec')
+
+    # Connect the output segmented file to the volume-counting node    
+    subcort_wf.connect(segNode,'segmentation_file',volNode,'seg_nifti_file')
+
+    # TIV/BV (Total Intracranial Volume/Brain Volume) computation workflow
+    tiv_bv_wf = create_tiv_bv_wf()
+    
+    # Connect the input brain and flirt_template to the TIV/BV workflow
+    subcort_wf.connect(inputNode,'reor_brain',tiv_bv_wf,'inputspec.reor_brain')
+    subcort_wf.connect(inputNode,'flirt_template',tiv_bv_wf,'inputspec.flirt_template')
+    
+    # CSV write/merge node
+    csvWriteNode = pe.Node(util.Function(input_names=['voldic_in',
+                                                      'tiv_in',
+                                                      'bv_in'],
+                                         output_names=['csv_out_file'],
+                                         function=csv_merge_write),
+                           name='csv_write')
+    
+    # Connect Volume segments dictionary, TIV/BV outputs to csv_writer node
+    subcort_wf.connect(volNode,'vol_dic',csvWriteNode,'voldic_in')
+    subcort_wf.connect(tiv_bv_wf,'outputspec.tiv_out',csvWriteNode,'tiv_in')
+    subcort_wf.connect(tiv_bv_wf,'outputspec.bv_out',csvWriteNode,'bv_in')
+    
+    # Output node
+    outputNode = pe.Node(interface=util.IdentityInterface(fields=['seg_out','csv_out']),
+                     name='outputspec')
+
+    # Connect the nodes to form the workflow
+    subcort_wf.connect(segNode,'segmentation_file',outputNode,'seg_out')
+    subcort_wf.connect(csvWriteNode,'csv_out_file',outputNode,'csv_out')    
 
     # Return the workflow
     return subcort_wf

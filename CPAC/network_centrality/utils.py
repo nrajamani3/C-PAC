@@ -246,15 +246,15 @@ def calc_threshold(option,
     print "threshold_option -->", option
      
     try:
-         if option == 0:
-             r_value = convert_pvalue_to_r(ntpts, threshold)
-         elif option == 1:
-             r_value = convert_sparsity_to_r(corr_matrix, threshold, full_matrix)
-         else:
-             r_value = threshold
+        if option == 0:
+            r_value = convert_pvalue_to_r(ntpts, threshold)
+        elif option == 1:
+            r_value = convert_sparsity_to_r(corr_matrix, threshold, full_matrix)
+        else:
+            r_value = threshold
     except:
-         print "Exception in calculating threshold value"
-         raise
+        print "Exception in calculating threshold value"
+        raise
      
     print "r_value --> ", r_value
      
