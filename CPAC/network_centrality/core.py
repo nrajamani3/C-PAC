@@ -11,7 +11,15 @@ These are function nodes of sorts that compute a centrality measure.
 import numpy as np
 #import pyximport
 #pyximport.install(setup_args={'include_dirs': [np.get_include()]})
-from CPAC.network_centrality.thresh_and_sum import *
+try:
+    from CPAC.network_centrality.thresh_and_sum import *
+except ImportError, e:
+    msg  = e.message
+    msg += "\n\nThis error likely occurs because thresh_and_sum hasn't been compiled."
+    msg += "\nConsider installing CPAC or building this file."
+    msg += "\nTo install, try `python setup.py install`."
+    msg += "\nTo build this file and use the current directory, try `python setup.py build_ext --inplace`"
+    raise ImportError(msg)
 
 
 def degree_centrality(corr_matrix, r_value, method, out=None):
