@@ -1,3 +1,4 @@
+# Import packages
 import wx
 from config_window import MainFrame
 from dataconfig_window import DataConfig
@@ -9,6 +10,8 @@ import pkg_resources as p
 import sys
 from CPAC.utils import Configuration
 import yaml
+
+# Init constants
 ID_NEW = 1
 ID_RENAME = 2
 ID_CLEAR = 3
@@ -20,11 +23,12 @@ ID_ADD = 8
 ID_SHOW = 9
 ID_DISPLAY = 10
 ID_CLEARALL = 11
+ID_CREATEDB = 12
 
 class ListBox(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(700, 650),  style= wx.SYSTEM_MENU | wx.CAPTION | wx.CLOSE_BOX)
-
+        # Import Packages
         import CPAC
         
         self.CreateStatusBar()
@@ -133,6 +137,7 @@ class ListBox(wx.Frame):
         lboxPanel2.SetBackgroundColour('#E9E3DB')
                 
         create = wx.Button(btnPanel2, ID_CREATE, 'New', size=(90, 30))
+        createdb = wx.Button(btnPanel2, ID_CREATE, 'New from DB', size=(120,30))
         add = wx.Button(btnPanel2, ID_ADD, 'Load', size= (90,30))
         show = wx.Button(btnPanel2, ID_SHOW, 'View', size= (90,30))
         clr2 = wx.Button(btnPanel2, ID_CLEARALL, 'Clear', size=(90, 30))
@@ -140,13 +145,16 @@ class ListBox(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.AddItem, id=ID_ADD)
         self.Bind(wx.EVT_BUTTON, self.OnShow, id= ID_SHOW)
         self.Bind(wx.EVT_BUTTON, lambda event: self.OnClear(event, 2), id=ID_CLEARALL)
+        self.Bind(wx.EVT_BUTTON, self.CreateItem, id=ID_CREATEDB)
         
         if 'linux' in sys.platform:
             btnSizer2.Add((-1,30))
         else:
             btnSizer2.Add((-1, 27))
         
+        # Add buttons to button sizer
         btnSizer2.Add(create, 0, wx.TOP)
+        btnSizer2.Add(createdb, 0, wx.TOP)
         btnSizer2.Add(add, 0, wx.TOP)
         btnSizer2.Add(show, 0, wx.TOP)
         btnSizer2.Add(clr2, 0, wx.TOP)
@@ -216,6 +224,11 @@ class ListBox(wx.Frame):
 
         self.Centre()
         self.Show(True)
+        
+#     # Open database connection window
+#     def open_cb_connection(self):
+#         # Import packages
+#         from CPAC.GUI.interface.windows.db_config import 
         
     def runAnalysis1(self,pipeline, sublist, p):
         
