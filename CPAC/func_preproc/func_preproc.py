@@ -48,7 +48,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error allocating workflow %s."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     # configure the workflow's input spec
     try:
@@ -59,7 +59,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error allocating inputspec (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     # configure the workflow's output spec
     try:
@@ -68,7 +68,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error allocating output spec (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     # allocate a node to check that the requested edits are
     # reasonable given the data
@@ -82,7 +82,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error allocating get_idx function node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
    
     # wire in the func_get_idx node
@@ -92,7 +92,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'in_files' input to get_idx function node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     try:
         preproc.connect(inputNode, 'start_idx',
@@ -100,7 +100,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'start_idx' input to get_idx function node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     try:
         preproc.connect(inputNode, 'stop_idx',
@@ -108,7 +108,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'stop_idx' input to get_idx function node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     try:
         # allocate a node to edit the functional file 
@@ -119,7 +119,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error allocating afni Calc node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
    
     # wire in the inpus
@@ -129,7 +129,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'in_file_a' input to afni Calc node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     try: 
         preproc.connect(func_get_idx, 'startidx',
@@ -137,7 +137,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'start_idx' input to afni Calc node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
 
     try: 
         preproc.connect(func_get_idx, 'stopidx',
@@ -145,7 +145,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting 'stop_idx' input to afni Calc node (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
   
     try: 
         # wire the output 
@@ -154,7 +154,7 @@ def create_wf_edit_func( wf_name = "edit_func" ):
     except:
         logger.info( "Error connecting output (wflow %s)."+\
                      " (%s:%d)" % (wf_name, dbg_file_lineno() ))
-        raise Exception
+        raise
   
     return preproc
     

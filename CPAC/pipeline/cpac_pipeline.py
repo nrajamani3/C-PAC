@@ -614,7 +614,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error create_func_datasource failed."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
             """
             Add in nodes to get parameters from configuration file
@@ -637,7 +637,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error creating scan_params node."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
    
             # wire in the scan parameter workflow
@@ -647,7 +647,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting scan_params 'subject' input."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
 
             try:
@@ -656,7 +656,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting scan_params 'scan' input."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
             # connect in constants
             scan_params.inputs.subject_map = sub_dict
@@ -673,7 +673,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error creating convert_tr node."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
     
             try:    
                 workflow.connect(scan_params, 'tr',
@@ -681,7 +681,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting convert_tr 'tr' input."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
     
 
             strat.set_leaf_properties(funcFlow, 'outputspec.rest')
@@ -700,7 +700,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error create_wf_edit_func failed."+\
                       " (%s:%d)" %(dbg_file_lineno()))
-                raise Exception
+                raise
 
             # find the output data on the leaf node
             try:
@@ -708,7 +708,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error  get_leaf_properties failed."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
             # connect the functional data from the leaf node into the wf
             try:
@@ -716,7 +716,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting input 'func' to trunc_wf."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
             # connect the other input parameters
             try: 
@@ -725,7 +725,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting input 'start_indx' to trunc_wf."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
             try:
                 workflow.connect(scan_params, 'stop_indx',
@@ -733,7 +733,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting input 'stop_idx' to trunc_wf."+\
                       " (%s:%d)" % dbg_file_lineno() )
-                raise Exception
+                raise
 
    
             # replace the leaf node with the output from the recently added workflow 
@@ -759,7 +759,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 except Exception as xxx:
                     logger.info( "Error connecting input 'stop_idx' to trunc_wf."+\
                           " (%s:%d)" % dbg_file_lineno() )
-                    raise Exception
+                    raise
 
                 # find the output data on the leaf node
                 try:
@@ -767,7 +767,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 except Exception as xxx:
                     logger.info( "Error  get_leaf_properties failed."+\
                           " (%s:%d)" % dbg_file_lineno() )
-                    raise Exception
+                    raise
 
    
                 # connect the output of the leaf node as the in_file
@@ -777,7 +777,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 except Exception as xxx:
                     logger.info( "Error connecting input 'infile' to func_slice_timing_correction afni node."+\
                           " (%s:%d)" % dbg_file_lineno() )
-                    raise Exception
+                    raise
 
                 logger.info("connected input to slc")
                 # we might prefer to use the TR stored in the NIFTI header
@@ -790,7 +790,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     except Exception as xxx:
                         logger.info( "Error connecting input 'tr' to func_slice_timing_correction afni node."+\
                              " (%s:%d)" % dbg_file_lineno() )
-                    raise Exception
+                    raise
                     logger.info("connected TR")
 
                 # we might prefer to use the slince timing information stored in the NIFTI header
@@ -803,7 +803,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     except Exception as xxx:
                         logger.info( "Error connecting input 'acquisition' to func_slice_timing_correction afni node."+\
                              " (%s:%d)" % dbg_file_lineno() )
-                    raise Exception
+                    raise
                     logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern)
 
                 if (0 in c.runFunctionalPreprocessing):
