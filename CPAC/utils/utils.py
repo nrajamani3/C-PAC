@@ -1146,7 +1146,7 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr):
             max_slice_offset = slice_timings[-1]
             # checking if the unit of TR and slice timing match or not
             # if slice timing in ms convert TR to ms as well
-            if  max_slice_offset > TR:
+            if  TR and max_slice_offset > TR:
                 warnings.warn("TR is in seconds and slice timings are in milliseconds."\
                               "Converting TR into milliseconds")
                 TR = TR * 1000
@@ -1171,7 +1171,9 @@ def get_tr (tr):
     Method to return TR in seconds
     """
     import re
-    if tr != None:
+    if 'None' in tr:
+        tr = None
+    if tr:
         tr = re.search("\d+.\d+", str(tr)).group(0)
         tr = float(tr)
         if tr > 10:
