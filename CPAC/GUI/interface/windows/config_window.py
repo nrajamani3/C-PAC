@@ -594,8 +594,10 @@ class MainFrame(wx.Frame):
             # Run the pipeline building           
             prep_workflow(sublist[0], c, strategies, 0)
             
-        except:
-            
+        except Exception as xxx:
+            print xxx
+            print "an exception occured"
+ 
             testDlg1.Destroy()
             
             errDlg1 = wx.MessageDialog(
@@ -957,4 +959,4 @@ class MainFrame(wx.Frame):
         except Exception, e:
             print e
             print "Error Writing the pipeline configuration file %s" % path
-            raise Exception
+            raise 

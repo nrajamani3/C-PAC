@@ -716,6 +716,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             except Exception as xxx:
                 logger.info( "Error connecting input 'func' to trunc_wf."+\
                       " (%s:%d)" % dbg_file_lineno() )
+                print xxx
                 raise
 
             # connect the other input parameters
@@ -738,6 +739,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
    
             # replace the leaf node with the output from the recently added workflow 
             strat.set_leaf_properties(trunc_wf, 'outputspec.edited_func')
+            num_strat = num_strat+1
 
 
         """
@@ -797,15 +799,24 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 # we might prefer to use the slice timing information stored in the NIFTI header
                 # if not, use the value in the scan_params node
                 logger.info( "slice timing pattern %s"%c.slice_timing_pattern)
-                if not "Use NIFTI Header" in c.slice_timing_pattern:
-                    try:
-                        workflow.connect(scan_params, 'acquisition',
-                            func_slice_timing_correction, 'tpattern')
-                    except Exception as xxx:
-                        logger.info( "Error connecting input 'acquisition' to func_slice_timing_correction afni node."+\
-                             " (%s:%d)" % dbg_file_lineno() )
+                try:
+                    if not "Use NIFTI Header" in c.slice_timing_pattern:
+                        try:
+                            logger.info( "connecting slice timing pattern %s"%c.slice_timing_pattern)
+                            workflow.connect(scan_params, 'tpattern',
+                                func_slice_timing_correction, 'tpattern')
+                            logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern)
+                        except Exception as xxx:
+                            logger.info( "Error connecting input 'acquisition' to func_slice_timing_correction afni node."+\
+                                 " (%s:%d)" % dbg_file_lineno() )
+                            print xxx
+                            raise
+                        logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern)
+                except Exception as xxx:
+                    logger.info( "Error connecting input 'acquisition' to func_slice_timing_correction afni node."+\
+                                 " (%s:%d)" % dbg_file_lineno() )
+                    print xxx
                     raise
-                    logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern)
 
                 if (0 in c.runFunctionalPreprocessing):
                     # we are forking so create a new node
@@ -966,7 +977,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
         
         new_strat_list = []
         num_strat = 0
-    
+   
+        print "made it to line 981" 
         workflow_counter += 1
         if 1 in c.runFristonModel:
             workflow_bit_id['fristons_parameter_model'] = workflow_counter
@@ -1046,6 +1058,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
                 except Exception as xxx:               
                     logConnectionError('Register Functional to Anatomical (pre BBReg)', num_strat, strat.get_resource_pool(), '0007')
+                    print xxx
                     raise
     
                 if 0 in c.runRegisterFuncToAnat:
@@ -1217,6 +1230,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
                 except Exception as xxx:
                     logConnectionError('Generate Motion Statistics', num_strat, strat.get_resource_pool(), '0009')
+                    print xxx
                     raise
     
                 if 0 in c.runGenerateMotionStatistics:
@@ -1966,6 +1980,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
     
     
+        print "made it to line 1983" 
         '''
         Spatial Regression Based Time Series
         '''
@@ -2175,36 +2190,54 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
         if 1 in c.runROITimeseries:
     
+            print "c.RunROITimeseries defined!"
             for strat in strat_list:
     
                 if c.roiSpecificationFile != None:
-    
-                    resample_functional_to_roi = pe.Node(interface=fsl.FLIRT(),
-                                                          name='resample_functional_to_roi_%d' % num_strat)
-                    resample_functional_to_roi.inputs.interp = 'trilinear'
-                    resample_functional_to_roi.inputs.apply_xfm = True
-                    resample_functional_to_roi.inputs.in_matrix_file = c.identityMatrix
-        
-                    roi_dataflow = create_roi_dataflow(c.roiSpecificationFile, 'roi_dataflow_%d' % num_strat)
-        
-                    roi_timeseries = get_roi_timeseries('roi_timeseries_%d' % num_strat)
-                    roi_timeseries.inputs.inputspec.output_type = c.roiTSOutputs
+                    try: 
+                        resample_functional_to_roi = pe.Node(interface=fsl.FLIRT(),
+                                                              name='resample_functional_to_roi_%d' % num_strat)
+                        print "roi_timeseries defined!"
+                        resample_functional_to_roi.inputs.interp = 'trilinear'
+                        print "roi_timeseries defined!"
+                        resample_functional_to_roi.inputs.apply_xfm = True
+                        print "roi_timeseries defined!"
+                        resample_functional_to_roi.inputs.in_matrix_file = c.identityMatrix
+            
+                        print "roi_timeseries defined!"
+                        roi_dataflow = create_roi_dataflow(c.roiSpecificationFile, 'roi_dataflow_%d' % num_strat)
+            
+                        print "roi_timeseries defined!"
+                        roi_timeseries = get_roi_timeseries('roi_timeseries_%d' % num_strat)
+                        print "roi_timeseries defined!"
+                        roi_timeseries.inputs.inputspec.output_type = c.roiTSOutputs
+                        print "roi_timeseries defined!"
+                    except Exception as xxx:
+                        logger.info( "Error creating roi dataflow. (%s:%d)" % dbg_file_lineno() )
+                        print xxx
+                        raise
                 
                 
                 if c.roiSpecificationFileForSCA != None:
                 
-                    # same workflow, except to run TSE and send it to the resource pool
-                    # so that it will not get sent to SCA
-                    resample_functional_to_roi_for_sca = pe.Node(interface=fsl.FLIRT(),
-                                                          name='resample_functional_to_roi_for_sca_%d' % num_strat)
-                    resample_functional_to_roi_for_sca.inputs.interp = 'trilinear'
-                    resample_functional_to_roi_for_sca.inputs.apply_xfm = True
-                    resample_functional_to_roi_for_sca.inputs.in_matrix_file = c.identityMatrix
-                    
-                    roi_dataflow_for_sca = create_roi_dataflow(c.roiSpecificationFileForSCA, 'roi_dataflow_for_sca_%d' % num_strat)
-        
-                    roi_timeseries_for_sca = get_roi_timeseries('roi_timeseries_for_sca_%d' % num_strat)
-                    roi_timeseries_for_sca.inputs.inputspec.output_type = c.roiTSOutputs
+                    try: 
+                        # same workflow, except to run TSE and send it to the resource pool
+                        # so that it will not get sent to SCA
+                        resample_functional_to_roi_for_sca = pe.Node(interface=fsl.FLIRT(),
+                                                              name='resample_functional_to_roi_for_sca_%d' % num_strat)
+                        resample_functional_to_roi_for_sca.inputs.interp = 'trilinear'
+                        resample_functional_to_roi_for_sca.inputs.apply_xfm = True
+                        resample_functional_to_roi_for_sca.inputs.in_matrix_file = c.identityMatrix
+                        
+                        roi_dataflow_for_sca = create_roi_dataflow(c.roiSpecificationFileForSCA, 'roi_dataflow_for_sca_%d' % num_strat)
+            
+                        roi_timeseries_for_sca = get_roi_timeseries('roi_timeseries_for_sca_%d' % num_strat)
+                        roi_timeseries_for_sca.inputs.inputspec.output_type = c.roiTSOutputs
+                    except Exception as xxx:
+                        logger.info( "Error creating roi dataflow."+\
+                              " (%s:%d)" % dbg_file_lineno() )
+                        print xxx
+                        raise
     
                 try:
     
@@ -2244,26 +2277,33 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
                 except Exception as xxx:
                     logConnectionError('ROI Timeseries analysis', num_strat, strat.get_resource_pool(), '0031')
+                    print xxx
                     raise
-    
-                if 0 in c.runROITimeseries:
-                    tmp = strategy()
-                    tmp.resource_pool = dict(strat.resource_pool)
-                    tmp.leaf_node = (strat.leaf_node)
-                    tmp.leaf_out_file = str(strat.leaf_out_file)
-                    tmp.name = list(strat.name)
-                    strat = tmp
-                    new_strat_list.append(strat)
-    
-                if c.roiSpecificationFile != None:
-                    strat.append_name(roi_timeseries.name)
-                elif c.roiSpecificationFileForSCA != None:
-                    strat.append_name(roi_timeseries_for_sca.name)
-    
-                if c.roiSpecificationFile != None:
-                    strat.update_resource_pool({'roi_timeseries' : (roi_timeseries, 'outputspec.roi_outputs')})
-                if c.roiSpecificationFileForSCA != None:
-                    strat.update_resource_pool({'roi_timeseries_for_SCA' : (roi_timeseries_for_sca, 'outputspec.roi_outputs')})
+   
+                try: 
+                    if 0 in c.runROITimeseries:
+                        tmp = strategy()
+                        tmp.resource_pool = dict(strat.resource_pool)
+                        tmp.leaf_node = (strat.leaf_node)
+                        tmp.leaf_out_file = str(strat.leaf_out_file)
+                        tmp.name = list(strat.name)
+                        strat = tmp
+                        new_strat_list.append(strat)
+        
+                    if c.roiSpecificationFile != None:
+                        strat.append_name(roi_timeseries.name)
+                    elif c.roiSpecificationFileForSCA != None:
+                        strat.append_name(roi_timeseries_for_sca.name)
+        
+                    if c.roiSpecificationFile != None:
+                        strat.update_resource_pool({'roi_timeseries' : (roi_timeseries, 'outputspec.roi_outputs')})
+                    if c.roiSpecificationFileForSCA != None:
+                        strat.update_resource_pool({'roi_timeseries_for_SCA' : (roi_timeseries_for_sca, 'outputspec.roi_outputs')})
+                except Exception as xxx:
+                    logConnectionError('ROI Timeseries analysis 2', num_strat, strat.get_resource_pool(), '0032')
+                    print xxx
+                    raise
+   
     
                 create_log_node(roi_timeseries, 'outputspec.roi_outputs', num_strat)
                 num_strat += 1
@@ -3018,6 +3058,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
     
     
+        print "made it to line 3060" 
         '''
         Transforming Dual Regression outputs to MNI
         '''
@@ -4285,6 +4326,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
         logger.info('\n\n' + 'Pipeline building completed.' + '\n\n')
     
     
+        print "made it to line 4328 -- end of workflow" 
     
         ###################### end of workflow ###########
     
