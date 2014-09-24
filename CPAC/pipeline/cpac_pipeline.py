@@ -87,6 +87,8 @@ class strategy:
         try:
             if resource_key in self.resource_pool:
                 return self.resource_pool[resource_key]
+            else:
+                raise Exception ("could not find %s in resource pool"%(resource_key))
         except Exception as xxx:
             logger.info('no node for output: ')
             logger.info(resource_key)
@@ -2197,21 +2199,14 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     try: 
                         resample_functional_to_roi = pe.Node(interface=fsl.FLIRT(),
                                                               name='resample_functional_to_roi_%d' % num_strat)
-                        print "roi_timeseries defined!"
                         resample_functional_to_roi.inputs.interp = 'trilinear'
-                        print "roi_timeseries defined!"
                         resample_functional_to_roi.inputs.apply_xfm = True
-                        print "roi_timeseries defined!"
                         resample_functional_to_roi.inputs.in_matrix_file = c.identityMatrix
             
-                        print "roi_timeseries defined!"
                         roi_dataflow = create_roi_dataflow(c.roiSpecificationFile, 'roi_dataflow_%d' % num_strat)
             
-                        print "roi_timeseries defined!"
                         roi_timeseries = get_roi_timeseries('roi_timeseries_%d' % num_strat)
-                        print "roi_timeseries defined!"
                         roi_timeseries.inputs.inputspec.output_type = c.roiTSOutputs
-                        print "roi_timeseries defined!"
                     except Exception as xxx:
                         logger.info( "Error creating roi dataflow. (%s:%d)" % dbg_file_lineno() )
                         print xxx
@@ -2280,16 +2275,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     print xxx
                     raise
    
-                try: 
-                    if 0 in c.runROITimeseries:
-                        tmp = strategy()
-                        tmp.resource_pool = dict(strat.resource_pool)
-                        tmp.leaf_node = (strat.leaf_node)
-                        tmp.leaf_out_file = str(strat.leaf_out_file)
-                        tmp.name = list(strat.name)
-                        strat = tmp
-                        new_strat_list.append(strat)
+                if 0 in c.runROITimeseries:
+                    tmp = strategy()
+                    tmp.resource_pool = dict(strat.resource_pool)
+                    tmp.leaf_node = (strat.leaf_node)
+                    tmp.leaf_out_file = str(strat.leaf_out_file)
+                    tmp.name = list(strat.name)
+                    strat = tmp
+                    new_strat_list.append(strat)
         
+                try: 
+
+                    print "CC"
+                    print c.roiSpecificationFile
+                    print c.roiSpecificationFileForSCA
+
                     if c.roiSpecificationFile != None:
                         strat.append_name(roi_timeseries.name)
                     elif c.roiSpecificationFileForSCA != None:
@@ -2300,8 +2300,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     if c.roiSpecificationFileForSCA != None:
                         strat.update_resource_pool({'roi_timeseries_for_SCA' : (roi_timeseries_for_sca, 'outputspec.roi_outputs')})
                 except Exception as xxx:
-                    logConnectionError('ROI Timeseries analysis 2', num_strat, strat.get_resource_pool(), '0032')
                     print xxx
+                    logConnectionError('ROI Timeseries analysis 2', num_strat, strat.get_resource_pool(), '0032')
                     raise
    
     
@@ -2330,12 +2330,18 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     node, out_file = strat.get_leaf_properties()
                     workflow.connect(node, out_file,
                                      sca_roi, 'inputspec.functional_file')
-    
+                except Exception as xxx:
+                    print xxx
+                    logConnectionError('SCA ROI 1', num_strat, strat.get_resource_pool(), '0032')
+                    raise
+
+                try:
                     node, out_file = strat.get_node_from_resource_pool('roi_timeseries_for_SCA')
                     workflow.connect(node, (out_file, extract_one_d),
                                      sca_roi, 'inputspec.timeseries_one_d')
                 except Exception as xxx:
-                    logConnectionError('SCA ROI', num_strat, strat.get_resource_pool(), '0032')
+                    print xxx
+                    logConnectionError('SCA ROI 2', num_strat, strat.get_resource_pool(), '0032')
                     raise
     
     
