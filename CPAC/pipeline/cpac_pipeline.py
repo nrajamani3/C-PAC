@@ -628,7 +628,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                                                  'subject_map',
                                                                  'start_indx',
                                                                  'stop_indx',
-                                                                 'tr'],
+                                                                 'tr',
+                                                                 'tpattern'],
                                                    output_names=['tr',
                                                                  'tpattern',
                                                                  'ref_slice',
@@ -665,6 +666,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             scan_params.inputs.start_indx = c.startIdx
             scan_params.inputs.stop_indx = c.stopIdx
             scan_params.inputs.tr = c.TR
+            scan_params.inputs.tpattern = c.slice_timing_pattern[0]
     
             # node to convert TR between seconds and milliseconds
             try:
