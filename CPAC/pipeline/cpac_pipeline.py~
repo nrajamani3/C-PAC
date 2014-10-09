@@ -378,19 +378,19 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 seg_preproc = create_seg_preproc(True, 'seg_preproc_%d' % num_strat)
 
             try:
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
+                node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
                 workflow.connect(node, out_file,
                                  seg_preproc, 'inputspec.brain')
 
                 if 'anat_mni_fnirt_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm',logger)
                     workflow.connect(node, out_file,
                                      seg_preproc, 'inputspec.standard2highres_mat')
                 elif 'anat_mni_ants_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm',logger)
                     workflow.connect(node, out_file,
                                      seg_preproc, 'inputspec.standard2highres_mat')
-                    node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
                     workflow.connect(node, out_file,
                                      seg_preproc, 'inputspec.standard2highres_rig')
 
@@ -732,7 +732,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
             try:
 
-                node, out_file = strat.get_node_from_resource_pool('movement_parameters')
+                node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
                 workflow.connect(node, out_file,
                                  fristons_model, 'inputspec.movement_file')
 
@@ -790,12 +790,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     return seg_prob_list[-1]
 
                 # Input functional image (func.nii.gz)
-                node, out_file = strat.get_node_from_resource_pool('mean_functional')
+                node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
                 workflow.connect(node, out_file,
                                  func_to_anat, 'inputspec.func')
 
                 # Input skull-stripped anatomical (anat.nii.gz)
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
+                node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
                 workflow.connect(node, out_file,
                                  func_to_anat, 'inputspec.anat')
 
@@ -868,21 +868,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         return seg_prob_list[-1]
 
                     # Input functional image (func.nii.gz)
-                    node, out_file = strat.get_node_from_resource_pool('mean_functional')
+                    node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
                     workflow.connect(node, out_file,
                                      func_to_anat_bbreg, 'inputspec.func')
 
                     # Input segmentation probability maps for white matter segmentation
-                    node, out_file = strat.get_node_from_resource_pool('seg_probability_maps')
+                    node, out_file = strat.get_node_from_resource_pool('seg_probability_maps',logger)
                     workflow.connect(node, (out_file, pick_wm),
                                      func_to_anat_bbreg, 'inputspec.anat_wm_segmentation')
 
                     # Input anatomical whole-head image (reoriented)
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_reorient',logger)
                     workflow.connect(node, out_file,
                                      func_to_anat_bbreg, 'inputspec.anat_skull')
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
                     workflow.connect(node, out_file,
                                      func_to_anat_bbreg, 'inputspec.linear_reg_matrix')
    
@@ -954,23 +954,23 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 workflow.connect(funcFlow, 'outputspec.scan',
                              gen_motion_stats, 'inputspec.scan_id')
 
-                node, out_file = strat.get_node_from_resource_pool('motion_correct')
+                node, out_file = strat.get_node_from_resource_pool('motion_correct',logger)
                 workflow.connect(node, out_file,
                                  gen_motion_stats, 'inputspec.motion_correct')
 
-                node, out_file = strat.get_node_from_resource_pool('movement_parameters')
+                node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
                 workflow.connect(node, out_file,
                                  gen_motion_stats, 'inputspec.movement_parameters')
 
-                node, out_file = strat.get_node_from_resource_pool('max_displacement')
+                node, out_file = strat.get_node_from_resource_pool('max_displacement',logger)
                 workflow.connect(node, out_file,
                                  gen_motion_stats, 'inputspec.max_displacement')
 
-                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
                 workflow.connect(node, out_file,
                                  gen_motion_stats, 'inputspec.mask')
 
-                node, out_file = strat.get_node_from_resource_pool('coordinate_transformation')
+                node, out_file = strat.get_node_from_resource_pool('coordinate_transformation',logger)
                 workflow.connect(node, out_file,
                                  gen_motion_stats, 'inputspec.oned_matrix_save')
 
@@ -1041,28 +1041,28 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     workflow.connect(node, out_file,
                                      nuisance, 'inputspec.subject')
 
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_gm_mask')
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_gm_mask',logger)
                     workflow.connect(node, out_file,
                                      nuisance, 'inputspec.gm_mask')
 
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_wm_mask')
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_wm_mask',logger)
                     workflow.connect(node, out_file,
                                      nuisance, 'inputspec.wm_mask')
 
                     node, out_file = strat.get_node_from_resource_pool('anatomical_csf_mask')
-                    workflow.connect(node, out_file,
+                    workflow.connect(node, out_file,,logger
                                      nuisance, 'inputspec.csf_mask')
 
-                    node, out_file = strat.get_node_from_resource_pool('movement_parameters')
+                    node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
                     workflow.connect(node, out_file,
                                      nuisance, 'inputspec.motion_components')
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
                     workflow.connect(node, out_file,
                                      nuisance, 'inputspec.func_to_anat_linear_xfm')
                 
                     if 'anat_mni_fnirt_register' in nodes:
-                        node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm')
+                        node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm',logger)
                         workflow.connect(node, out_file,
                                          nuisance, 'inputspec.mni_to_anat_linear_xfm')
                     else:
@@ -1070,11 +1070,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         # INVERSE transform, but ants_affine_xfm gets inverted
                         # within the workflow
 
-                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
+                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
                         workflow.connect(node, out_file,
                                          nuisance, 'inputspec.anat_to_mni_rigid_xfm')
 
-                        node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
+                        node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm',logger)
                         workflow.connect(node, out_file,
                                          nuisance, 'inputspec.anat_to_mni_affine_xfm')
 
@@ -1177,7 +1177,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 node, out_file = strat.get_leaf_properties()
                 workflow.connect(node, out_file,
                                  alff, 'inputspec.rest_res')
-                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
                 workflow.connect(node, out_file,
                                  alff, 'inputspec.rest_mask')
 
@@ -1278,11 +1278,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     workflow.connect(node, out_file,
                                      scrubbing, 'inputspec.preprocessed')
 
-                    node, out_file = strat.get_node_from_resource_pool('scrubbing_frames_included')
+                    node, out_file = strat.get_node_from_resource_pool('scrubbing_frames_included',logger)
                     workflow.connect(node, out_file,
                                      scrubbing, 'inputspec.frames_in_1D')
 
-                    node, out_file = strat.get_node_from_resource_pool('movement_parameters')
+                    node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
                     workflow.connect(node, out_file,
                                      scrubbing, 'inputspec.movement_parameters')
 
@@ -1345,11 +1345,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     
                 try:
 
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
                     workflow.connect(node, out_file,
                                      func_mni_warp, 'field_file')
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
                     workflow.connect(node, out_file,
                                      func_mni_warp, 'premat')
   
@@ -1358,23 +1358,23 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                      func_mni_warp, 'in_file')
     
 
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
                     workflow.connect(node, out_file,
                                      functional_brain_mask_to_standard, 'field_file')
                     workflow.connect(node, out_file,
                                      mean_functional_warp, 'field_file')
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
+                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
                     workflow.connect(node, out_file,
                                      functional_brain_mask_to_standard, 'premat') 
                     workflow.connect(node, out_file,
                                      mean_functional_warp, 'premat') 
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
+                    node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
                     workflow.connect(node, out_file,
                                      functional_brain_mask_to_standard, 'in_file')
 
-                    node, out_file = strat.get_node_from_resource_pool('mean_functional')
+                    node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
                     workflow.connect(node, out_file, mean_functional_warp, 'in_file')
 
                     
@@ -1415,17 +1415,17 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         # convert the .mat from linear Func->Anat to
                         # ANTS format
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'functional_to_anat_linear_xfm')
+                                'functional_to_anat_linear_xfm',logger)
                         workflow.connect(node, out_file, fsl_to_itk_func_mni,
                                 'inputspec.affine_file')
 
                         node, out_file = strat.get_node_from_resource_pool(\
-                                reference)
+                                reference,logger)
                         workflow.connect(node, out_file, fsl_to_itk_func_mni,
                                 'inputspec.reference_file')
 
                         node, out_file = strat.get_node_from_resource_pool(\
-                                source_file)
+                                source_file,logger)
                         workflow.connect(node, out_file, fsl_to_itk_func_mni,
                                 'inputspec.source_file')
 
@@ -1457,21 +1457,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                         # Field file from anatomical nonlinear registration
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'anatomical_to_mni_nonlinear_xfm')
+                                'anatomical_to_mni_nonlinear_xfm',logger)
                         workflow.connect(node, out_file,
                                 collect_transforms_func_mni,
                                 'inputspec.warp_file')
 
                         # affine transformation from anatomical registration
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'ants_affine_xfm')
+                                'ants_affine_xfm',logger)
                         workflow.connect(node, out_file,
                                 collect_transforms_func_mni,
                                 'inputspec.linear_affine')
 
                         # rigid transformation from anatomical registration
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'ants_rigid_xfm')
+                                'ants_rigid_xfm',logger)
                         workflow.connect(node, out_file,
                                 collect_transforms_func_mni,
                                 'inputspec.linear_rigid')
@@ -1479,7 +1479,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         # Premat from Func->Anat linear reg and bbreg
                         # (if bbreg is enabled)
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'itk_func_anat_affine_%s' % func_name)
+                                'itk_func_anat_affine_%s' % func_name,logger)
                         workflow.connect(node, out_file, 
                                 collect_transforms_func_mni,
                                 'inputspec.fsl_to_itk_affine')
@@ -1532,7 +1532,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                             apply_ants_warp_func_mni, 'inputspec.input_image')
 
                         node, out_file = strat.get_node_from_resource_pool(\
-                                'itk_collected_warps_%s' % func_name)
+                                'itk_collected_warps_%s' % func_name,logger)
                         workflow.connect(node, out_file, 
                                 apply_ants_warp_func_mni,
                                 'inputspec.transforms')
@@ -1569,7 +1569,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 collect_transforms_func_mni('functional_brain_mask_to_standard')
 
                 node, out_file = strat.get_node_from_resource_pool('func' \
-                        'tional_brain_mask')
+                        'tional_brain_mask',logger)
                 ants_apply_warps_func_mni(node, out_file, c.template_brain_only_for_func, 'NearestNeighbor', 0, 'functional_brain_mask_to_standard')
 
 
@@ -1579,7 +1579,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 collect_transforms_func_mni('mean_functional_in_mni')
 
                 node, out_file = strat.get_node_from_resource_pool('mean' \
-                        '_functional')
+                        '_functional',logger)
                 ants_apply_warps_func_mni(node, out_file, c.template_brain_only_for_func, 'Linear', 0, 'mean_functional_in_mni')
 
             
@@ -1650,23 +1650,23 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.rest_res')
                 
-                node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
+                node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.example_func2highres_mat')
 
-                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.rest_mask')
 
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
+                node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.brain')
 
-                node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
+                node, out_file = strat.get_node_from_resource_pool('anatomical_reorient',logger)
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.reorient')
 
-                node, out_file = strat.get_node_from_resource_pool('mean_functional')
+                node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
                 workflow.connect(node, out_file,
                                  vmhc, 'inputspec.mean_functional')
 
@@ -1709,7 +1709,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 workflow.connect(node, out_file,
                                  reho, 'inputspec.rest_res_filt')
 
-                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
                 workflow.connect(node, out_file,
                                  reho, 'inputspec.rest_mask')
             except:
@@ -1765,8 +1765,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
             try:
 
-                node, out_file = strat.get_node_from_resource_pool('functional_mni')
-                node2, out_file2 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard')
+                node, out_file = strat.get_node_from_resource_pool('functional_mni',logger)
+                node2, out_file2 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard',logger)
 
                 # resample the input functional file and functional mask to spatial map
                 workflow.connect(node, out_file,
@@ -1869,7 +1869,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                 if c.maskSpecificationFile != None:
 
-                    node, out_file = strat.get_node_from_resource_pool('functional_mni')
+                    node, out_file = strat.get_node_from_resource_pool('functional_mni',logger)
     
                     # resample the input functional file to mask
                     workflow.connect(node, out_file,
@@ -1885,7 +1885,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 
                 if c.maskSpecificationFileForSCA != None:
                     
-                    node, out_file = strat.get_node_from_resource_pool('functional_mni')
+                    node, out_file = strat.get_node_from_resource_pool('functional_mni',logger)
                     
                     # resample the input functional file to mask
                     workflow.connect(node, out_file,
