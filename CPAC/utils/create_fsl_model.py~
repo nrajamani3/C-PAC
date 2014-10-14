@@ -392,8 +392,7 @@ def pandas_alternate_organize_data(data, c):
             for name, group in df.groupby([c.groupingVariable, col]):
                 group[col] = 1
                 df[col+'__'+'_'.join([str(e) for e in name])] = group[col]
-                df[col+'__'+'_'.join([str(e) for e in name])] = \
-                    df[col+'__'+'_'.join([str(e) for e in name])].fillna(0)
+                df[col+'__'+'_'.join([str(e) for e in name])] = df[col+'__'+'_'.join([str(e) for e in name])].fillna(0)
 
     for col in c.columnsInModel:
         del df[col]
@@ -452,10 +451,7 @@ def group_by_gp_categorical(categorical, data, c):
         if not (cat_col == c.groupingVariable):
 
             for idx in range(0, len(data)):
-                new_col = '__'.join([str(cat_col), \
-                        str(data[idx][cat_col]), \
-                        str(c.groupingVariable), \
-                        str(data[idx][c.groupingVariable])])
+                new_col = '__'.join([str(cat_col), str(data[idx][cat_col]), str(c.groupingVariable), str(data[idx][c.groupingVariable])])
                 if new_col in gp_cat_dict:
                     gp_cat_dict[new_col].append(idx)
                 else:

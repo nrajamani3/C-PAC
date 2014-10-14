@@ -1,0 +1,45 @@
+QC sections:
+
+
+make SNR plot
+
+make motion parameters plot
+
+make FD plot and volumes removed
+
+make QC montages for Skull Stripping Visualization
+
+make QC montages for mni normalized anatomical image
+
+make QC montages for CSF WM GM
+
+make QC montage for Mean Functional in T1 with T1 edge
+
+make QC montage for Mean Functional in MNI with MNI edge
+
+make QC montages for SCA ROI Smoothed Derivative
+
+make QC montages for SCA Smoothed Derivative
+
+make QC montages for Network Centrality
+
+QC Montages for MultiReg SCA
+
+QC Montages for MultiReg DR
+
+QC Montages for VMHC
+
+QC Montages for ReHO
+
+QC Montages for ALFF
+
+QC Montages for fALFF
+
+
+
+
+
+
+
+
+

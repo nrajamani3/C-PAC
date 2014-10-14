@@ -1,5 +1,7 @@
 import commands
-
+import os
+import nipype.pipeline.engine as pe
+from CPAC.utils.utils import create_log,create_log_template
 
 class strategy:
     """
@@ -26,7 +28,7 @@ class strategy:
     def get_resource_pool(self):
         return self.resource_pool
 
-    def get_node_from_resource_pool(self, resource_key):
+    def get_node_from_resource_pool(self, resource_key,logger):
         try:
             if resource_key in self.resource_pool:
                 return self.resource_pool[resource_key]
@@ -35,7 +37,7 @@ class strategy:
             logger.info(resource_key)
             raise
 
-    def update_resource_pool(self, resources):
+    def update_resource_pool(self, resources,logger):
         for key, value in resources.items():
             if key in self.resource_pool:
                 logger.info('Warning key %s already exists in resource' \
@@ -43,7 +45,7 @@ class strategy:
             self.resource_pool[key] = value
             
             
-def create_log_node(wflow, output, indx, scan_id = None):
+def create_log_node(workflow,wflow, output, indx, log_dir,scan_id = None):
     """
     """
     if wflow: 
@@ -59,14 +61,20 @@ def create_log_node(wflow, output, indx, scan_id = None):
         log_wf.inputs.inputspec.log_dir = log_dir
         log_wf.inputs.inputspec.inputs = log_dir
         return log_wf
-        
-def logStandardError(sectionName, errLine, errNum):
+
+    
+def populateLogger(message,,logger):
+    """
+    """
+    logger.info(message)
+    
+def logStandardError(sectionName, errLine, errNum,logger):
     """
     """    
     logger.info("\n\n" + 'ERROR: %s - %s' % (sectionName, errLine) + "\n\n" + \
                 "Error name: cpac_pipeline_%s" % (errNum) + "\n\n")
         
-def logConnectionError(workflow_name, numStrat, resourcePool, errNum):
+def logConnectionError(workflow_name, numStrat, resourcePool, errNum,logger):
     """
     """       
     logger.info("\n\n" + 'ERROR: Invalid Connection: %s: %s, resource_pool: %s' \
@@ -75,7 +83,7 @@ def logConnectionError(workflow_name, numStrat, resourcePool, errNum):
                 "\n\n" + "This is a pipeline creation error"+\
                 " - the workflows have not started yet." + "\n\n")
         
-def logStandardWarning(sectionName, warnLine):
+def logStandardWarning(sectionName, warnLine,logger):
     """
     """    
     logger.info("\n\n" + 'WARNING: %s - %s' % (sectionName, warnLine) + "\n\n")
@@ -119,12 +127,13 @@ def inputFilepathsCheck(c):
         raise Exception
     
     
-def workflowPreliminarySetup(subject_id,c,config,logging,logger):
+def workflowPreliminarySetup(subject_id,c,config,logging,log_dir,logger):
     
     wfname = 'resting_preproc_' + str(subject_id)
     workflow = pe.Workflow(name=wfname)
     workflow.base_dir = c.workingDirectory
-    workflow.config['execution'] = {'hash_method': 'timestamp', 'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
+    workflow.config['execution'] = {'hash_method': 'timestamp', \
+                                    'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
     config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
     logging.update_logging(config)
 

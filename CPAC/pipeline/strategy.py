@@ -63,7 +63,7 @@ def create_log_node(workflow,wflow, output, indx, log_dir,scan_id = None):
         return log_wf
 
     
-def populateLogger(message):
+def populateLogger(message,logger):
     """
     """
     logger.info(message)
