@@ -26,7 +26,10 @@ class TestPipelineGraph(unittest.TestCase):
     """
 
     def setUp(self):
-        
+
+        self.longMessage = True
+        self.maxDiff = None
+
         # load the gold standard graph  
         edgelistFile = "pipeline_edge_list.p"
         self.edge_list=pickle.load(open(edgelistFile, "rb" ))         

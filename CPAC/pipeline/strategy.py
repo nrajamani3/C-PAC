@@ -2,6 +2,10 @@ import commands
 import os
 import nipype.pipeline.engine as pe
 from CPAC.utils.utils import create_log,create_log_template
+from CPAC.utils.datasource import create_anat_datasource
+from CPAC.anat_preproc.anat_preproc import create_anat_preproc
+from CPAC.func_preproc.func_preproc import create_func_preproc
+from CPAC.seg_preproc.seg_preproc import create_seg_preproc
 
 class strategy:
     """
@@ -39,9 +43,10 @@ class strategy:
 
     def update_resource_pool(self, resources,logger):
         for key, value in resources.items():
-            if key in self.resource_pool:
-                logger.info('Warning key %s already exists in resource' \
-                        ' pool, replacing with %s ' % (key, value))
+##            if key in self.resource_pool:
+##                logger.info('Warning: %s already exists in resource' \
+##                        ' pool with value %s, \nreplacing it with this value %s ' %\
+##                         (key, self.resource_pool[key],value))
             self.resource_pool[key] = value
             
             
@@ -139,23 +144,84 @@ def workflowPreliminarySetup(subject_id,c,config,logging,log_dir,logger):
 
     if c.reGenerateOutputs is True:
         cmd = "find %s -name \'*sink*\' -exec rm -rf {} \\;" % os.path.join(c.workingDirectory, wfname)
-        logger.info(cmd)
         commands.getoutput(cmd)
         cmd = "find %s -name \'*link*\' -exec rm -rf {} \\;" % os.path.join(c.workingDirectory, wfname)
-        logger.info(cmd)
         commands.getoutput(cmd)
         cmd = "find %s -name \'*log*\' -exec rm -rf {} \\;" % os.path.join(c.workingDirectory, wfname)
-        logger.info(cmd)
         commands.getoutput(cmd)
         
     return workflow
     
+def runAnatomicalDataGathering(c,strat_list,subject_id,sub_dict):
+    """
+    """
+    num_strat = 0
+    for gather_anat in c.runAnatomicalDataGathering:
+        strat_initial = strategy()
+        if gather_anat == 1:
+            flow = create_anat_datasource()
+            flow.inputs.inputnode.subject = subject_id
+            flow.inputs.inputnode.anat = sub_dict['anat']
+
+            anat_flow = flow.clone('anat_gather_%d' % num_strat)
+
+            strat_initial.set_leaf_properties(anat_flow, 'outputspec.anat')
+
+        num_strat += 1
+        strat_list.append(strat_initial)   
+    return strat_list
     
-    
-    
-    
-    
-    
+def runAnatomicalPreprocessing(c,workflow_bit_id,workflow_counter,strat_list,logger):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+
+    if 1 in c.runAnatomicalPreprocessing:
+
+        workflow_bit_id['anat_preproc'] = workflow_counter
+
+        for strat in strat_list:
+            # create a new node, Remember to change its name!
+            anat_preproc = create_anat_preproc().clone('anat_preproc_%d' % num_strat)
+
+            try:
+                # connect the new node to the previous leaf
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file, anat_preproc, 'inputspec.anat')
+
+            except:
+                logConnectionError('Anatomical Preprocessing No valid Previous for strat', \
+                                   num_strat, strat.get_resource_pool(), '0001',logger)
+                num_strat += 1
+                continue
+
+            if 0 in c.runAnatomicalPreprocessing:
+                # we are forking so create a new node
+                tmp = strategy()
+                tmp.resource_pool = dict(strat.resource_pool)
+                tmp.leaf_node = (strat.leaf_node)
+                tmp.leaf_out_file = str(strat.leaf_out_file)
+                tmp.name = list(strat.name)
+                strat = tmp
+                new_strat_list.append(strat)
+
+            strat.append_name(anat_preproc.name)
+
+
+            strat.set_leaf_properties(anat_preproc, 'outputspec.brain')
+            # add stuff to resource pool if we need it
+
+            strat.update_resource_pool({'anatomical_brain':(anat_preproc, 'outputspec.brain')},logger)
+            strat.update_resource_pool({'anatomical_reorient':(anat_preproc, 'outputspec.reorient')},logger)
+            
+            #write to log
+            create_log_node(workflow,anat_preproc, 'outputspec.brain', num_strat,log_dir)
+
+            num_strat += 1
+
+    strat_list += new_strat_list
+    return strat_list
     
     
     

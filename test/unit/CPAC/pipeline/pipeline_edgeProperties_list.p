@@ -2861,7 +2861,7 @@ p1326
 aa(lp1327
 g1284
 ag734
-aS'[((\'outputspec.roi_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n\\\\n\\\\n    for timeseries in list_timeseries:\\\\n\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n\\\\n\\\\n            return timeseries\\\\n\\\\n        else:\\\\n\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
+aS'[((\'outputspec.roi_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n    for timeseries in list_timeseries:\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n            return timeseries\\\\n        else:\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
 p1328
 aa(lp1329
 g1284
@@ -2872,7 +2872,7 @@ aa(lp1331
 g1287
 aS'sca_roi_1'
 p1332
-aS'[((\'outputspec.roi_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n\\\\n\\\\n    for timeseries in list_timeseries:\\\\n\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n\\\\n\\\\n            return timeseries\\\\n\\\\n        else:\\\\n\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
+aS'[((\'outputspec.roi_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n    for timeseries in list_timeseries:\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n            return timeseries\\\\n        else:\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
 p1333
 aa(lp1334
 g1287
@@ -3682,11 +3682,11 @@ p1697
 aa(lp1698
 g1100
 ag737
-aS'[((\'outputspec.mask_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n\\\\n\\\\n    for timeseries in list_timeseries:\\\\n\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n\\\\n\\\\n            return timeseries\\\\n\\\\n        else:\\\\n\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
+aS'[((\'outputspec.mask_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n    for timeseries in list_timeseries:\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n            return timeseries\\\\n        else:\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
 p1699
 aa(lp1700
 g1106
 ag1469
-aS'[((\'outputspec.mask_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n\\\\n\\\\n    for timeseries in list_timeseries:\\\\n\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n\\\\n\\\\n            return timeseries\\\\n\\\\n        else:\\\\n\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
+aS'[((\'outputspec.mask_outputs\', \'S\\\'def extract_one_d(list_timeseries):\\\\n    for timeseries in list_timeseries:\\\\n        if \\\\\\\'1D\\\\\\\' in timeseries:\\\\n            return timeseries\\\\n        else:\\\\n            print "Error : ROI/Voxel TimeSeries 1D file not found"\\\\n            return None\\\\n\\\'\\n.\', ()), \'inputspec.timeseries_one_d\')]'
 p1701
 aa.
