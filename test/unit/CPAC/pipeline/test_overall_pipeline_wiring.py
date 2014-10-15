@@ -40,7 +40,7 @@ class TestPipelineGraph(unittest.TestCase):
         graphOverviewFile = "pipeline_graph_overview.p"
         self.g_overview=pickle.load(open(graphOverviewFile,"rb"))           
 
-        subFile = "subject_list_4_unittest.yml"
+        subFile = "subject_list_4_unittest1.yml"
         self.sublist = yaml.load(open(subFile, 'r'))  
 
         configFile = "pipeline_4_unittest.yml"

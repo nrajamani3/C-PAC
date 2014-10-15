@@ -30,7 +30,7 @@ class GoldStandardGraph(object):
     def __init__(self):
         
         # get the subject list
-        subFile = "subject_list_4_unittest.yml"
+        subFile = "subject_list_4_unittest1.yml"
         self.sublist = yaml.load(open(os.path.realpath(subFile), 'r'))    
             
         

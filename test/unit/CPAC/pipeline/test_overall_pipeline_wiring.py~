@@ -4,11 +4,10 @@ from CPAC.utils import Configuration
 from CPAC.pipeline.cpac_pipeline import prep_workflow
 from CPAC.pipeline.cpac_runner import build_strategies
 from operator import itemgetter
-import matplotlib.pyplot as plt
-import networkx as nx
 import unittest
 import pickle
-
+import matplotlib.pyplot as plt
+import networkx as nx
 
         
 class TestPipelineGraph(unittest.TestCase):
@@ -27,7 +26,10 @@ class TestPipelineGraph(unittest.TestCase):
     """
 
     def setUp(self):
-        
+
+        self.longMessage = True
+        self.maxDiff = None
+
         # load the gold standard graph  
         edgelistFile = "pipeline_edge_list.p"
         self.edge_list=pickle.load(open(edgelistFile, "rb" ))         
@@ -38,7 +40,7 @@ class TestPipelineGraph(unittest.TestCase):
         graphOverviewFile = "pipeline_graph_overview.p"
         self.g_overview=pickle.load(open(graphOverviewFile,"rb"))           
 
-        subFile = "subject_list_4_unittest.yml"
+        subFile = "subject_list_4_unittest1.yml"
         self.sublist = yaml.load(open(subFile, 'r'))  
 
         configFile = "pipeline_4_unittest.yml"
@@ -91,10 +93,8 @@ class TestPipelineGraph(unittest.TestCase):
                     self.workflow._graph.number_of_edges(),\
                     msg="Total Number of edges differ between the two graphs")
             
-    def test_graph_draw(self):
-        nx.draw(self.workflow._graph)
-        plt.savefig("path.png")
-        #nx.draw()
+    # def test_graph_draw(self):
+        
 
 #------------------------------------------------------------------------------
 # run test

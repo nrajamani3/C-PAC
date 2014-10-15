@@ -1,11 +1,64 @@
-import commands
 import os
+import time
+from time import strftime
 import nipype.pipeline.engine as pe
-from CPAC.utils.utils import create_log,create_log_template
-from CPAC.utils.datasource import create_anat_datasource
+import nipype.interfaces.fsl as fsl
+import nipype.interfaces.io as nio
+from nipype.interfaces.afni import preprocess
+from   nipype.pipeline.utils import format_dot
+import nipype.interfaces.ants as ants
+import nipype.interfaces.c3 as c3
+from nipype import config
+from nipype import logging
+from CPAC import network_centrality
+from CPAC.network_centrality.utils import merge_lists
+logger = logging.getLogger('workflow')
+import pkg_resources as p
+#import CPAC
 from CPAC.anat_preproc.anat_preproc import create_anat_preproc
 from CPAC.func_preproc.func_preproc import create_func_preproc
 from CPAC.seg_preproc.seg_preproc import create_seg_preproc
+
+from CPAC.registration import create_nonlinear_register, \
+                              create_register_func_to_anat, \
+                              create_bbregister_func_to_anat, \
+                              create_wf_calculate_ants_warp, \
+                              create_wf_apply_ants_warp, \
+                              create_wf_c3d_fsl_to_itk, \
+                              create_wf_collect_transforms
+from CPAC.nuisance import create_nuisance, bandpass_voxels
+
+from CPAC.median_angle import create_median_angle_correction
+from CPAC.generate_motion_statistics import motion_power_statistics
+from CPAC.generate_motion_statistics import fristons_twenty_four
+from CPAC.scrubbing import create_scrubbing_preproc
+from CPAC.timeseries import create_surface_registration, get_roi_timeseries, \
+                            get_voxel_timeseries, get_vertices_timeseries, \
+                            get_spatial_map_timeseries
+from CPAC.network_centrality import create_resting_state_graphs, get_zscore
+from CPAC.utils.datasource import *
+from CPAC.utils import Configuration, create_all_qc
+### no create_log_template here, move in CPAC/utils/utils.py
+from CPAC.qc.qc import create_montage, create_montage_gm_wm_csf
+from CPAC.qc.utils import register_pallete, make_edge, drop_percent_, \
+                          gen_histogram, gen_plot_png, gen_motion_plt, \
+                          gen_std_dev, gen_func_anat_xfm, gen_snr, \
+                          generateQCPages, cal_snr_val
+from CPAC.utils.utils import extract_one_d, set_gauss, \
+                             prepare_symbolic_links, get_scan_params, \
+                             get_tr, extract_txt, create_log, \
+                             create_log_template, extract_output_mean, \
+                             create_output_mean_csv
+from CPAC.vmhc.vmhc import create_vmhc
+from CPAC.reho.reho import create_reho
+from CPAC.alff.alff import create_alff
+from CPAC.sca.sca import create_sca, create_temporal_reg
+import zlib
+import linecache
+import csv
+import pickle
+import commands
+#------------------------------------------------------------------------------
 
 class strategy:
     """
@@ -152,52 +205,43 @@ def workflowPreliminarySetup(subject_id,c,config,logging,log_dir,logger):
         
     return workflow
     
-def runAnatomicalDataGathering(c,strat_list,subject_id,sub_dict):
+def runAnatomicalDataGathering(c,subject_id,sub_dict):
     """
     """
     num_strat = 0
+    strat_list = []
     for gather_anat in c.runAnatomicalDataGathering:
         strat_initial = strategy()
         if gather_anat == 1:
             flow = create_anat_datasource()
             flow.inputs.inputnode.subject = subject_id
             flow.inputs.inputnode.anat = sub_dict['anat']
-
             anat_flow = flow.clone('anat_gather_%d' % num_strat)
-
             strat_initial.set_leaf_properties(anat_flow, 'outputspec.anat')
-
         num_strat += 1
-        strat_list.append(strat_initial)   
+        strat_list.append(strat_initial) 
     return strat_list
     
-def runAnatomicalPreprocessing(c,workflow_bit_id,workflow_counter,strat_list,logger):
+def runAnatomicalPreprocessing(workflow,c,workflow_bit_id,workflow_counter,\
+                                strat_list,logger,log_dir):
     """
     """
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runAnatomicalPreprocessing:
-
         workflow_bit_id['anat_preproc'] = workflow_counter
-
         for strat in strat_list:
-            # create a new node, Remember to change its name!
             anat_preproc = create_anat_preproc().clone('anat_preproc_%d' % num_strat)
-
-            try:
-                # connect the new node to the previous leaf
+            try: # connect the new node to the previous leaf                
                 node, out_file = strat.get_leaf_properties()
                 workflow.connect(node, out_file, anat_preproc, 'inputspec.anat')
-
             except:
                 logConnectionError('Anatomical Preprocessing No valid Previous for strat', \
                                    num_strat, strat.get_resource_pool(), '0001',logger)
                 num_strat += 1
                 continue
 
-            if 0 in c.runAnatomicalPreprocessing:
-                # we are forking so create a new node
+            if 0 in c.runAnatomicalPreprocessing: # we are forking so create a new node                
                 tmp = strategy()
                 tmp.resource_pool = dict(strat.resource_pool)
                 tmp.leaf_node = (strat.leaf_node)
@@ -207,26 +251,179 @@ def runAnatomicalPreprocessing(c,workflow_bit_id,workflow_counter,strat_list,log
                 new_strat_list.append(strat)
 
             strat.append_name(anat_preproc.name)
-
-
             strat.set_leaf_properties(anat_preproc, 'outputspec.brain')
-            # add stuff to resource pool if we need it
-
-            strat.update_resource_pool({'anatomical_brain':(anat_preproc, 'outputspec.brain')},logger)
-            strat.update_resource_pool({'anatomical_reorient':(anat_preproc, 'outputspec.reorient')},logger)
-            
-            #write to log
-            create_log_node(workflow,anat_preproc, 'outputspec.brain', num_strat,log_dir)
-
+            strat.update_resource_pool({'anatomical_brain':\
+                                    (anat_preproc, 'outputspec.brain')},logger)
+            strat.update_resource_pool({'anatomical_reorient':\
+                                (anat_preproc, 'outputspec.reorient')},logger)            
+            create_log_node(workflow,anat_preproc, 'outputspec.brain', \
+                            num_strat,log_dir)
             num_strat += 1
-
     strat_list += new_strat_list
     return strat_list
     
+def runRegistrationPreprocessing(workflow,c,workflow_bit_id,workflow_counter,\
+                                strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
     
-    
-    
-    
+    if 1 in c.runRegistrationPreprocessing:
+
+        workflow_bit_id['anat_mni_register'] = workflow_counter
+        for strat in strat_list:
+
+            if 'FSL' in c.regOption:
+                num_strat = regOptionFSL(num_strat,strat,workflow,\
+                                            logger,c,new_strat_list)                    
+        strat_list += new_strat_list
+
+
+        
+        new_strat_list = []
+            
+        for strat in strat_list:
+            
+            nodes = getNodeList(strat)
+            
+            # or run ANTS anatomical-to-MNI registration instead
+            if ('ANTS' in c.regOption) and \
+                    ('anat_mni_fnirt_register' not in nodes):
+
+                ants_reg_anat_mni = create_wf_calculate_ants_warp('anat_mni' \
+                        '_ants_register_%d' % num_strat)
+
+                try:
+                    node, out_file = strat.get_leaf_properties()
+                    workflow.connect(node, out_file, ants_reg_anat_mni,
+                            'inputspec.anatomical_brain')
+
+                    # pass the reference file  
+                    ants_reg_anat_mni = setAntsInputSpecs(ants_reg_anat_mni,c)         
+
+                except:
+                    logConnectionError('Anatomical Registration (ANTS)', \
+                        num_strat, strat.get_resource_pool(), '0003',logger)
+                    raise
+
+                if 0 in c.runRegistrationPreprocessing:
+                    tmp = strategy()
+                    tmp.resource_pool = dict(strat.resource_pool)
+                    tmp.leaf_node = (strat.leaf_node)
+                    tmp.leaf_out_file = str(strat.leaf_out_file)
+                    tmp.name = list(strat.name)
+                    strat = tmp
+                    new_strat_list.append(strat)
+
+                strat.append_name(ants_reg_anat_mni.name)
+                strat.set_leaf_properties(ants_reg_anat_mni, \
+                                'outputspec.normalized_output_brain')
+
+                strat.update_resource_pool({\
+                            'ants_rigid_xfm':(ants_reg_anat_mni, 'outputspec.ants_rigid_xfm'),\
+                            'ants_affine_xfm':(ants_reg_anat_mni, 'outputspec.ants_affine_xfm'),\
+                            'anatomical_to_mni_nonlinear_xfm':(ants_reg_anat_mni, 'outputspec.warp_field'),\
+                            'mni_to_anatomical_nonlinear_xfm':(ants_reg_anat_mni, 'outputspec.inverse_warp_field'),\
+                            'anat_to_mni_ants_composite_xfm':(ants_reg_anat_mni, 'outputspec.composite_transform'),\
+                            'mni_normalized_anatomical':(ants_reg_anat_mni, 'outputspec.normalized_output_brain')},\
+                            logger)
+
+                create_log_node(workflow,ants_reg_anat_mni, \
+                'outputspec.normalized_output_brain', num_strat,log_dir)          
+                num_strat += 1            
+    strat_list += new_strat_list
+    return strat_list 
+
+def regOptionFSL(num_strat,strat,workflow,logger,c,new_strat_list):
+    """
+    """
+    fnirt_reg_anat_mni = create_nonlinear_register('anat_mni_fnirt_register_%d' % num_strat)
+    try:
+        node, out_file = strat.get_leaf_properties()
+        workflow.connect(node, out_file,
+                         fnirt_reg_anat_mni, 'inputspec.input_brain')
+        node, out_file = strat.get_node_from_resource_pool('anatomical_reorient',logger)
+        workflow.connect(node, out_file,
+                         fnirt_reg_anat_mni, 'inputspec.input_skull')
+        fnirt_reg_anat_mni = setFnirtInputSpecs(fnirt_reg_anat_mni,c)             
+    except:
+        logConnectionError('Anatomical Registration (FSL)', \
+                           num_strat, strat.get_resource_pool(), '0002',logger)
+        raise
+
+    if (0 in c.runRegistrationPreprocessing) or ('ANTS' in c.regOption):
+        tmp = strategy()
+        tmp.resource_pool = dict(strat.resource_pool)
+        tmp.leaf_node = (strat.leaf_node)
+        tmp.leaf_out_file = str(strat.leaf_out_file)
+        tmp.name = list(strat.name)
+        strat = tmp
+        new_strat_list.append(strat)
+
+    strat.append_name(fnirt_reg_anat_mni.name)
+    strat.set_leaf_properties(fnirt_reg_anat_mni, 'outputspec.output_brain')
+    strat.update_resource_pool({\
+                'anatomical_to_mni_linear_xfm':(fnirt_reg_anat_mni, 'outputspec.linear_xfm'),\
+                'anatomical_to_mni_nonlinear_xfm':(fnirt_reg_anat_mni, 'outputspec.nonlinear_xfm'),\
+                'mni_to_anatomical_linear_xfm':(fnirt_reg_anat_mni, 'outputspec.invlinear_xfm'),\
+                'mni_normalized_anatomical':(fnirt_reg_anat_mni, 'outputspec.output_brain')},\
+                logger)
+    create_log_node(workflow,fnirt_reg_anat_mni, \
+                    'outputspec.output_brain', num_strat,log_dir)         
+    num_strat += 1 
+    return num_strat        
+                
+                
+                
+def setFnirtInputSpecs(fnirt_reg_anat_mni,c):
+    """
+    """
+    fnirt_reg_anat_mni.inputs.inputspec.reference_brain = c.template_brain_only_for_anat
+    fnirt_reg_anat_mni.inputs.inputspec.reference_skull = c.template_skull_for_anat
+
+    # assign the FSL FNIRT config file specified in pipeline config.yml
+    fnirt_reg_anat_mni.inputs.inputspec.fnirt_config = c.fnirtConfig  
+    return fnirt_reg_anat_mni
+
+  
+def setAntsInputSpecs(ants_reg_anat_mni,c):
+    """
+    """
+    ants_reg_anat_mni.inputs.inputspec. \
+        reference_brain = c.template_brain_only_for_anat
+    ants_reg_anat_mni.inputs.inputspec.dimension = 3
+    ants_reg_anat_mni.inputs.inputspec. \
+        use_histogram_matching = True
+    ants_reg_anat_mni.inputs.inputspec. \
+        winsorize_lower_quantile = 0.01
+    ants_reg_anat_mni.inputs.inputspec. \
+        winsorize_upper_quantile = 0.99
+    ants_reg_anat_mni.inputs.inputspec. \
+        metric = ['MI','MI','CC']
+    ants_reg_anat_mni.inputs.inputspec.metric_weight = [1,1,1]
+    ants_reg_anat_mni.inputs.inputspec. \
+        radius_or_number_of_bins = [32,32,4]
+    ants_reg_anat_mni.inputs.inputspec. \
+        sampling_strategy = ['Regular','Regular',None]
+    ants_reg_anat_mni.inputs.inputspec. \
+        sampling_percentage = [0.25,0.25,None]
+    ants_reg_anat_mni.inputs.inputspec. \
+        number_of_iterations = [[1000,500,250,100], \
+        [1000,500,250,100], [100,100,70,20]]
+    ants_reg_anat_mni.inputs.inputspec. \
+        convergence_threshold = [1e-8,1e-8,1e-9]
+    ants_reg_anat_mni.inputs.inputspec. \
+        convergence_window_size = [10,10,15]
+    ants_reg_anat_mni.inputs.inputspec. \
+        transforms = ['Rigid','Affine','SyN']
+    ants_reg_anat_mni.inputs.inputspec. \
+        transform_parameters = [[0.1],[0.1],[0.1,3,0]]
+    ants_reg_anat_mni.inputs.inputspec. \
+        shrink_factors = [[8,4,2,1],[8,4,2,1],[6,4,2,1]]
+    ants_reg_anat_mni.inputs.inputspec. \
+        smoothing_sigmas = [[3,2,1,0],[3,2,1,0],[3,2,1,0]]   
+    return ants_reg_anat_mni
     
     
     
