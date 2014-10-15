@@ -60,11 +60,12 @@ from strategy import    strategy, create_log_node, logStandardError,\
                         inputFilepathsCheck, workflowPreliminarySetup,\
                         runAnatomicalDataGathering, runAnatomicalPreprocessing,\
                         runRegistrationPreprocessing, runSegmentationPreprocessing,\
-                        runFunctionalDataGathering, runFunctionalPreprocessing
+                        runFunctionalDataGathering
 import zlib
 import linecache
 import csv
 import pickle
+import CPAC
 
  
 
@@ -85,14 +86,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     # tempfile add time to time data structure inside tempfile, and increment
     # number of subjects
 
-
-<<<<<<< .merge_file_jcwo50
-    logger.info('VERSION: CPAC v0.3.5 (dev)')
-    logger.info('Pipeline start time: %s' % pipeline_start_time)
-=======
     cores_msg = 'VERSION: CPAC %s' % CPAC.__version__
-
->>>>>>> .merge_file_dIlCkY
 
     # perhaps in future allow user to set threads maximum
     # this is for centrality mostly    
@@ -163,410 +157,72 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     Inserting Anatomical Preprocessing workflow
     '''
-<<<<<<< .merge_file_jcwo50
     strat_list = runAnatomicalPreprocessing(c,subject_id,sub_dict,workflow,\
-                                workflow_bit_id,workflow_counter,\
-                                strat_list,logger,log_dir)
-=======
-    new_strat_list = []
-    num_strat = 0
-
-    if 1 in c.runAnatomicalPreprocessing:
-
-        workflow_bit_id['anat_preproc'] = workflow_counter
-
-        for strat in strat_list:
-            # create a new node, Remember to change its name!
-            anat_preproc = create_anat_preproc(c.already_skullstripped[0]).clone('anat_preproc_%d' % num_strat)
-
-            try:
-                # connect the new node to the previous leaf
-                node, out_file = strat.get_leaf_properties()
-                workflow.connect(node, out_file, anat_preproc, 'inputspec.anat')
-
-            except:
-                logConnectionError('Anatomical Preprocessing No valid Previous for strat', num_strat, strat.get_resource_pool(), '0001')
-                num_strat += 1
-                continue
-
-            if 0 in c.runAnatomicalPreprocessing:
-                # we are forking so create a new node
-                tmp = strategy()
-                tmp.resource_pool = dict(strat.resource_pool)
-                tmp.leaf_node = (strat.leaf_node)
-                tmp.leaf_out_file = str(strat.leaf_out_file)
-                tmp.name = list(strat.name)
-                strat = tmp
-                new_strat_list.append(strat)
-
-            strat.append_name(anat_preproc.name)
-
-
-            strat.set_leaf_properties(anat_preproc, 'outputspec.brain')
-            # add stuff to resource pool if we need it
-
-            strat.update_resource_pool({'anatomical_brain':(anat_preproc, 'outputspec.brain')})
-            strat.update_resource_pool({'anatomical_reorient':(anat_preproc, 'outputspec.reorient')})
-            
-            #write to log
-            create_log_node(anat_preproc, 'outputspec.brain', num_strat)
-
-            num_strat += 1
-
-    strat_list += new_strat_list
-
-
->>>>>>> .merge_file_dIlCkY
+                                workflow_bit_id,workflow_counter,strat_list,logger,log_dir)
 
     '''
     T1 -> Template, Non-linear registration (FNIRT or ANTS)
     '''
     workflow_counter += 1
-<<<<<<< .merge_file_jcwo50
     strat_list = runRegistrationPreprocessing(c,subject_id,sub_dict,workflow,\
-                                workflow_bit_id,workflow_counter,\
-                                strat_list,logger,log_dir)
-=======
-    
-    # either run FSL anatomical-to-MNI registration, or...
-    
-    if 1 in c.runRegistrationPreprocessing:
-
-        workflow_bit_id['anat_mni_register'] = workflow_counter
-        for strat in strat_list:
-
-            if 'FSL' in c.regOption:
-
-                # this is to prevent the user from running FNIRT if they are
-                # providing already-skullstripped inputs. this is because
-                # FNIRT requires an input with the skull still on
-                if c.already_skullstripped[0] == 3:
-
-                    err_msg = '\n\n[!] CPAC says: FNIRT (for anatomical ' \
-                              'registration) will not work properly if you ' \
-                              'are providing inputs that have already been ' \
-                              'skull-stripped.\n\nEither switch to using ' \
-                              'ANTS for registration or provide input ' \
-                              'images that have not been already ' \
-                              'skull-stripped.\n\n'
-
-                    logger.info(err_msg)
-                    raise Exception
-
-                fnirt_reg_anat_mni = create_nonlinear_register('anat_mni_fnirt_register_%d' % num_strat)
-
-                try:
-                    node, out_file = strat.get_leaf_properties()
-                    workflow.connect(node, out_file,
-                                     fnirt_reg_anat_mni, 'inputspec.input_brain')
-
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
-                    workflow.connect(node, out_file,
-                                     fnirt_reg_anat_mni, 'inputspec.input_skull')
-
-                    # pass the reference files                
-                    fnirt_reg_anat_mni.inputs.inputspec.reference_brain = c.template_brain_only_for_anat
-                    fnirt_reg_anat_mni.inputs.inputspec.reference_skull = c.template_skull_for_anat
-
-                    # assign the FSL FNIRT config file specified in pipeline config.yml
-                    fnirt_reg_anat_mni.inputs.inputspec.fnirt_config = c.fnirtConfig
-                
-
-                except:
-                    logConnectionError('Anatomical Registration (FSL)', num_strat, strat.get_resource_pool(), '0002')
-                    raise
-
-                if (0 in c.runRegistrationPreprocessing) or ('ANTS' in c.regOption):
-                    tmp = strategy()
-                    tmp.resource_pool = dict(strat.resource_pool)
-                    tmp.leaf_node = (strat.leaf_node)
-                    tmp.leaf_out_file = str(strat.leaf_out_file)
-                    tmp.name = list(strat.name)
-                    strat = tmp
-                    new_strat_list.append(strat)
-
-                strat.append_name(fnirt_reg_anat_mni.name)
-                strat.set_leaf_properties(fnirt_reg_anat_mni, 'outputspec.output_brain')
-
-                strat.update_resource_pool({'anatomical_to_mni_linear_xfm':(fnirt_reg_anat_mni, 'outputspec.linear_xfm'),
-                                            'anatomical_to_mni_nonlinear_xfm':(fnirt_reg_anat_mni, 'outputspec.nonlinear_xfm'),
-                                            'mni_to_anatomical_linear_xfm':(fnirt_reg_anat_mni, 'outputspec.invlinear_xfm'),
-                                            'mni_normalized_anatomical':(fnirt_reg_anat_mni, 'outputspec.output_brain')})
-
-
-                create_log_node(fnirt_reg_anat_mni, 'outputspec.output_brain', num_strat)
-            
-            
-                num_strat += 1
-                
-        strat_list += new_strat_list
-
-
-        
-        new_strat_list = []
-            
-        for strat in strat_list:
-            
-            nodes = getNodeList(strat)
-            
-            # or run ANTS anatomical-to-MNI registration instead
-            if ('ANTS' in c.regOption) and \
-                    ('anat_mni_fnirt_register' not in nodes):
-
-                ants_reg_anat_mni = create_wf_calculate_ants_warp('anat_mni' \
-                        '_ants_register_%d' % num_strat)
-
-                try:
-
-                    # calculating the transform with the skullstripped is
-                    # reported to be better, but it requires very high
-                    # quality skullstripping. If skullstripping is imprecise
-                    # registration with skull is preferred
-                    if (1 in c.regWithSkull):
-
-                        if c.already_skullstripped[0] == 3:
-
-                            err_msg = '\n\n[!] CPAC says: You selected ' \
-                                      'to run anatomical registration with ' \
-                                      'the skull, but you also selected to ' \
-                                      'use already-skullstripped images as ' \
-                                      'your inputs. This can be changed ' \
-                                      'in your pipeline configuration ' \
-                                      'editor.\n\n'
-
-                            logger.info(err_msg)
-                            raise Exception
-
-                        # get the reorient skull-on anatomical from resource pool
-                        node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
-
-                        # pass the anatomical to the workflow
-                        workflow.connect(node, out_file,
-                            ants_reg_anat_mni,'inputspec.anatomical_brain')
-
-                        # pass the reference file
-                        ants_reg_anat_mni.inputs.inputspec.reference_brain = \
-                            c.template_skull_for_anat
-
-
-                    else:
-
-                        node, out_file = strat.get_leaf_properties()
-
-                        workflow.connect(node, out_file, ants_reg_anat_mni,
-                            'inputspec.anatomical_brain')
-
-                        # pass the reference file           
-                        ants_reg_anat_mni.inputs.inputspec. \
-                            reference_brain = c.template_brain_only_for_anat
-
-
-                    ants_reg_anat_mni.inputs.inputspec.dimension = 3
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        use_histogram_matching = True
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        winsorize_lower_quantile = 0.01
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        winsorize_upper_quantile = 0.99
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        metric = ['MI','MI','CC']
-                    ants_reg_anat_mni.inputs.inputspec.metric_weight = [1,1,1]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        radius_or_number_of_bins = [32,32,4]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        sampling_strategy = ['Regular','Regular',None]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        sampling_percentage = [0.25,0.25,None]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        number_of_iterations = [[1000,500,250,100], \
-                        [1000,500,250,100], [100,100,70,20]]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        convergence_threshold = [1e-8,1e-8,1e-9]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        convergence_window_size = [10,10,15]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        transforms = ['Rigid','Affine','SyN']
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        transform_parameters = [[0.1],[0.1],[0.1,3,0]]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        shrink_factors = [[8,4,2,1],[8,4,2,1],[6,4,2,1]]
-                    ants_reg_anat_mni.inputs.inputspec. \
-                        smoothing_sigmas = [[3,2,1,0],[3,2,1,0],[3,2,1,0]]
-                
-
-                except:
-                    logConnectionError('Anatomical Registration (ANTS)', num_strat, strat.get_resource_pool(), '0003')
-                    raise
-
-                if 0 in c.runRegistrationPreprocessing:
-                    tmp = strategy()
-                    tmp.resource_pool = dict(strat.resource_pool)
-                    tmp.leaf_node = (strat.leaf_node)
-                    tmp.leaf_out_file = str(strat.leaf_out_file)
-                    tmp.name = list(strat.name)
-                    strat = tmp
-                    new_strat_list.append(strat)
-
-                strat.append_name(ants_reg_anat_mni.name)
-                strat.set_leaf_properties(ants_reg_anat_mni, 'outputspec.normalized_output_brain')
-
-                strat.update_resource_pool({'ants_initial_xfm':(ants_reg_anat_mni, 'outputspec.ants_initial_xfm'),
-                                            'ants_rigid_xfm':(ants_reg_anat_mni, 'outputspec.ants_rigid_xfm'),
-                                            'ants_affine_xfm':(ants_reg_anat_mni, 'outputspec.ants_affine_xfm'),
-                                            'anatomical_to_mni_nonlinear_xfm':(ants_reg_anat_mni, 'outputspec.warp_field'),
-                                            'mni_to_anatomical_nonlinear_xfm':(ants_reg_anat_mni, 'outputspec.inverse_warp_field'),
-                                            'anat_to_mni_ants_composite_xfm':(ants_reg_anat_mni, 'outputspec.composite_transform'),
-                                            'mni_normalized_anatomical':(ants_reg_anat_mni, 'outputspec.normalized_output_brain')})
-
-                create_log_node(ants_reg_anat_mni, 'outputspec.normalized_output_brain', num_strat)
-          
-                num_strat += 1
-            
-    strat_list += new_strat_list
-
-
->>>>>>> .merge_file_dIlCkY
+                                workflow_bit_id,workflow_counter,strat_list,logger,log_dir)
 
     '''
     Inserting Segmentation Preprocessing
     Workflow
     '''
     workflow_counter += 1
-<<<<<<< .merge_file_jcwo50
     strat_list=runSegmentationPreprocessing(c,subject_id,sub_dict,workflow,\
                                 workflow_bit_id,workflow_counter,\
                                 strat_list,logger,log_dir)
-    
-=======
-    if 1 in c.runSegmentationPreprocessing:
-        workflow_bit_id['seg_preproc'] = workflow_counter
-        for strat in strat_list:
-            
-            nodes = getNodeList(strat)
-            
-            if 'anat_mni_fnirt_register' in nodes:
-                seg_preproc = create_seg_preproc(False, 'seg_preproc_%d' % num_strat)
-            elif 'anat_mni_ants_register' in nodes:
-                seg_preproc = create_seg_preproc(True, 'seg_preproc_%d' % num_strat)
 
-            try:
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
-                workflow.connect(node, out_file,
-                                 seg_preproc, 'inputspec.brain')
-
-                if 'anat_mni_fnirt_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_mat')
-                elif 'anat_mni_ants_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_init')
-                    node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_rig')
-
-                    node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_mat')
-
-
-                seg_preproc.inputs.inputspec.PRIOR_CSF = c.PRIORS_CSF
-                seg_preproc.inputs.inputspec.PRIOR_GRAY = c.PRIORS_GRAY
-                seg_preproc.inputs.inputspec.PRIOR_WHITE = c.PRIORS_WHITE
-
-                seg_preproc.inputs.csf_threshold.csf_threshold = \
-                                        c.cerebralSpinalFluidThreshold
-                seg_preproc.inputs.wm_threshold.wm_threshold = \
-                                        c.whiteMatterThreshold
-                seg_preproc.inputs.gm_threshold.gm_threshold = \
-                                        c.grayMatterThreshold
-                seg_preproc.get_node('csf_threshold').iterables = ('csf_threshold',
-                                        c.cerebralSpinalFluidThreshold)
-                seg_preproc.get_node('wm_threshold').iterables = ('wm_threshold',
-                                        c.whiteMatterThreshold)
-                seg_preproc.get_node('gm_threshold').iterables = ('gm_threshold',
-                                        c.grayMatterThreshold)
-
-
-            except:
-                logConnectionError('Segmentation Preprocessing', num_strat, strat.get_resource_pool(), '0004')
-                raise
-
-            if 0 in c.runSegmentationPreprocessing:
-                tmp = strategy()
-                tmp.resource_pool = dict(strat.resource_pool)
-                tmp.leaf_node = (strat.leaf_node)
-                tmp.leaf_out_file = str(strat.leaf_out_file)
-                tmp.name = list(strat.name)
-                strat = tmp
-                new_strat_list.append(strat)
-
-            strat.append_name(seg_preproc.name)
-            strat.update_resource_pool({'anatomical_gm_mask' : (seg_preproc, 'outputspec.gm_mask'),
-                                        'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
-                                        'anatomical_wm_mask' : (seg_preproc, 'outputspec.wm_mask'),
-                                        'seg_probability_maps': (seg_preproc, 'outputspec.probability_maps'),
-                                        'seg_mixeltype': (seg_preproc, 'outputspec.mixeltype'),
-                                        'seg_partial_volume_map': (seg_preproc, 'outputspec.partial_volume_map'),
-                                        'seg_partial_volume_files': (seg_preproc, 'outputspec.partial_volume_files')})
-
-            create_log_node(seg_preproc, 'outputspec.partial_volume_map', num_strat)
-            num_strat += 1
-
-    strat_list += new_strat_list
-
-
-
-
->>>>>>> .merge_file_dIlCkY
     '''
     Inserting Functional Data workflow
     '''
-<<<<<<< .merge_file_jcwo50
-    strat_list,funcFlow = runFunctionalDataGathering(c,subject_id,sub_dict,workflow,\
-                                workflow_bit_id,workflow_counter,\
-                                strat_list,logger,log_dir)
-
-
-    """
-    Inserting Functional Image Preprocessing
-    Workflow
-    """   
-    workflow_counter += 1
-    strat_list = runFunctionalPreprocessing(c,subject_id,sub_dict,workflow,\
-                                workflow_bit_id,workflow_counter,\
-                                strat_list,logger,log_dir)
-
-    '''
-    Inserting Friston's 24 parameter Workflow
-    In case this workflow runs , it overwrites the movement_parameters file
-    So the file contains 24 parameters for motion and that gets wired to all the workflows
-    that depend on. The effect should be seen when regressing out nuisance signals and motion
-    is used as one of the regressors
-    '''
-    
-    new_strat_list = []
-    num_strat = 0
-
-    workflow_counter += 1
-    if 1 in c.runFristonModel:
-        workflow_bit_id['fristons_parameter_model'] = workflow_counter
-        for strat in strat_list:
-
-            fristons_model = fristons_twenty_four(wf_name='fristons_parameter_model_%d' % num_strat)
-
-            try:
-
-                node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
-                workflow.connect(node, out_file,
-                                 fristons_model, 'inputspec.movement_file')
-
-            except:
-                logConnectionError('Friston\'s Parameter Model', \
-                                   num_strat, strat.get_resource_pool(), '0006',logger)
-                raise
-=======
+##<<<<<<< .merge_file_jcwo50
+##    strat_list,funcFlow = runFunctionalDataGathering(c,subject_id,sub_dict,workflow,\
+##                                workflow_bit_id,workflow_counter,\
+##                                strat_list,logger,log_dir)
+##
+##
+##    """
+##    Inserting Functional Image Preprocessing
+##    Workflow
+##    """   
+##    workflow_counter += 1
+##    strat_list = runFunctionalPreprocessing(c,subject_id,sub_dict,workflow,\
+##                                workflow_bit_id,workflow_counter,\
+##                                strat_list,logger,log_dir)
+##
+##    '''
+##    Inserting Friston's 24 parameter Workflow
+##    In case this workflow runs , it overwrites the movement_parameters file
+##    So the file contains 24 parameters for motion and that gets wired to all the workflows
+##    that depend on. The effect should be seen when regressing out nuisance signals and motion
+##    is used as one of the regressors
+##    '''
+##    
+##    new_strat_list = []
+##    num_strat = 0
+##
+##    workflow_counter += 1
+##    if 1 in c.runFristonModel:
+##        workflow_bit_id['fristons_parameter_model'] = workflow_counter
+##        for strat in strat_list:
+##
+##            fristons_model = fristons_twenty_four(wf_name='fristons_parameter_model_%d' % num_strat)
+##
+##            try:
+##
+##                node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
+##                workflow.connect(node, out_file,
+##                                 fristons_model, 'inputspec.movement_file')
+##
+##            except:
+##                logConnectionError('Friston\'s Parameter Model', \
+##                                   num_strat, strat.get_resource_pool(), '0006',logger)
+##                raise
+##=======
 
     num_strat = 0
 
@@ -835,7 +491,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         logger.info( "Error allocating func_preproc."+\
                              " (%s:%d)" % dbg_file_lineno() )
                         raise
->>>>>>> .merge_file_dIlCkY
 
                     node = None
                     out_file = None
@@ -976,29 +631,14 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     new_strat_list.append(strat)
                 strat.append_name(fristons_model.name)
     
-                strat.update_resource_pool({'movement_parameters':(fristons_model, 'outputspec.movement_file')})
+                strat.update_resource_pool({'movement_parameters':(fristons_model, 'outputspec.movement_file')},logger)
     
         
-                create_log_node(fristons_model, 'outputspec.movement_file', num_strat)
+                create_log_node(fristons_model, 'outputspec.movement_file', num_strat,log_dir)
                 
                 num_strat += 1
                 
         strat_list += new_strat_list
-
-<<<<<<< .merge_file_jcwo50
-            strat.update_resource_pool({'movement_parameters':(fristons_model, 'outputspec.movement_file')},logger)
-
-    
-            create_log_node(workflow,fristons_model, 'outputspec.movement_file', num_strat,log_dir)
-            
-            num_strat += 1
-            
-    strat_list += new_strat_list
-=======
-
->>>>>>> .merge_file_dIlCkY
-
-
 
     '''
     Func -> T1 Registration (Initial Linear reg)
@@ -1310,15 +950,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         # INVERSE transform, but ants_affine_xfm gets inverted
                         # within the workflow
 
-<<<<<<< .merge_file_jcwo50
-                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
-=======
-                        node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm')
-                        workflow.connect(node, out_file,
-                                         nuisance, 'inputspec.anat_to_mni_initial_xfm')
+                        node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm',logger)
+                        workflow.connect(node, out_file,nuisance, 'inputspec.anat_to_mni_initial_xfm')
 
-                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
->>>>>>> .merge_file_dIlCkY
+                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
                         workflow.connect(node, out_file,
                                          nuisance, 'inputspec.anat_to_mni_rigid_xfm')
 
@@ -1434,17 +1069,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                    num_strat, strat.get_resource_pool(), '0012',logger)
                 raise
             strat.append_name(alff.name)
-<<<<<<< .merge_file_jcwo50
             strat.update_resource_pool({'alff_img':(alff, 'outputspec.alff_img')},logger)
             strat.update_resource_pool({'falff_img':(alff, 'outputspec.falff_img')},logger)
-            strat.update_resource_pool({'alff_Z_img':(alff, 'outputspec.alff_Z_img')},logger)
-            strat.update_resource_pool({'falff_Z_img':(alff, 'outputspec.falff_Z_img')},logger)
-=======
-            strat.update_resource_pool({'alff_img':(alff, 'outputspec.alff_img')})
-            strat.update_resource_pool({'falff_img':(alff, 'outputspec.falff_img')})
-            #strat.update_resource_pool({'alff_Z_img':(alff, 'outputspec.alff_Z_img')})
-            #strat.update_resource_pool({'falff_Z_img':(alff, 'outputspec.falff_Z_img')})
->>>>>>> .merge_file_dIlCkY
+##            strat.update_resource_pool({'alff_Z_img':(alff, 'outputspec.alff_Z_img')},logger)
+##            strat.update_resource_pool({'falff_Z_img':(alff, 'outputspec.falff_Z_img')},logger)
+
             
             create_log_node(workflow,alff, 'outputspec.falff_img', num_strat,log_dir)
 
@@ -1937,16 +1566,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 logConnectionError('VMHC', num_strat, strat.get_resource_pool(), '0019',logger)
                 raise
 
-
-<<<<<<< .merge_file_jcwo50
             strat.update_resource_pool({'vmhc_raw_score':(vmhc, 'outputspec.VMHC_FWHM_img')},logger)
             strat.update_resource_pool({'vmhc_z_score':(vmhc, 'outputspec.VMHC_Z_FWHM_img')},logger)
             strat.update_resource_pool({'vmhc_z_score_stat_map':(vmhc, 'outputspec.VMHC_Z_stat_FWHM_img')},logger)
-=======
-            strat.update_resource_pool({'vmhc_raw_score':(vmhc, 'outputspec.VMHC_FWHM_img')})
-            strat.update_resource_pool({'vmhc_fisher_zstd':(vmhc, 'outputspec.VMHC_Z_FWHM_img')})
-            strat.update_resource_pool({'vmhc_fisher_zstd_zstat_map':(vmhc, 'outputspec.VMHC_Z_stat_FWHM_img')})
->>>>>>> .merge_file_dIlCkY
             strat.append_name(vmhc.name)
             
             create_log_node(workflow,vmhc, 'outputspec.VMHC_FWHM_img', num_strat,log_dir)
@@ -1984,13 +1606,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 raise
 
 
-<<<<<<< .merge_file_jcwo50
+
             strat.update_resource_pool({'raw_reho_map':(reho, 'outputspec.raw_reho_map')},logger)
-            strat.update_resource_pool({'reho_Z_img':(reho, 'outputspec.z_score')},logger)
-=======
-            strat.update_resource_pool({'raw_reho_map':(reho, 'outputspec.raw_reho_map')})
-            #strat.update_resource_pool({'reho_Z_img':(reho, 'outputspec.z_score')})
->>>>>>> .merge_file_dIlCkY
+##            strat.update_resource_pool({'reho_Z_img':(reho, 'outputspec.z_score')},logger)
             strat.append_name(reho.name)
             
             create_log_node(workflow,reho, 'outputspec.raw_reho_map', num_strat,log_dir)
@@ -2159,20 +1777,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 
                 
                 if c.roiSpecificationFileForSCA != None:
-                
-<<<<<<< .merge_file_jcwo50
-                if c.maskSpecificationFileForSCA != None:
-                    
-                    node, out_file = \
-                    strat.get_node_from_resource_pool('functional_mni',logger)
-                    
-                    # resample the input functional file to mask
-=======
-                    node, out_file = strat.get_node_from_resource_pool('functional_mni')
+                    node, out_file = strat.get_node_from_resource_pool('functional_mni',logger)
                 
                     # TSE only, not meant for SCA
                     # resample the input functional file to roi
->>>>>>> .merge_file_dIlCkY
+
                     workflow.connect(node, out_file,
                                      resample_functional_to_roi_for_sca, 'in_file')
                     workflow.connect(roi_dataflow_for_sca, 'outputspec.out_file',
@@ -2185,12 +1794,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                      roi_timeseries_for_sca, 'inputspec.rest')
 
             except:
-<<<<<<< .merge_file_jcwo50
-                logConnectionError('Voxel timeseries analysis', num_strat, \
-                            strat.get_resource_pool(), '0030',logger)
-=======
-                logConnectionError('ROI Timeseries analysis', num_strat, strat.get_resource_pool(), '0031')
->>>>>>> .merge_file_dIlCkY
+                logConnectionError('ROI Timeseries analysis', num_strat, strat.get_resource_pool(), '0031',logger)
                 raise
 
             if 0 in c.runROITimeseries:
@@ -2207,22 +1811,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 strat.update_resource_pool({'roi_timeseries' : (roi_timeseries, 'outputspec.roi_outputs')})
                 create_log_node(roi_timeseries, 'outputspec.roi_outputs', num_strat)
 
-<<<<<<< .merge_file_jcwo50
-            if c.maskSpecificationFile != None:
-                strat.update_resource_pool({'voxel_timeseries': (voxel_timeseries, 'outputspec.mask_outputs')},logger)
-            if c.maskSpecificationFileForSCA != None:
-                strat.update_resource_pool({'voxel_timeseries_for_SCA': (voxel_timeseries_for_sca, 'outputspec.mask_outputs')},logger)
-            
-            create_log_node(workflow,voxel_timeseries, 'outputspec.mask_outputs', num_strat,log_dir)
-=======
+
             if c.roiSpecificationFileForSCA != None:
                 strat.append_name(roi_timeseries_for_sca.name)
-                strat.update_resource_pool({'roi_timeseries_for_SCA' : (roi_timeseries_for_sca, 'outputspec.roi_outputs')})
-                create_log_node(roi_timeseries_for_sca, 'outputspec.roi_outputs', num_strat)
+                strat.update_resource_pool({'roi_timeseries_for_SCA' : \
+                (roi_timeseries_for_sca, 'outputspec.roi_outputs')},logger)
+                create_log_node(roi_timeseries_for_sca, 'outputspec.roi_outputs', num_strat,log_dir)
 
             if (c.roiSpecificationFile != None) or (c.roiSpecificationFileForSCA != None):
                 num_strat += 1
->>>>>>> .merge_file_dIlCkY
 
 
     strat_list += new_strat_list
@@ -2286,19 +1883,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     workflow.connect(resample_functional_to_mask, 'out_file',
                                      voxel_timeseries, 'inputspec.rest')
                 
-<<<<<<< .merge_file_jcwo50
-                    node, out_file = \
-                    strat.get_node_from_resource_pool('functional_mni',logger)
-                
-                    # TSE only, not meant for SCA
-                    # resample the input functional file to roi
-=======
                 if c.maskSpecificationFileForSCA != None:
                     
-                    node, out_file = strat.get_node_from_resource_pool('functional_mni')
+                    node, out_file = strat.get_node_from_resource_pool('functional_mni',logger)
                     
                     # resample the input functional file to mask
->>>>>>> .merge_file_dIlCkY
                     workflow.connect(node, out_file,
                                      resample_functional_to_mask_for_sca, 'in_file')
                     workflow.connect(mask_dataflow_for_sca, 'outputspec.out_file',
@@ -2312,12 +1901,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 
 
             except:
-<<<<<<< .merge_file_jcwo50
-                logConnectionError('ROI Timeseries analysis', \
-                    num_strat, strat.get_resource_pool(), '0031',logger)
-=======
-                logConnectionError('Voxel timeseries analysis', num_strat, strat.get_resource_pool(), '0030')
->>>>>>> .merge_file_dIlCkY
+                logConnectionError('Voxel timeseries analysis', num_strat, strat.get_resource_pool(), '0030',logger)
+
                 raise
 
             if 0 in c.runVoxelTimeseries:
@@ -2334,27 +1919,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 strat.update_resource_pool({'voxel_timeseries': (voxel_timeseries, 'outputspec.mask_outputs')})
                 create_log_node(voxel_timeseries, 'outputspec.mask_outputs', num_strat)
 
-<<<<<<< .merge_file_jcwo50
-            if c.roiSpecificationFile != None:
-                strat.update_resource_pool({'roi_timeseries' : \
-                (roi_timeseries, 'outputspec.roi_outputs')},logger)
-            if c.roiSpecificationFileForSCA != None:
-                strat.update_resource_pool({'roi_timeseries_for_SCA' : \
-                (roi_timeseries_for_sca, 'outputspec.roi_outputs')},logger)
 
-            create_log_node(workflow,roi_timeseries, 'outputspec.roi_outputs', num_strat,log_dir)
-            num_strat += 1
-=======
             if c.maskSpecificationFileForSCA != None:
                 strat.append_name(voxel_timeseries_for_sca.name)
-                strat.update_resource_pool({'voxel_timeseries_for_SCA': (voxel_timeseries_for_sca, 'outputspec.mask_outputs')})
-                create_log_node(voxel_timeseries_for_sca, 'outputspec.mask_outputs', num_strat)
+                strat.update_resource_pool({'voxel_timeseries_for_SCA':\
+                 (voxel_timeseries_for_sca, 'outputspec.mask_outputs')},logger)
+                create_log_node(voxel_timeseries_for_sca, 'outputspec.mask_outputs', num_strat,log_dir)
 
             if (c.maskSpecificationFile != None) or (c.maskSpecificationFileForSCA != None):
                 num_strat += 1
-
->>>>>>> .merge_file_dIlCkY
-
     strat_list += new_strat_list
 
 
@@ -2389,16 +1962,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                             strat.get_resource_pool(), '0032',logger)
                 raise
 
-
-<<<<<<< .merge_file_jcwo50
-            strat.update_resource_pool({'sca_roi_correlations':\
-                    (sca_roi, 'outputspec.correlation_file')},logger)
-            strat.update_resource_pool({'sca_roi_Z':\
-                    (sca_roi, 'outputspec.Z_score')},logger)
-=======
-            strat.update_resource_pool({'sca_roi_correlations':(sca_roi, 'outputspec.correlation_file')})
+            strat.update_resource_pool({'sca_roi_correlations':(sca_roi, 'outputspec.correlation_file')},logger)
             #strat.update_resource_pool({'sca_roi_Z':(sca_roi, 'outputspec.Z_score')})
->>>>>>> .merge_file_dIlCkY
+
             
             create_log_node(workflow,sca_roi, 'outputspec.correlation_file', \
                     num_strat,log_dir)
@@ -2437,13 +2003,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 raise
 
 
-<<<<<<< .merge_file_jcwo50
+
             strat.update_resource_pool({'sca_seed_correlations':(sca_seed, 'outputspec.correlation_file')},logger)
-            strat.update_resource_pool({'sca_seed_Z':(sca_seed, 'outputspec.Z_score')},logger)
-=======
-            strat.update_resource_pool({'sca_seed_correlations':(sca_seed, 'outputspec.correlation_file')})
             #strat.update_resource_pool({'sca_seed_Z':(sca_seed, 'outputspec.Z_score')})
->>>>>>> .merge_file_dIlCkY
+
             strat.append_name(sca_seed.name)
             num_strat += 1
     strat_list += new_strat_list
@@ -2483,19 +2046,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         num_strat, strat.get_resource_pool(), '0033',logger)
                 raise
 
-<<<<<<< .merge_file_jcwo50
-            strat.update_resource_pool({'dr_tempreg_maps_stack':(dr_temp_reg, 'outputspec.temp_reg_map')},logger)
-            strat.update_resource_pool({'dr_tempreg_maps_z_stack':\
-                        (dr_temp_reg, 'outputspec.temp_reg_map_z'),\
-                        'dr_tempreg_maps_z_files':\
-                        (dr_temp_reg, 'outputspec.temp_reg_map_z_stack')},logger)
-=======
+
             strat.update_resource_pool({'dr_tempreg_maps_stack':(dr_temp_reg, 'outputspec.temp_reg_map'),
-                                        'dr_tempreg_maps_files':(dr_temp_reg, 'outputspec.temp_reg_map_files')})
+                                        'dr_tempreg_maps_files':(dr_temp_reg, 'outputspec.temp_reg_map_files')},logger)
             strat.update_resource_pool({'dr_tempreg_maps_zstat_stack':(dr_temp_reg, 'outputspec.temp_reg_map_z'),
-                                        'dr_tempreg_maps_zstat_files':(dr_temp_reg, 'outputspec.temp_reg_map_z_files')})
->>>>>>> .merge_file_dIlCkY
-            
+                                        'dr_tempreg_maps_zstat_files':(dr_temp_reg, 'outputspec.temp_reg_map_z_files')},logger)
+
             strat.append_name(dr_temp_reg.name)
             
             create_log_node(workflow,dr_temp_reg, 'outputspec.temp_reg_map', num_strat,log_dir)
@@ -2545,19 +2101,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 raise
 
 
-<<<<<<< .merge_file_jcwo50
-            strat.update_resource_pool({'sca_tempreg_maps_stack':(sc_temp_reg,\
-             'outputspec.temp_reg_map')},logger)
-            strat.update_resource_pool({'sca_tempreg_maps_z_stack':(sc_temp_reg,\
-             'outputspec.temp_reg_map_z'),\
-                                        'sca_tempreg_maps_z_files':(sc_temp_reg, \
-                                        'outputspec.temp_reg_map_z_stack')},logger)
-=======
+
             strat.update_resource_pool({'sca_tempreg_maps_stack':(sc_temp_reg, 'outputspec.temp_reg_map'),
-                                        'sca_tempreg_maps_files':(sc_temp_reg, 'outputspec.temp_reg_map_files')})
+                                        'sca_tempreg_maps_files':(sc_temp_reg, 'outputspec.temp_reg_map_files')},logger)
             strat.update_resource_pool({'sca_tempreg_maps_zstat_stack':(sc_temp_reg, 'outputspec.temp_reg_map_z'),
-                                        'sca_tempreg_maps_zstat_files':(sc_temp_reg, 'outputspec.temp_reg_map_z_files')})
->>>>>>> .merge_file_dIlCkY
+                                        'sca_tempreg_maps_zstat_files':(sc_temp_reg, 'outputspec.temp_reg_map_z_files')},logger)
+
             
             create_log_node(workflow,sc_temp_reg, 'outputspec.temp_reg_map', num_strat,log_dir)
             
@@ -2807,11 +2356,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                     strat.append_name(smoothing.name)
                     strat.update_resource_pool({'centrality_outputs_smoothed' : (smoothing, 'out_file'),
-<<<<<<< .merge_file_jcwo50
                                                 'centrality_outputs_zscore' : (z_score, 'outputspec.z_score_img')},logger)
-=======
-                                                'centrality_outputs_zstd' : (z_score, 'outputspec.z_score_img')})
->>>>>>> .merge_file_dIlCkY
                     
                     strat.append_name(smoothing.name)
                     create_log_node(workflow,smoothing, 'out_file', num_strat,log_dir)
@@ -3335,15 +2880,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     if (1 in c.runMultRegSCA) and (1 in c.runROITimeseries) and c.fwhm != None:
         for strat in strat_list:
 
-            sc_temp_reg_maps_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),
-<<<<<<< .merge_file_jcwo50
-                                              name='sca_tempreg_maps_stack_smooth_%d' % \
-                                            num_strat, iterfield=['in_file'])
-=======
+            sc_temp_reg_maps_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),\
                                               name='sca_tempreg_maps_stack_smooth_%d' % num_strat, iterfield=['in_file'])
-            sc_temp_reg_maps_files_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),
+            sc_temp_reg_maps_files_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),\
                                               name='sca_tempreg_maps_files_smooth_%d' % num_strat, iterfield=['in_file'])
->>>>>>> .merge_file_dIlCkY
             sc_temp_reg_maps_Z_stack_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),
                                               name='sca_tempreg_maps_Z_stack_smooth_%d' % \
                                             num_strat, iterfield=['in_file'])
@@ -3352,18 +2892,13 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                             num_strat, iterfield=['in_file'])
 
             try:
-<<<<<<< .merge_file_jcwo50
+
                 node, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_stack',logger)
-                node2, out_file2 = strat.get_node_from_resource_pool('sca_tempreg_maps_z_stack',logger)
-                node3, out_file3 = strat.get_node_from_resource_pool('sca_tempreg_maps_z_files',logger)
+                node5, out_file5 = strat.get_node_from_resource_pool('sca_tempreg_maps_files',logger)
+                node2, out_file2 = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_stack',logger)
+                node3, out_file3 = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files',logger)
                 node4, out_file4 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard',logger)
-=======
-                node, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_stack')
-                node5, out_file5 = strat.get_node_from_resource_pool('sca_tempreg_maps_files')
-                node2, out_file2 = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_stack')
-                node3, out_file3 = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files')
-                node4, out_file4 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard')
->>>>>>> .merge_file_dIlCkY
+
 
                 # non-normalized stack
                 workflow.connect(node, out_file,
@@ -3406,23 +2941,13 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         num_strat, strat.get_resource_pool(), '0038',logger)
                 raise
             strat.append_name(sc_temp_reg_maps_smooth.name)
-<<<<<<< .merge_file_jcwo50
-            strat.update_resource_pool({'sca_tempreg_maps_stack_smooth':\
-                                        (sc_temp_reg_maps_smooth, 'out_file'),
-                                       'sca_tempreg_maps_z_stack_smooth':\
-                                        (sc_temp_reg_maps_Z_stack_smooth, 'out_file'),
-                                       'sca_tempreg_maps_z_files_smooth':\
-                                    (sc_temp_reg_maps_Z_files_smooth, 'out_file')},logger)
 
-            create_log_node(workflow,sc_temp_reg_maps_smooth, 'out_file', num_strat,log_dir)
-=======
             strat.update_resource_pool({'sca_tempreg_maps_stack_smooth':(sc_temp_reg_maps_smooth, 'out_file'),
                                         'sca_tempreg_maps_files_smooth':(sc_temp_reg_maps_files_smooth, 'out_file'),
                                         'sca_tempreg_maps_zstat_stack_smooth':(sc_temp_reg_maps_Z_stack_smooth, 'out_file'),
-                                        'sca_tempreg_maps_zstat_files_smooth':(sc_temp_reg_maps_Z_files_smooth, 'out_file')})
+                                        'sca_tempreg_maps_zstat_files_smooth':(sc_temp_reg_maps_Z_files_smooth, 'out_file')},logger)
 
             create_log_node(sc_temp_reg_maps_smooth, 'out_file', num_strat)
->>>>>>> .merge_file_dIlCkY
             num_strat += 1
     strat_list += new_strat_list
 
@@ -3447,18 +2972,13 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                               name='dr_tempreg_maps_Z_files_smooth_%d' % num_strat, iterfield=['in_file'])
 
             try:
-<<<<<<< .merge_file_jcwo50
+
                 node, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_stack_to_standard',logger)
-                node2, out_file2 = strat.get_node_from_resource_pool('dr_tempreg_maps_z_stack_to_standard',logger)
-                node3, out_file3 = strat.get_node_from_resource_pool('dr_tempreg_maps_z_files_to_standard',logger)
+                node2, out_file2 = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_stack_to_standard',logger)
+                node5, out_file5 = strat.get_node_from_resource_pool('dr_tempreg_maps_files_to_standard',logger)
+                node3, out_file3 = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files_to_standard',logger)
                 node4, out_file4 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard',logger)
-=======
-                node, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_stack_to_standard')
-                node2, out_file2 = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_stack_to_standard')
-                node5, out_file5 = strat.get_node_from_resource_pool('dr_tempreg_maps_files_to_standard')
-                node3, out_file3 = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files_to_standard')
-                node4, out_file4 = strat.get_node_from_resource_pool('functional_brain_mask_to_standard')
->>>>>>> .merge_file_dIlCkY
+
 
                 # non-normalized stack
                 workflow.connect(node, out_file,
@@ -3501,7 +3021,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     num_strat, strat.get_resource_pool(), '0039',logger)
                 raise
             strat.append_name(dr_temp_reg_maps_smooth.name)
-<<<<<<< .merge_file_jcwo50
+
             strat.update_resource_pool({'dr_tempreg_maps_stack_smooth':\
                                     (dr_temp_reg_maps_smooth, 'out_file'),
                                        'dr_tempreg_maps_z_stack_smooth':\
@@ -3509,13 +3029,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                        'dr_tempreg_maps_z_files_smooth':\
                                     (dr_temp_reg_maps_Z_files_smooth, 'out_file')},logger)
             create_log_node(workflow,dr_temp_reg_maps_smooth, 'out_file', num_strat,log_dir)
-=======
-            strat.update_resource_pool({'dr_tempreg_maps_stack_smooth':(dr_temp_reg_maps_smooth, 'out_file'),
-                                        'dr_tempreg_maps_zstat_stack_smooth':(dr_temp_reg_maps_Z_stack_smooth, 'out_file'),
-                                        'dr_tempreg_maps_files_smooth':(dr_temp_reg_maps_files_smooth, 'out_file'),
-                                        'dr_tempreg_maps_zstat_files_smooth':(dr_temp_reg_maps_Z_files_smooth, 'out_file')})
-            create_log_node(dr_temp_reg_maps_smooth, 'out_file', num_strat)
->>>>>>> .merge_file_dIlCkY
+
             num_strat += 1
     strat_list += new_strat_list
 
@@ -4516,33 +4030,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                 if c.fwhm != None:
 
-<<<<<<< .merge_file_jcwo50
-                    temporal_regression_sca_overlay, out_file = \
-                    strat.get_node_from_resource_pool('sca_tempreg_maps_z_files_smooth',logger)
-                    montage_temporal_regression_sca = \
-                        create_montage('montage_temporal_regression_sca_%d' % \
-                        num_strat,'cyan_to_yellow', \
-                        'temporal_regression_sca_smooth')
 
-                    montage_temporal_regression_sca.inputs.inputspec.underlay = \
-                            c.template_brain_only_for_func
-                    strat.update_resource_pool(\
-                    {'qc___temporal_regression_sca_smooth_a': \
-                    (montage_temporal_regression_sca, 'outputspec.axial_png'),\
-                    'qc___temporal_regression_sca_smooth_s': \
-                    (montage_temporal_regression_sca, 'outputspec.sagittal_png'),\
-                    'qc___temporal_regression_sca_smooth_hist': \
-                    (hist_, 'hist_path')},logger)
-=======
-                    temporal_regression_sca_overlay, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files_smooth')
+                    temporal_regression_sca_overlay, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files_smooth',logger)
                     montage_temporal_regression_sca = create_montage('montage_temporal_regression_sca_%d' % num_strat,
                                       'cyan_to_yellow', 'temporal_regression_sca_smooth')
 
                     montage_temporal_regression_sca.inputs.inputspec.underlay = c.template_brain_only_for_func
                     strat.update_resource_pool({'qc___temporal_regression_sca_smooth_a': (montage_temporal_regression_sca, 'outputspec.axial_png'),
                                             'qc___temporal_regression_sca_smooth_s': (montage_temporal_regression_sca, 'outputspec.sagittal_png'),
-                                            'qc___temporal_regression_sca_smooth_hist': (hist_, 'hist_path')})
->>>>>>> .merge_file_dIlCkY
+                                            'qc___temporal_regression_sca_smooth_hist': (hist_, 'hist_path')},logger)
 
                     if not 12 in qc_montage_id_a:
                         qc_montage_id_a[12] = 'temporal_regression_sca_smooth_a'
@@ -4550,17 +4046,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         qc_hist_id[12] = 'temporal_regression_sca_smooth_hist'
 
                 else:
-<<<<<<< .merge_file_jcwo50
-                    temporal_regression_sca_overlay, out_file = \
-                    strat.get_node_from_resource_pool('sca_tempreg_maps_z_files',logger)
-                    montage_temporal_regression_sca = \
-                    create_montage('montage_temporal_regression_sca_%d' % \
-                    num_strat,'cyan_to_yellow', 'temporal_regression_sca')
-=======
-                    temporal_regression_sca_overlay, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files')
+
+                    temporal_regression_sca_overlay, out_file = strat.get_node_from_resource_pool('sca_tempreg_maps_zstat_files',logger)
                     montage_temporal_regression_sca = create_montage('montage_temporal_regression_sca_%d' % num_strat,
                                       'cyan_to_yellow', 'temporal_regression_sca')
->>>>>>> .merge_file_dIlCkY
 
                     montage_temporal_regression_sca.inputs.inputspec.underlay = c.template_brain_only_for_func
                     strat.update_resource_pool({'qc___temporal_regression_sca_a': (montage_temporal_regression_sca, 'outputspec.axial_png'),
@@ -4600,15 +4089,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                 if c.fwhm != None:
 
-<<<<<<< .merge_file_jcwo50
-                    temporal_dual_regression_overlay, out_file = \
-                    strat.get_node_from_resource_pool('dr_tempreg_maps_z_files_smooth',ligger)
-                    montage_temporal_dual_regression = \
-                    create_montage('montage_temporal_dual_regression_%d' % num_strat,
-=======
-                    temporal_dual_regression_overlay, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files_smooth')
+                    temporal_dual_regression_overlay, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files_smooth',logger)
                     montage_temporal_dual_regression = create_montage('montage_temporal_dual_regression_%d' % num_strat,
->>>>>>> .merge_file_dIlCkY
                                       'cyan_to_yellow', 'temporal_dual_regression_smooth')
 
                     montage_temporal_dual_regression.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4622,15 +4104,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
 
                 else:
-<<<<<<< .merge_file_jcwo50
-                    temporal_dual_regression_overlay, out_file = \
-                    strat.get_node_from_resource_pool('dr_tempreg_maps_z_files',logger)
-                    montage_temporal_dual_regression = \
-                    create_montage('montage_temporal_dual_regression_%d' % num_strat,
-=======
-                    temporal_dual_regression_overlay, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files')
+
+                    temporal_dual_regression_overlay, out_file = strat.get_node_from_resource_pool('dr_tempreg_maps_zstat_files',logger)
                     montage_temporal_dual_regression = create_montage('montage_temporal_dual_regression_%d' % num_strat,
->>>>>>> .merge_file_dIlCkY
+
                                       'cyan_to_yellow', 'temporal_dual_regression')
 
                     montage_temporal_dual_regression.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4663,11 +4140,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                        name='dp_vmhc%d' % num_strat)
                 drop_percent.inputs.percent_ = 99.98
 
-<<<<<<< .merge_file_jcwo50
-                vmhc_overlay, out_file = strat.get_node_from_resource_pool('vmhc_z_score_stat_map',logger)
-=======
-                vmhc_overlay, out_file = strat.get_node_from_resource_pool('vmhc_fisher_zstd_zstat_map')
->>>>>>> .merge_file_dIlCkY
+                vmhc_overlay, out_file = strat.get_node_from_resource_pool('vmhc_fisher_zstd_zstat_map',logger)
+
                 montage_vmhc = create_montage('montage_vmhc_%d' % num_strat,
                                   'cyan_to_yellow', 'vmhc_smooth')
 
@@ -4715,18 +4189,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     drop_percent_zstd.inputs.percent_ = 99.999
 
                     if c.fwhm != None:
-<<<<<<< .merge_file_jcwo50
-                        reho_overlay, out_file = strat.get_node_from_resource_pool('reho_Z_to_standard_smooth',logger)
-                        montage_reho = create_montage('montage_reho_%d' % num_strat,
-                                      'cyan_to_yellow', 'reho_standard_smooth')
-                        montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(reho_overlay, out_file,
-                                         hist_, 'measure_file')
-                        strat.update_resource_pool({'qc___reho_smooth_a': (montage_reho, 'outputspec.axial_png'),
-                                                'qc___reho_smooth_s': (montage_reho, 'outputspec.sagittal_png'),
-                                                'qc___reho_smooth_hist': (hist_, 'hist_path')},logger)
-=======
-                        reho_zstd_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_smooth_zstd')
+
+                        reho_zstd_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_smooth_zstd',logger)
                         montage_reho_zstd = create_montage('montage_reho_zstd_%d' % num_strat,
                                       'cyan_to_yellow', 'reho_standard_smooth_zstd')
                         montage_reho_zstd.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4734,8 +4198,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                          hist_reho_zstd, 'measure_file')
                         strat.update_resource_pool({'qc___reho_zstd_smooth_a': (montage_reho_zstd, 'outputspec.axial_png'),
                                                 'qc___reho_zstd_smooth_s': (montage_reho_zstd, 'outputspec.sagittal_png'),
-                                                'qc___reho_zstd_smooth_hist': (hist_reho_zstd, 'hist_path')})
->>>>>>> .merge_file_dIlCkY
+                                                'qc___reho_zstd_smooth_hist': (hist_reho_zstd, 'hist_path')},logger)
+
 
                         if not 15 in qc_montage_id_a:
                             qc_montage_id_a[15] = 'reho_zstd_smooth_a'
@@ -4744,18 +4208,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
 
                     else:
-<<<<<<< .merge_file_jcwo50
-                        reho_overlay, out_file = strat.get_node_from_resource_pool('reho_Z_to_standard',logger)
-                        montage_reho = create_montage('montage_reho_%d' % num_strat,
-                                      'cyan_to_yellow', 'reho_standard')
-                        montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(reho_overlay, out_file,
-                                         hist_, 'measure_file')
-                        strat.update_resource_pool({'qc___reho_a': (montage_reho, 'outputspec.axial_png'),
-                                                'qc___reho_s': (montage_reho, 'outputspec.sagittal_png'),
-                                                'qc___reho_hist': (hist_, 'hist_path')},logger)
-=======
-                        reho_zstd_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_zstd')
+
+                        reho_zstd_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_zstd',logger)
                         montage_reho_zstd = create_montage('montage_reho_zstd_%d' % num_strat,
                                       'cyan_to_yellow', 'reho_standard_zstd')
                         montage_reho_zstd.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4763,8 +4217,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                          hist_reho_zstd, 'measure_file')
                         strat.update_resource_pool({'qc___reho_zstd_a': (montage_reho_zstd, 'outputspec.axial_png'),
                                                 'qc___reho_zstd_s': (montage_reho_zstd, 'outputspec.sagittal_png'),
-                                                'qc___reho_zstd_hist': (hist_reho_zstd, 'hist_path')})
->>>>>>> .merge_file_dIlCkY
+                                                'qc___reho_zstd_hist': (hist_reho_zstd, 'hist_path')},logger)
+
 
                         if not 15 in qc_montage_id_a:
                             qc_montage_id_a[15] = 'reho_zstd_a'
@@ -4775,16 +4229,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     workflow.connect(reho_zstd_overlay, out_file,
                                      drop_percent_zstd, 'measure_file')
 
-<<<<<<< .merge_file_jcwo50
-                    if c.fwhm != None:
-                        reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_smooth',logger)
-                        montage_reho = create_montage('montage_reho_%d' % num_strat,
-                                      'cyan_to_yellow', 'reho_standard_smooth')
-                        montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(reho_overlay, out_file,
-                                         hist_, 'measure_file')
-                        strat.update_resource_pool({'qc___reho_smooth_a': (montage_reho, 'outputspec.axial_png'),
-=======
+
                     workflow.connect(drop_percent_zstd, 'modified_measure_file',
                                      montage_reho_zstd, 'inputspec.overlay')
 
@@ -4792,14 +4237,13 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 
 
                 if c.fwhm != None:
-                    reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_smooth')
+                    reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard_smooth',logger)
                     montage_reho = create_montage('montage_reho_%d' % num_strat,
                                   'cyan_to_yellow', 'reho_standard_smooth')
                     montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
                     workflow.connect(reho_overlay, out_file,
                                      hist_, 'measure_file')
                     strat.update_resource_pool({'qc___reho_smooth_a': (montage_reho, 'outputspec.axial_png'),
->>>>>>> .merge_file_dIlCkY
                                                 'qc___reho_smooth_s': (montage_reho, 'outputspec.sagittal_png'),
                                                 'qc___reho_smooth_hist': (hist_, 'hist_path')},logger)
 
@@ -4808,26 +4252,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         qc_montage_id_s[15] = 'reho_smooth_s'
                         qc_hist_id[15] = 'reho_smooth_hist'
 
-
-<<<<<<< .merge_file_jcwo50
-                    else:
-                        reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard',logger)
-                        montage_reho = create_montage('montage_reho_%d' % num_strat,
-                                      'cyan_to_yellow', 'reho_standard')
-                        montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(reho_overlay, out_file,
-                                         hist_, 'measure_file')
-                        strat.update_resource_pool({'qc___reho_a': (montage_reho, 'outputspec.axial_png'),
-=======
                 else:
-                    reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard')
+                    reho_overlay, out_file = strat.get_node_from_resource_pool('reho_to_standard',logger)
                     montage_reho = create_montage('montage_reho_%d' % num_strat,
                                   'cyan_to_yellow', 'reho_standard')
                     montage_reho.inputs.inputspec.underlay = c.template_brain_only_for_func
                     workflow.connect(reho_overlay, out_file,
                                      hist_, 'measure_file')
                     strat.update_resource_pool({'qc___reho_a': (montage_reho, 'outputspec.axial_png'),
->>>>>>> .merge_file_dIlCkY
+
                                                 'qc___reho_s': (montage_reho, 'outputspec.sagittal_png'),
                                                 'qc___reho_hist': (hist_, 'hist_path')},logger)
 
@@ -4884,29 +4317,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
 
                     if c.fwhm != None:
-<<<<<<< .merge_file_jcwo50
-                        alff_overlay, out_file = strat.get_node_from_resource_pool('alff_Z_to_standard_smooth',logger)
-                        falff_overlay, out_file_f = strat.get_node_from_resource_pool('falff_Z_to_standard_smooth',logger)
-                        montage_alff = create_montage('montage_alff_%d' % num_strat,
-                                      'cyan_to_yellow', 'alff_standard_smooth')
-                        montage_alff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        montage_falff = create_montage('montage_falff_%d' % num_strat,
-                                      'cyan_to_yellow', 'falff_standard_smooth')
-                        montage_falff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(alff_overlay, out_file,
-                                         hist_alff, 'measure_file')
 
-                        workflow.connect(falff_overlay, out_file_f,
-                                         hist_falff, 'measure_file')
-                        strat.update_resource_pool({'qc___alff_smooth_a': (montage_alff, 'outputspec.axial_png'),
-                                                'qc___alff_smooth_s': (montage_alff, 'outputspec.sagittal_png'),
-                                                'qc___falff_smooth_a': (montage_falff, 'outputspec.axial_png'),
-                                                'qc___falff_smooth_s': (montage_falff, 'outputspec.sagittal_png'),
-                                                'qc___alff_smooth_hist': (hist_alff, 'hist_path'),
-                                                'qc___falff_smooth_hist': (hist_falff, 'hist_path')},logger)
-=======
-                        alff_zstd_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_smooth_zstd')
-                        falff_zstd_overlay, out_file_f = strat.get_node_from_resource_pool('falff_to_standard_smooth_zstd')
+                        alff_zstd_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_smooth_zstd',logger)
+                        falff_zstd_overlay, out_file_f = strat.get_node_from_resource_pool('falff_to_standard_smooth_zstd',logger)
                         montage_alff_zstd = create_montage('montage_alff_zstd_%d' % num_strat,
                                       'cyan_to_yellow', 'alff_standard_smooth_zstd')
                         montage_alff_zstd.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4923,8 +4336,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                                 'qc___falff_smooth_a': (montage_falff_zstd, 'outputspec.axial_png'),
                                                 'qc___falff_smooth_s': (montage_falff_zstd, 'outputspec.sagittal_png'),
                                                 'qc___alff_smooth_hist': (hist_alff_zstd, 'hist_path'),
-                                                'qc___falff_smooth_hist': (hist_falff_zstd, 'hist_path')})
->>>>>>> .merge_file_dIlCkY
+                                                'qc___falff_smooth_hist': (hist_falff_zstd, 'hist_path')},logger)
 
                         if not 16 in qc_montage_id_a:
                             qc_montage_id_a[16] = 'alff_smooth_a'
@@ -4939,29 +4351,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
 
                     else:
-<<<<<<< .merge_file_jcwo50
-                        alff_overlay, out_file = strat.get_node_from_resource_pool('alff_Z_to_standard',logger)
-                        falff_overlay, out_file = strat.get_node_from_resource_pool('falff_Z_to_standard',logger)
-                        montage_alff = create_montage('montage_alff_%d' % num_strat,
-                                      'cyan_to_yellow', 'alff_standard')
-                        montage_alff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        montage_falff = create_montage('montage_falff_%d' % num_strat,
-                                      'cyan_to_yellow', 'falff_standard')
-                        montage_falff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(alff_overlay, out_file,
-                                         hist_alff, 'measure_file')
-
-                        workflow.connect(falff_overlay, out_file_f,
-                                         hist_falff, 'measure_file')
-                        strat.update_resource_pool({'qc___alff_a': (montage_alff, 'outputspec.axial_png'),
-                                                'qc___alff_s': (montage_alff, 'outputspec.sagittal_png'),
-                                                'qc___falff_a': (montage_falff, 'outputspec.axial_png'),
-                                                'qc___falff_s': (montage_falff, 'outputspec.sagittal_png'),
-                                                'qc___alff_hist': (hist_alff, 'hist_path'),
-                                                'qc___falff_hist': (hist_falff, 'hist_path')},logger)
-=======
-                        alff_zstd_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_zstd')
-                        falff_zstd_overlay, out_file = strat.get_node_from_resource_pool('falff_to_standard_zstd')
+                        alff_zstd_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_zstd',logger)
+                        falff_zstd_overlay, out_file = strat.get_node_from_resource_pool('falff_to_standard_zstd',logger)
                         montage_alff_zstd = create_montage('montage_alff_zstd_%d' % num_strat,
                                       'cyan_to_yellow', 'alff_standard_zstd')
                         montage_alff_zstd.inputs.inputspec.underlay = c.template_brain_only_for_func
@@ -4978,8 +4369,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                                 'qc___falff_zstd_a': (montage_falff_zstd, 'outputspec.axial_png'),
                                                 'qc___falff_zstd_s': (montage_falff_zstd, 'outputspec.sagittal_png'),
                                                 'qc___alff_zstd_hist': (hist_alff_zstd, 'hist_path'),
-                                                'qc___falff_zstd_hist': (hist_falff_zstd, 'hist_path')})
->>>>>>> .merge_file_dIlCkY
+                                                'qc___falff_zstd_hist': (hist_falff_zstd, 'hist_path')},logger)
+
 
                         if not 16 in qc_montage_id_a:
                             qc_montage_id_a[16] = 'alff_a'
@@ -4997,61 +4388,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                     workflow.connect(drop_percent_zstd, 'modified_measure_file',
                                      montage_alff_zstd, 'inputspec.overlay')
-
-<<<<<<< .merge_file_jcwo50
-                    if c.fwhm != None:
-                        alff_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_smooth',logger)
-                        falff_overlay, out_file_f = strat.get_node_from_resource_pool('falff_to_standard_smooth',logger)
-                        montage_alff = create_montage('montage_alff_%d' % num_strat,
-                                      'cyan_to_yellow', 'alff_standard_smooth')
-                        montage_alff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        montage_falff = create_montage('montage_falff_%d' % num_strat,
-                                      'cyan_to_yellow', 'falff_standard_smooth')
-                        montage_falff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(alff_overlay, out_file,
-                                         hist_alff, 'measure_file')
-
-                        workflow.connect(falff_overlay, out_file_f,
-                                         hist_falff, 'measure_file')
-                        strat.update_resource_pool({'qc___alff_smooth_a': (montage_alff, 'outputspec.axial_png'),
-                                                'qc___alff_smooth_s': (montage_alff, 'outputspec.sagittal_png'),
-                                                'qc___falff_smooth_a': (montage_falff, 'outputspec.axial_png'),
-                                                'qc___falff_smooth_s': (montage_falff, 'outputspec.sagittal_png'),
-                                                'qc___alff_smooth_hist': (hist_alff, 'hist_path'),
-                                                'qc___falff_smooth_hist': (hist_falff, 'hist_path')},logger)
-=======
                     workflow.connect(falff_zstd_overlay, out_file,
                                      drop_percent_falff_zstd, 'measure_file')
->>>>>>> .merge_file_dIlCkY
-
                     workflow.connect(drop_percent_falff_zstd, 'modified_measure_file',
                                      montage_falff_zstd, 'inputspec.overlay')
 
 
 
 
-<<<<<<< .merge_file_jcwo50
-                    else:
-                        alff_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard',logger)
-                        falff_overlay, out_file = strat.get_node_from_resource_pool('falff_to_standard',logger)
-                        montage_alff = create_montage('montage_alff_%d' % num_strat,
-                                      'cyan_to_yellow', 'alff_standard')
-                        montage_alff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        montage_falff = create_montage('montage_falff_%d' % num_strat,
-                                      'cyan_to_yellow', 'falff_standard')
-                        montage_falff.inputs.inputspec.underlay = c.template_brain_only_for_func
-                        workflow.connect(alff_overlay, out_file,
-                                         hist_alff, 'measure_file')
 
-                        workflow.connect(falff_overlay, out_file_f,
-                                         hist_falff, 'measure_file')
-                        strat.update_resource_pool({'qc___alff_a': (montage_alff, 'outputspec.axial_png'),
-                                                'qc___alff_s': (montage_alff, 'outputspec.sagittal_png'),
-                                                'qc___falff_a': (montage_falff, 'outputspec.axial_png'),
-                                                'qc___falff_s': (montage_falff, 'outputspec.sagittal_png'),
-                                                'qc___alff_hist': (hist_alff, 'hist_path'),
-                                                'qc___falff_hist': (hist_falff, 'hist_path')},logger)
-=======
                 if c.fwhm != None:
                     alff_overlay, out_file = strat.get_node_from_resource_pool('alff_to_standard_smooth')
                     falff_overlay, out_file_f = strat.get_node_from_resource_pool('falff_to_standard_smooth')
@@ -5082,7 +4427,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         qc_montage_id_a[17] = 'falff_smooth_a'
                         qc_montage_id_s[17] = 'falff_smooth_s'
                         qc_hist_id[17] = 'falff_smooth_hist'
->>>>>>> .merge_file_dIlCkY
 
 
                 else:
