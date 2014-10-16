@@ -24,12 +24,14 @@ queue :  all.q
 
 
 # Number of cores (on a single machine) or slots on a node (cluster/grid) per subject. Slots are cores on a cluster/grid node.
-# IMPORTANT: Number of Cores Per Subject multiplied by Number of Subjects to Run Simultaneously must not be greater than the total number of cores.
+# IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration (ANTS only)' must not be greater than the total number of cores.
 numCoresPerSubject :  1
 
 
 # This number depends on computing resources.
-numSubjectsAtOnce :  4
+# IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration (ANTS only)' must not be greater than the total number of cores.
+numSubjectsAtOnce :  1
+
 
 # This number depends on computing resources.
 # IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration (ANTS only)' must not be greater than the total number of cores.
@@ -58,7 +60,7 @@ runSymbolicLinks :  [1]
 
 
 # Generate quality control pages containing preprocessing and derivative outputs.
-generateQualityControlImages :  [0]
+generateQualityControlImages :  [1]
 
 
 # Deletes the contents of the Working Directory after running.
@@ -66,9 +68,10 @@ generateQualityControlImages :  [0]
 removeWorkingDir :  False
 
 
-# Uses the contents of the Working Directory to regenerate all outputs and their symbolic links.
+# Uses the contents of the Working Directory to regenerate all outputs 
+# and their symbolic links.
 # Requires an intact Working Directory from a previous CPAC run.
-reGenerateOutputs :  True
+reGenerateOutputs :  False
 
 
 # Loads anatomical images for processing by CPAC.
@@ -86,6 +89,12 @@ runFunctionalDataGathering :  [1]
 runAnatomicalPreprocessing :  [1]
 
 
+# Disables skull-stripping on the anatomical inputs if they are already 
+#skull-stripped outside of C-PAC. Set this to yes if your input images 
+#are already skull-stripped.
+already_skullstripped :  [2]
+
+
 # Runs the functional preprocessing workflow.
 # Must be enabled to run any subsequent processing or analysis workflows.
 runFunctionalPreprocessing :  [1]
@@ -97,7 +106,7 @@ functionalMasking :  ['3dAutoMask']
 
 # Decides format of outputs. Off will produce non-z-scored outputs, 
 # On will produce z-scores of outputs, and On/Off will produce both.
-runZScoring :  [1, 0]
+runZScoring :  [1]
 
 
 # Register anatomical images to a template.
@@ -110,8 +119,7 @@ resolution_for_anat :  2mm
 
 
 # Template to be used during registration.
-# It is not necessary to change this path unless you intend to use a 
-# non-standard template.
+# It is not necessary to change this path unless you intend to use a non-standard template.
 template_brain_only_for_anat :  /usr/share/fsl/5.0/data/standard/MNI152_T1_${resolution_for_anat}_brain.nii.gz
 
 
@@ -125,15 +133,22 @@ regOption :  ['ANTS']
 
 
 # Configuration file to be used by FSL to set FNIRT parameters.
-# It is not necessary to change this path unless you intend to use custom FNIRT parameters or a non-standard template.
+# It is not necessary to change this path unless you intend to use 
+# custom FNIRT parameters or a non-standard template.
 fnirtConfig :  T1_2_MNI152_2mm
 
 
-# Automatically segment anatomical images into white matter, gray matter, and CSF based on prior probability maps.
+# Register skull-on anatomical image to a template.
+regWithSkull :  [0]
+
+
+# Automatically segment anatomical images into white matter, gray matter, 
+# and CSF based on prior probability maps.
 runSegmentationPreprocessing :  [1]
 
 
-# Only voxels with a White Matter probability greater than this value will be classified as White Matter.
+# Only voxels with a White Matter probability greater than this value will 
+# be classified as White Matter.
 # Can be a single value or a list of values separated by commas.
 whiteMatterThreshold : [0.98]
 
@@ -149,24 +164,28 @@ cerebralSpinalFluidThreshold : [0.98]
 
 
 # Full path to a directory containing binarized prior probability maps.
-# These maps are included as part of the 'Image Resource Files' package \
+# These maps are included as part of the 'Image Resource Files' package 
 # available on the Install page of the User Guide.
-# It is not necessary to change this path unless you intend to use non-standard priors.
+# It is not necessary to change this path unless you intend to use 
+# non-standard priors.
 priors_path :  /usr/share/fsl/5.0/data/standard/tissuepriors/${resolution_for_anat}
 
 
 # Full path to a binarized White Matter prior probability map.
-# It is not necessary to change this path unless you intend to use non-standard priors.
+# It is not necessary to change this path unless you intend to use 
+# non-standard priors.
 PRIORS_WHITE :  $priors_path/avg152T1_white_bin.nii.gz
 
 
 # Full path to a binarized Gray Matter prior probability map.
-# It is not necessary to change this path unless you intend to use non-standard priors.
+# It is not necessary to change this path unless you intend to use 
+# non-standard priors.
 PRIORS_GRAY :  $priors_path/avg152T1_gray_bin.nii.gz
 
 
 # Full path to a binarized CSF prior probability map.
-# It is not necessary to change this path unless you intend to use non-standard priors.
+# It is not necessary to change this path unless you intend to use 
+# non-standard priors.
 PRIORS_CSF :  $priors_path/avg152T1_csf_bin.nii.gz
 
 
@@ -182,7 +201,8 @@ stopIdx :  None
 
 # Specify the TR at which images were acquired.
 # Default is None (TR information is read from image file header)
-TR :  2.5
+TR :  None
+
 
 # Interpolate voxel time courses so they are sampled at the same time points.
 slice_timing_correction :  [0]
@@ -190,6 +210,7 @@ slice_timing_correction :  [0]
 
 # Acquisition strategy for acquiring image slices.
 slice_timing_pattern :  ['Use NIFTI Header']
+
 
 # Run Functional to Anatomical Registration
 runRegisterFuncToAnat :  [1]
@@ -217,8 +238,7 @@ runRegisterFuncToMNI :  [1]
 
 
 # Matrix containing all 1's. Used as an identity matrix during registration.
-# It is not necessary to change this path unless you intend to use 
-# non-standard MNI registration.
+# It is not necessary to change this path unless you intend to use non-standard MNI registration.
 identityMatrix :  /usr/share/fsl/5.0/etc/flirtsch/ident.mat
 
 
@@ -266,7 +286,7 @@ runMedianAngleCorrection :  [0]
 
 
 # Target angle used during Median Angle Correction.
-targetAngleDeg : [90.0]
+targetAngleDeg : [90]
 
 
 # Apply a temporal band-pass filter to functional data.
@@ -290,7 +310,7 @@ runGenerateMotionStatistics :  [1]
 
 
 # Remove volumes exhibiting excessive motion.
-runScrubbing :  [1, 0]
+runScrubbing :  [0]
 
 
 # Specify the maximum acceptable Framewise Displacement (FD) in millimeters.
@@ -306,14 +326,23 @@ numRemovePrecedingFrames :  1
 numRemoveSubsequentFrames :  2
 
 
-# If you wish to specify new seeds (for use in Time Series Extraction and/or Seed-based Correlation Analysis), this field should contain the full path to a text file containing seed definitions.
+# If you wish to specify new seeds (for use in Time Series Extraction and/or 
+# Seed-based Correlation Analysis), this field should contain the full path to 
+# a text file containing seed definitions.
 # If you do not wish to specify new seeds, this field should be set to None.
-# Seeds are defined by providing a seed label number, x/y/z coordinates in MNI space, seed radius (in mm), and resolution.
+# Seeds are defined by providing a seed label number, x/y/z coordinates in 
+# MNI space, seed radius (in mm), and resolution.
 # Example:
 # 1 -28 -40 -12 2 3mm
 # 2 -4 48 24 3 2mm
-# If multiple seeds are specified with the same resolution, they will be grouped into a single file containing multiple seeds, with the values within each seed ROI set to the seed label number.
-# Note that CPAC does not check for overlapping seeds. In the event that a voxel is present in multiple seeds defined here, the value of that voxel will be set to the sum of the two seed label numbers (effectively resulting in a new seed). Users should confirm the seeds they define do not overlap before running CPAC.
+# If multiple seeds are specified with the same resolution, they will be 
+# grouped into a single file containing multiple seeds, with the values 
+# within each seed ROI set to the seed label number.
+# Note that CPAC does not check for overlapping seeds. In the event that 
+# a voxel is present in multiple seeds defined here, the value of that voxel 
+# will be set to the sum of the two seed label numbers (effectively resulting 
+# in a new seed). Users should confirm the seeds they define do not overlap 
+# before running CPAC.
 seedSpecificationFile :  /home/rtungaraza/CPAC_testData/seed_spec.txt
 
 
@@ -321,30 +350,39 @@ seedSpecificationFile :  /home/rtungaraza/CPAC_testData/seed_spec.txt
 seedOutputLocation :  /home/rtungaraza/CPAC_testData/ROIs
 
 
-# It is possible to use the newly generated seeds when running a number of the analyses included in CPAC. Note that these analyses will be run using all new seeds.
-# If you wish to use these new seeds to run Seed-based Correlation Analysis, select ROI Average Timeseries Extraction.
+# It is possible to use the newly generated seeds when running a number of the 
+# analyses included in CPAC. Note that these analyses will be run using all 
+# new seeds.
+# If you wish to use these new seeds to run Seed-based Correlation Analysis, 
+# select ROI Average Timeseries Extraction.
 # If you do not wish to use new seeds in these analyses, select none.
 useSeedInAnalysis :  ['roi_average']
 
 
-# Extract the average time series of one or more ROIs/seeds. Must be enabled if you wish to run Seed-based Correlation Analysis.
+# Extract the average time series of one or more ROIs/seeds. Must be 
+# enabled if you wish to run Seed-based Correlation Analysis.
 runROITimeseries :  [1]
 
 
 # Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing one or more ROIs.
-# If you only wish to extract time series for newly defined spherical seed ROIs, set this field to None.
+# Each line in this file should be the path to a NIfTI file containing 
+# one or more ROIs.
+# If you only wish to extract time series for newly defined spherical 
+# seed ROIs, set this field to None.
+# Note that all ROI masks values are converted to integers within C-PAC.
 roiSpecificationFile :  /home/rtungaraza/CPAC_testData/roi_specs.txt
 
 
 # Full path to a text file containing a list ROI files.
 # Each line in this file should be the path to a NIfTI file containing one or more ROIs.
 # If you only wish to extract time series for newly defined spherical seed ROIs, set this field to None.
+# Note that all ROI masks values are converted to integers within C-PAC.
 roiSpecificationFileForSCA :  /home/rtungaraza/CPAC_testData/roi_specs.txt
 
 
-# By default, extracted time series are written as both a text file and a 1D file. Additional output formats are as a .csv spreadsheet or a Numpy array.
-roiTSOutputs :  [False, False]
+# By default, extracted time series are written as both a text file and a 1D 
+# file. Additional output formats are as a .csv spreadsheet or a Numpy array.
+roiTSOutputs :  [True, True]
 
 
 # Extract the time series of all voxels within one or more ROIs/seeds.
@@ -352,19 +390,24 @@ runVoxelTimeseries :  [1]
 
 
 # Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing a single ROI.
-# If you only wish to extract time series for newly defined spherical seed ROIs, set this field to None.
+# Each line in this file should be the path to a NIfTI file containing a 
+# single ROI.
+# If you only wish to extract time series for newly defined spherical seed 
+# ROIs, set this field to None.
 maskSpecificationFile :  /home/rtungaraza/CPAC_testData/mask_specs.txt
 
 
 # Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing a single ROI.
-# If you only wish to extract time series for newly defined spherical seed ROIs, set this field to None.
+# Each line in this file should be the path to a NIfTI file containing a 
+# single ROI.
+# If you only wish to extract time series for newly defined spherical seed 
+# ROIs, set this field to None.
 maskSpecificationFileForSCA :  /home/rtungaraza/CPAC_testData/mask_specs.txt
 
 
-# By default, extracted time series are written as both a text file and a 1D file. Additional output formats are as a .csv spreadsheet or a Numpy array.
-voxelTSOutputs :  [False, False]
+# By default, extracted time series are written as both a text file and a 1D 
+# file. Additional output formats are as a .csv spreadsheet or a Numpy array.
+voxelTSOutputs :  [True, True]
 
 
 # Register timeseries data to a surface model built by FreeSurfer.
@@ -389,13 +432,15 @@ runVerticesTimeSeries :  [0]
 verticesTSOutputs :  [False, False]
 
 
-# Extract the time series from one or more existing spatial maps (such as an ICA map).
+# Extract the time series from one or more existing spatial maps 
+# (such as an ICA map).
 # Required if you wish to run Dual Regression.
 runSpatialRegression :  [1]
 
 
 # Full path to a text file containing a list spatial maps.
-# Each line in this file should be the path to a 4D NIfTI file containing one spatial map per volume.
+# Each line in this file should be the path to a 4D NIfTI file containing 
+# one spatial map per volume.
 spatialPatternMaps :  /home/rtungaraza/CPAC_testData/spatia_maps_list.txt
 
 
@@ -403,12 +448,16 @@ spatialPatternMaps :  /home/rtungaraza/CPAC_testData/spatia_maps_list.txt
 spatialDemean :  True
 
 
-# For each extracted ROI Average and/or ROI Voxelwise time series, CPAC will generate a whole-brain correlation map.
-# It should be noted that for a given seed/ROI, SCA maps for ROI Average and ROI Voxelwise time series will be the same.
+# For each extracted ROI Average and/or ROI Voxelwise time series, CPAC 
+# will generate a whole-brain correlation map.
+# It should be noted that for a given seed/ROI, SCA maps for ROI Average 
+# and ROI Voxelwise time series will be the same.
 runSCA :  [1]
 
 
-# CPAC will enter all extracted time series from ROI Average TSE, ROI Voxelwise TSE, and Spatial Regression into a single multiple regression model and output a single correlation map.
+# CPAC will enter all extracted time series from ROI Average TSE, ROI 
+# Voxelwise TSE, and Spatial Regression into a single multiple regression
+#  model and output a single correlation map.
 runMultRegSCA :  [1]
 
 
@@ -473,18 +522,17 @@ runReHo :  [1]
 # 7 (Faces)
 # 19 (Faces + Edges)
 # 27 (Faces + Edges + Corners)
-clusterSize :  0
+clusterSize :  2
 
 
 # Calculate Degree, Eigenvector Centrality, or Functional Connectivity Density.
-runNetworkCentrality :  [1]
+runNetworkCentrality :  [0]
 
 
 # Full path to a text file containing a mask or list of ROIs.
 # Each line of this file should contain the path to an ROI or mask.
 # If a mask is specified, centrality will be calculated for all voxels within the mask.
-# If a list of ROIs is specified, each ROI will be treated as a node, and \
-# centrality will be calculated for each node.
+# If a list of ROIs is specified, each ROI will be treated as a node, and centrality will be calculated for each node.
 templateSpecificationFile :  /home/rtungaraza/CPAC_testData/centrality_specs.txt
 
 
@@ -493,7 +541,7 @@ degWeightOptions :  [True, True]
 
 
 # Select the type of threshold used when creating the degree centrality adjacency matrix.
-degCorrelationThresholdOption :  2
+degCorrelationThresholdOption :  0
 
 
 # Based on the Threshold Type selected above, enter a Threshold Value.
@@ -541,7 +589,7 @@ memoryAllocatedForDegreeCentrality :  2.0
 # Full Width at Half Maximum of the Gaussian kernel used during spatial smoothing.
 # Can be a single value or multiple values separated by commas.
 # Note that spatial smoothing is run as the last step in the individual-level analysis pipeline, such that all derivatives are output both smoothed and unsmoothed.
-fwhm : [4]
+fwhm : [6]
 
 
 # Run Bootstrap Analysis of Stable Clusters
@@ -610,17 +658,17 @@ cwasRegressorStrata :  None
 
 
 # This number depends on computing resources.
-numGPAModelsAtOnce :  1
+numGPAModelsAtOnce :  2
 
 
 # Select which derivatives you would like to include when running group analysis.
 # When including Dual Regression, make sure to correct your P-value for the number of maps you are comparing.
 # When including Multiple Regression SCA, you must have more degrees of freedom (subjects) than there were time series.
-derivativeList :  []
+derivativeList : [] # ['sca_roi_Z_to_standard_smooth_fisher_zstd', 'sca_seed_to_standard_smooth_fisher_zstd', 'vmhc_fisher_z_std_z_stat_map', 'alff_to_standard_smooth_zstd', 'falff_to_standard_smooth_zstd', 'reho_to_standard_smooth_zstd', 'centrality_outputs_zstd']
 
 
 # Use the + to add FSL model configuration to be run.
-modelConfigs :  []
+modelConfigs : [] # ['/home/likewise-open/CHILDMIND/steven.giavasis/run/034a/new_sub_list/interactions/gpa_fsl_config_interactions3.yaml']
 
 
 # Set this option to True if any of the models specified above contain F-tests.

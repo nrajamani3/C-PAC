@@ -43,7 +43,8 @@ class TestPipelineGraph(unittest.TestCase):
         subFile = "subject_list_4_unittest1.yml"
         self.sublist = yaml.load(open(subFile, 'r'))  
 
-        configFile = "pipeline_4_unittest.yml"
+        #configFile = "pipeline_4_unittest.yml"
+        configFile = "pipeline_config_037_ANTS.yml"
         self.c = Configuration(yaml.load(open(configFile,'r')))
 
         # build strategies 
