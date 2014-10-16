@@ -62,7 +62,8 @@ from CPAC.pipeline.utils import    strategy, create_log_node, logStandardError,\
                         runRegistrationPreprocessing, runSegmentationPreprocessing,\
                         runFunctionalDataGathering, collect_transforms_func_mni,\
                         fsl_to_itk_conversion, ants_apply_warps_func_mni,\
-                        fisher_z_score_standardize, z_score_standardize
+                        fisher_z_score_standardize, z_score_standardize,\
+                        connectCentralityWorkflow, output_smooth,output_smooth_FuncToMNI
 import zlib
 import linecache
 import csv
@@ -639,13 +640,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
                 # Input functional image (func.nii.gz)
                 node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
-                workflow.connect(node, out_file,
-                                 func_to_anat, 'inputspec.func')
+                workflow.connect(node, out_file,func_to_anat, 'inputspec.func')
 
                 # Input skull-stripped anatomical (anat.nii.gz)
                 node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
-                workflow.connect(node, out_file,
-                                 func_to_anat, 'inputspec.anat')
+                workflow.connect(node, out_file,func_to_anat, 'inputspec.anat')
 
    
 
@@ -2052,44 +2051,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             template_dataflow = create_roi_mask_dataflow(c.templateSpecificationFile, 'Network Centrality', 'template_dataflow_%d' % num_strat)
 
             # Connect in each workflow for the centrality method of interest
-            def connectCentralityWorkflow(methodOption,
-                                          thresholdOption,
-                                          threshold,
-                                          weightOptions,
-                                          mList):
-                # Create centrality workflow
-                network_centrality = create_resting_state_graphs(\
-                                     c.memoryAllocatedForDegreeCentrality,
-                                     'network_centrality_%d-%d' \
-                                     %(num_strat,methodOption))
-                # Connect registered function input image to inputspec
-                workflow.connect(resample_functional_to_template, 'out_file',
-                                 network_centrality, 'inputspec.subject')
-                # Subject mask/parcellation image
-                workflow.connect(template_dataflow, 'outputspec.out_file',
-                                 network_centrality, 'inputspec.template')
-                # Give which method we're doing (0 - deg, 1 - eig, 2 - lfcd)
-                network_centrality.inputs.inputspec.method_option = \
-                methodOption
-                # Type of threshold (0 - p-value, 1 - sparsity, 2 - corr)
-                network_centrality.inputs.inputspec.threshold_option = \
-                thresholdOption
-                # Connect threshold value (float)
-                network_centrality.inputs.inputspec.threshold = threshold
-                # List of two booleans, first for binary, second for weighted
-                network_centrality.inputs.inputspec.weight_options = \
-                weightOptions
-                # Merge output with others via merge_node connection
-                workflow.connect(network_centrality,
-                                 'outputspec.centrality_outputs',
-                                 merge_node,
-                                 mList)
-                # Append this as a strategy
-                strat.append_name(network_centrality.name)
-                # Create log node for strategy
-                create_log_node(workflow,network_centrality,
-                                'outputspec.centrality_outputs',
-                                num_strat,log_dir)
+            
                 
             # Init merge node for appending method output lists to one another
             merge_node = pe.Node(util.Function(input_names=['deg_list',
@@ -2101,27 +2063,20 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             
             # If we're calculating degree centrality
             if c.degWeightOptions.count(True) > 0:
-                connectCentralityWorkflow(0,
-                                          c.degCorrelationThresholdOption,
-                                          c.degCorrelationThreshold,
-                                          c.degWeightOptions,
-                                          'deg_list')
+                connectCentralityWorkflow(0,c.degCorrelationThresholdOption,\
+                                          c.degCorrelationThreshold,c.degWeightOptions,\
+                                          'deg_list',workflow,log_dir,num_strat)
 
             # If we're calculating eigenvector centrality
             if c.eigWeightOptions.count(True) > 0:
-                connectCentralityWorkflow(1,
-                                          c.eigCorrelationThresholdOption,
-                                          c.eigCorrelationThreshold,
-                                          c.eigWeightOptions,
-                                          'eig_list')
+                connectCentralityWorkflow(1,c.eigCorrelationThresholdOption,
+                                          c.eigCorrelationThreshold,c.eigWeightOptions,
+                                          'eig_list',workflow,log_dir,num_strat)
             
             # If we're calculating lFCD
             if c.lfcdWeightOptions.count(True) > 0:
-                connectCentralityWorkflow(2,
-                                          2,
-                                          c.lfcdCorrelationThreshold,
-                                          c.lfcdWeightOptions,
-                                          'lfcd_list')
+                connectCentralityWorkflow(2,2,c.lfcdCorrelationThreshold,\
+                                          c.lfcdWeightOptions,'lfcd_list',workflow,log_dir,num_strat)
 
             try:
 
@@ -2357,165 +2312,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     OUTPUT TO SMOOTH
     '''
-
-    def output_smooth(output_name, output_resource, strat, num_strat, map_node=0):
- 
-        output_to_standard_smooth = None
-
-        if map_node == 0:
-            output_smooth = pe.Node(interface=fsl.MultiImageMaths(),
-                    name='%s_smooth_%d' % (output_name, num_strat))
-
-            output_average = pe.Node(interface=preprocess.Maskave(),
-                    name='%s_smooth_mean_%d' % (output_name, num_strat))
-
-            mean_to_csv = pe.Node(util.Function(input_names=['in_file', 'output_name'],
-                        output_names=['output_mean'],
-                        function=extract_output_mean),
-                        name='%s_smooth_mean_to_txt_%d' % (output_name, \
-                        num_strat))
-
-
-        elif map_node == 1:
-            output_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),
-                    name='%s_smooth_%d' % (output_name, num_strat), \
-                    iterfield=['in_file'])
-
-            output_average = pe.MapNode(interface=preprocess.Maskave(),
-                    name='%s_smooth_mean_%d' % (output_name, num_strat), \
-                    iterfield=['in_file'])
-
-            mean_to_csv = pe.MapNode(util.Function(input_names=['in_file', 'output_name'],
-                        output_names=['output_mean'],
-                        function=extract_output_mean),
-                        name='%s_smooth_mean_to_txt_%d' % (output_name, \
-                        num_strat), iterfield=['in_file'])
-
-
-        mean_to_csv.inputs.output_name = output_name + '_smooth'
-
-
-        try:
-
-            node, out_file = strat. \
-                    get_node_from_resource_pool(output_resource,logger)
-
-            workflow.connect(node, out_file, output_smooth, 'in_file')
-
-            workflow.connect(inputnode_fwhm, ('fwhm', set_gauss), 
-                    output_smooth, 'op_string')
-
-            node, out_file = strat. \
-                    get_node_from_resource_pool('functional_brain_mask',logger)
-            workflow.connect(node, out_file, output_smooth, 'operand_files')
-
-            workflow.connect(output_smooth, 'out_file', output_average, \
-                    'in_file')
-
-            workflow.connect(output_average, 'out_file', mean_to_csv, \
-                    'in_file')
-
-
-        except:
-            logConnectionError('%s smooth' % output_name, num_strat, \
-                    strat.get_resource_pool(), '0027',logger)
-            raise
-
-        strat.append_name(output_smooth.name)
-        strat.update_resource_pool({'%s_smooth' % (output_name): \
-                (output_smooth, 'out_file'),
-                'output_means.@%s' % (output_name): (mean_to_csv, 'output_mean')},logger)
-
-
-        if 1 in c.runRegisterFuncToMNI:
-
-            if map_node == 0:
-                output_to_standard_smooth = pe.Node(interface= \
-                        fsl.MultiImageMaths(), name='%s_to_standard_' \
-                        'smooth_%d' % (output_name, num_strat))
-
-                output_to_standard_average = pe.Node(interface= \
-                        preprocess.Maskave(), name='%s_to_standard_smooth_' \
-                        'mean_%d' % (output_name, num_strat))
-
-                standard_mean_to_csv = pe.Node(util.Function( \
-                        input_names=['in_file', 'output_name'], output_names=['output_mean'],
-                        function=extract_output_mean),
-                        name='%s_to_standard_smooth_mean_to_txt_%d' % \
-                        (output_name, num_strat))
-
-
-            elif map_node == 1:
-                output_to_standard_smooth = pe.MapNode(interface= \
-                        fsl.MultiImageMaths(), name='%s_to_standard_' \
-                        'smooth_%d' % (output_name, num_strat), \
-                        iterfield=['in_file'])
-
-                output_to_standard_average = pe.MapNode(interface= \
-                        preprocess.Maskave(), name='%s_to_standard_smooth_' \
-                        'mean_%d' % (output_name, num_strat), \
-                        iterfield=['in_file'])
-
-                standard_mean_to_csv = pe.MapNode(util.Function( \
-                        input_names=['in_file', 'output_name'], output_names=['output_mean'],
-                        function=extract_output_mean),
-                        name='%s_to_standard_smooth_mean_to_txt_%d' % \
-                        (output_name, num_strat), iterfield=['in_file'])
-
-
-            standard_mean_to_csv.inputs.output_name = output_name + '_to_standard_smooth'
-
-
-            try:
-
-                node, out_file = strat.get_node_from_resource_pool('%s_to_' \
-                        'standard' % output_name,logger)
-                
-                workflow.connect(node, out_file, output_to_standard_smooth,
-                        'in_file')
-                
-                workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),
-                        output_to_standard_smooth, 'op_string')
-
-                node, out_file = strat.get_node_from_resource_pool('func' \
-                        'tional_brain_mask_to_standard',logger)
-                workflow.connect(node, out_file, output_to_standard_smooth,
-                        'operand_files')
-
-                workflow.connect(output_to_standard_smooth, 'out_file', \
-                        output_to_standard_average, 'in_file')
-
-                workflow.connect(output_to_standard_average, 'out_file', \
-                        standard_mean_to_csv, 'in_file')
-
-
-            except:
-                logConnectionError('%s smooth in MNI' % output_name, \
-                        num_strat, strat.get_resource_pool(), '0028',logger)
-                raise Exception
-
-
-            strat.append_name(output_to_standard_smooth.name)
-            strat.update_resource_pool({'%s_to_standard_smooth' % \
-                    (output_name):(output_to_standard_smooth, 'out_file'),
-                    'output_means.@%s_to_standard_smooth' % (output_name): \
-                    (standard_mean_to_csv, 'output_mean')},logger)
-            create_log_node(workflow,output_to_standard_smooth, 'out_file', num_strat,log_dir)
-
-            
-        num_strat += 1
-
-
-
-
-    '''
-    z-score standardization functions
-    '''
-
     
-
-
-
+    
 
     '''
     Transforming Dual Regression outputs to MNI
@@ -2552,10 +2350,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     if 1 in c.runRegisterFuncToMNI and (1 in c.runALFF):
 
         for strat in strat_list:
-
             output_to_standard('alff', 'alff_img', strat, num_strat)
-            output_to_standard('falff', 'falff_img', strat, num_strat)
-               
+            output_to_standard('falff', 'falff_img', strat, num_strat)               
             num_strat += 1
     
     strat_list += new_strat_list
@@ -2789,158 +2585,103 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''    
     Smoothing ALFF fALFF Z scores and or possibly Z scores in MNI 
     '''
-    
     new_strat_list = []
     num_strat = 0
     if (1 in c.runALFF) and c.fwhm != None:
         for strat in strat_list:
-
-            output_smooth('alff', 'alff_img', strat, num_strat)
-            output_smooth('falff', 'falff_img', strat, num_strat)
-
+            num_strat=output_smooth(workflow,inputnode_fwhm,'alff', 'alff_img', strat, num_strat,logger,c,log_dir)
+            num_strat=output_smooth(workflow,inputnode_fwhm,'falff', 'falff_img', strat, num_strat,logger,c,log_dir)
             num_strat += 1
-
     strat_list += new_strat_list
-
-
 
     '''
     z-standardize alff/falff MNI-standardized outputs
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runZScoring and (1 in c.runALFF):
-
         for strat in strat_list:
-
             if c.fwhm != None:
                 z_score_standardize(workflow,'alff', 'alff_to_standard_smooth', strat, num_strat,logger)
                 z_score_standardize(workflow,'falff', 'falff_to_standard_smooth', strat, num_strat,logger)
             else:
                 z_score_standardize(workflow,'alff', 'alff_to_standard', strat, num_strat,logger)
                 z_score_standardize(workflow,'falff', 'falff_to_standard', strat, num_strat,logger)
-
             num_strat += 1
-
     strat_list += new_strat_list
-
-
-
 
     '''
     Smoothing ReHo outputs and or possibly ReHo outputs in MNI 
-    '''
-    
+    '''    
     new_strat_list = []
     num_strat = 0
-
     if (1 in c.runReHo) and c.fwhm != None:
         for strat in strat_list:
-
-            output_smooth('reho', 'raw_reho_map', strat, num_strat)
-
+            num_strat=output_smooth(workflow,inputnode_fwhm,'reho', 'raw_reho_map', strat, num_strat,logger,c,log_dir)
             num_strat += 1
-
     strat_list += new_strat_list
-
-
 
     '''
     z-standardize ReHo MNI-standardized outputs
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runZScoring and (1 in c.runReHo):
-
         for strat in strat_list:
-
             if c.fwhm != None:
                 z_score_standardize(workflow,'reho', 'reho_to_standard_smooth', strat, num_strat,logger)
             else:
                 z_score_standardize(workflow,'reho', 'reho_to_standard', strat, num_strat,logger)
-
-            num_strat += 1
-
+                num_strat += 1
     strat_list += new_strat_list
-
-
-    
 
     '''
     Smoothing SCA roi based Z scores and or possibly Z scores in MNI 
     '''
     if (1 in c.runSCA) and (1 in c.runROITimeseries) and c.fwhm != None:
         for strat in strat_list:
-
-            output_smooth('sca_roi', 'sca_roi_correlations', strat, num_strat)
-            
+            num_strat=output_smooth(workflow,inputnode_fwhm,'sca_roi', 'sca_roi_correlations', strat, num_strat,logger,c,log_dir)            
             num_strat += 1
-
     strat_list += new_strat_list
-
-
 
     '''
     fisher-z-standardize SCA ROI MNI-standardized outputs
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runZScoring and (1 in c.runSCA) and (1 in c.runROITimeseries):
-
         for strat in strat_list:
-
             if c.fwhm != None:
                 fisher_z_score_standardize(workflow,'sca_roi', 'sca_roi_to_standard_smooth', 'roi_timeseries_for_SCA', strat, num_strat,logger, 1)
             else:
                 fisher_z_score_standardize(workflow,'sca_roi', 'sca_roi_to_standard', 'roi_timeseries_for_SCA', strat, num_strat,logger, 1)
-
             num_strat += 1
-
     strat_list += new_strat_list
-
-
 
     '''
     Smoothing SCA seed based Z scores and or possibly Z scores in MNI 
     '''
     new_strat_list = []
     num_strat = 0
-
     if (1 in c.runSCA) and (1 in c.runVoxelTimeseries) and c.fwhm != None:
         for strat in strat_list:
-
-            output_smooth('sca_seed', 'sca_seed_correlations', strat, num_strat)
-
+            num_strat=output_smooth(workflow,inputnode_fwhm,'sca_seed', 'sca_seed_correlations', strat, num_strat,logger,c,log_dir)
             num_strat += 1
-
     strat_list += new_strat_list
-
 
 
     '''
     fisher-z-standardize SCA seed MNI-standardized outputs
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runZScoring and (1 in c.runSCA) and (1 in c.runVoxelTimeseries):
-
         for strat in strat_list:
-
             if c.fwhm != None:
                 fisher_z_score_standardize(workflow,'sca_seed', 'sca_seed_to_standard_smooth', 'voxel_timeseries_for_SCA', strat, num_strat,logger, 1)
             else:
                 fisher_z_score_standardize(workflow,'sca_seed', 'sca_seed_to_standard', 'voxel_timeseries_for_SCA', strat, num_strat,logger, 1)
-
             num_strat += 1
-
     strat_list += new_strat_list
 
 

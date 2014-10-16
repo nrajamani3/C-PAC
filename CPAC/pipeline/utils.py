@@ -656,7 +656,157 @@ def fisher_z_score_standardize(workflow,output_name, output_resource, \
     strat.append_name(fisher_z_score_std.name)
     strat.update_resource_pool({'%s_fisher_zstd' % (output_resource): \
             (fisher_z_score_std, 'outputspec.fisher_z_score_img')},logger) 
-                           
+
+def connectCentralityWorkflow(methodOption,thresholdOption,threshold,\
+                              weightOptions,mList,workflow,log_dir,num_strat):
+    """
+    """
+    # Create centrality workflow
+    network_centrality = create_resting_state_graphs(c.memoryAllocatedForDegreeCentrality,\
+                         'network_centrality_%d-%d' %(num_strat,methodOption))
+    # Connect registered function input image to inputspec
+    workflow.connect(resample_functional_to_template, 'out_file',network_centrality, 'inputspec.subject')
+    # Subject mask/parcellation image
+    workflow.connect(template_dataflow, 'outputspec.out_file',network_centrality, 'inputspec.template')
+    # Give which method we're doing (0 - deg, 1 - eig, 2 - lfcd)
+    network_centrality.inputs.inputspec.method_option = methodOption
+    # Type of threshold (0 - p-value, 1 - sparsity, 2 - corr)
+    network_centrality.inputs.inputspec.threshold_option = thresholdOption
+    # Connect threshold value (float)
+    network_centrality.inputs.inputspec.threshold = threshold
+    # List of two booleans, first for binary, second for weighted
+    network_centrality.inputs.inputspec.weight_options = weightOptions
+    # Merge output with others via merge_node connection
+    workflow.connect(network_centrality,'outputspec.centrality_outputs',merge_node,mList)
+    # Append this as a strategy
+    strat.append_name(network_centrality.name)
+    # Create log node for strategy
+    create_log_node(workflow,network_centrality,'outputspec.centrality_outputs',num_strat,log_dir)
+                        
+def output_smooth_FuncToMNI(workflow,output_name,num_strat,logger,strat,log_dir,map_node=0):
+    """
+    """
+    output_to_standard_smooth = None
+    if map_node == 0:
+        output_to_standard_smooth = pe.Node(interface= fsl.MultiImageMaths(), name='%s_to_standard_' \
+                                    'smooth_%d' % (output_name, num_strat))
+        output_to_standard_average = pe.Node(interface= preprocess.Maskave(), name='%s_to_standard_smooth_' \
+                                    'mean_%d' % (output_name, num_strat))
+        standard_mean_to_csv = pe.Node(util.Function( input_names=['in_file', 'output_name'], output_names=['output_mean'],\
+                                    function=extract_output_mean),name='%s_to_standard_smooth_mean_to_txt_%d' % \
+                                    (output_name, num_strat))
+    elif map_node == 1:
+        output_to_standard_smooth = pe.MapNode(interface= fsl.MultiImageMaths(), name='%s_to_standard_' \
+                                    'smooth_%d' % (output_name, num_strat), iterfield=['in_file'])
+        output_to_standard_average = pe.MapNode(interface= preprocess.Maskave(), name='%s_to_standard_smooth_' \
+                                    'mean_%d' % (output_name, num_strat),iterfield=['in_file'])
+        standard_mean_to_csv = pe.MapNode(util.Function( input_names=['in_file', 'output_name'], output_names=['output_mean'],
+                                    function=extract_output_mean),name='%s_to_standard_smooth_mean_to_txt_%d' % \
+                                    (output_name, num_strat), iterfield=['in_file'])
+
+    standard_mean_to_csv.inputs.output_name = output_name + '_to_standard_smooth'
+    try:
+        node, out_file = strat.get_node_from_resource_pool('%s_to_standard'%output_name,logger)                
+        workflow.connect(node, out_file, output_to_standard_smooth,'in_file')                
+        workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),output_to_standard_smooth, 'op_string')
+        
+        node, out_file = strat.get_node_from_resource_pool('functional_brain_mask_to_standard',logger)
+        workflow.connect(node, out_file, output_to_standard_smooth,'operand_files')
+        workflow.connect(output_to_standard_smooth, 'out_file',output_to_standard_average, 'in_file')
+        workflow.connect(output_to_standard_average, 'out_file',standard_mean_to_csv, 'in_file')
+    except:
+        logConnectionError('%s smooth in MNI'%output_name,num_strat, strat.get_resource_pool(), '0028',logger)
+        raise Exception
+    
+    strat.append_name(output_to_standard_smooth.name)
+    strat.update_resource_pool({'%s_to_standard_smooth' % \
+                    (output_name):(output_to_standard_smooth, 'out_file'),
+                    'output_means.@%s_to_standard_smooth' % (output_name): \
+                    (standard_mean_to_csv, 'output_mean')},logger)
+    create_log_node(workflow,output_to_standard_smooth, 'out_file', num_strat,log_dir)
+    
+def output_smooth(workflow,inputnode_fwhm,output_name,output_resource,strat,num_strat,logger,c,log_dir,map_node=0):
+    """
+    """
+    output_to_standard_smooth = None
+    if map_node == 0:
+        output_smooth = pe.Node(interface=fsl.MultiImageMaths(),name='%s_smooth_%d' % (output_name, num_strat))
+        output_average = pe.Node(interface=preprocess.Maskave(),name='%s_smooth_mean_%d' % (output_name, num_strat))
+        mean_to_csv = pe.Node(util.Function(input_names=['in_file', 'output_name'],\
+                        output_names=['output_mean'],function=extract_output_mean),\
+                        name='%s_smooth_mean_to_txt_%d' % (output_name,num_strat))
+
+    elif map_node == 1:
+        output_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),\
+                name='%s_smooth_%d' % (output_name, num_strat),iterfield=['in_file'])
+        output_average = pe.MapNode(interface=preprocess.Maskave(),\
+                name='%s_smooth_mean_%d' % (output_name, num_strat),iterfield=['in_file'])
+        mean_to_csv = pe.MapNode(util.Function(input_names=['in_file', 'output_name'],\
+                        output_names=['output_mean'],function=extract_output_mean),\
+                        name='%s_smooth_mean_to_txt_%d' % (output_name,num_strat), iterfield=['in_file'])
+
+    mean_to_csv.inputs.output_name = output_name + '_smooth'
+    try:
+        node, out_file = strat.get_node_from_resource_pool(output_resource,logger)
+        workflow.connect(node, out_file, output_smooth, 'in_file')
+        workflow.connect(inputnode_fwhm, ('fwhm', set_gauss), output_smooth, 'op_string')
+        
+        node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
+        workflow.connect(node, out_file, output_smooth, 'operand_files')
+        workflow.connect(output_smooth, 'out_file', output_average,'in_file')
+        workflow.connect(output_average, 'out_file', mean_to_csv,'in_file')
+    except:
+        logConnectionError('%s smooth' % output_name, num_strat,strat.get_resource_pool(), '0027',logger)
+        raise
+
+    strat.append_name(output_smooth.name)
+    strat.update_resource_pool({'%s_smooth' % (output_name): \
+            (output_smooth, 'out_file'),'output_means.@%s' % (output_name): (mean_to_csv, 'output_mean')},logger)
+
+    if 1 in c.runRegisterFuncToMNI:
+##        output_smooth_FuncToMNI(workflow,output_name, num_strat,logger,strat,log_dir,map_node)
+        
+        if map_node == 0:
+            output_to_standard_smooth = pe.Node(interface= fsl.MultiImageMaths(), name='%s_to_standard_' \
+                                        'smooth_%d' % (output_name, num_strat))
+            output_to_standard_average = pe.Node(interface= preprocess.Maskave(), name='%s_to_standard_smooth_' \
+                                        'mean_%d' % (output_name, num_strat))
+            standard_mean_to_csv = pe.Node(util.Function( input_names=['in_file', 'output_name'], output_names=['output_mean'],\
+                                        function=extract_output_mean),name='%s_to_standard_smooth_mean_to_txt_%d' % \
+                                        (output_name, num_strat))
+        elif map_node == 1:
+            output_to_standard_smooth = pe.MapNode(interface= fsl.MultiImageMaths(), name='%s_to_standard_' \
+                                        'smooth_%d' % (output_name, num_strat), iterfield=['in_file'])
+            output_to_standard_average = pe.MapNode(interface= preprocess.Maskave(), name='%s_to_standard_smooth_' \
+                                        'mean_%d' % (output_name, num_strat),iterfield=['in_file'])
+            standard_mean_to_csv = pe.MapNode(util.Function( input_names=['in_file', 'output_name'], output_names=['output_mean'],
+                                        function=extract_output_mean),name='%s_to_standard_smooth_mean_to_txt_%d' % \
+                                        (output_name, num_strat), iterfield=['in_file'])
+
+        standard_mean_to_csv.inputs.output_name = output_name + '_to_standard_smooth'
+        try:
+            node, out_file = strat.get_node_from_resource_pool('%s_to_standard'%output_name,logger)                
+            workflow.connect(node, out_file, output_to_standard_smooth,'in_file')                
+            workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),output_to_standard_smooth, 'op_string')
+            
+            node, out_file = strat.get_node_from_resource_pool('functional_brain_mask_to_standard',logger)
+            workflow.connect(node, out_file, output_to_standard_smooth,'operand_files')
+            workflow.connect(output_to_standard_smooth, 'out_file',output_to_standard_average, 'in_file')
+            workflow.connect(output_to_standard_average, 'out_file',standard_mean_to_csv, 'in_file')
+        except:
+            logConnectionError('%s smooth in MNI'%output_name,num_strat, strat.get_resource_pool(), '0028',logger)
+            raise Exception
+        
+        strat.append_name(output_to_standard_smooth.name)
+        strat.update_resource_pool({'%s_to_standard_smooth' % \
+                        (output_name):(output_to_standard_smooth, 'out_file'),
+                        'output_means.@%s_to_standard_smooth' % (output_name): \
+                        (standard_mean_to_csv, 'output_mean')},logger)
+        create_log_node(workflow,output_to_standard_smooth, 'out_file', num_strat,log_dir)  
+    num_strat += 1
+    return num_strat
+        
+        
 def setScanParamsInputSpecs(c,sub_dict,num_strat):
     """
     """
