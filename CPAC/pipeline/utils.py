@@ -400,7 +400,6 @@ def setAntsInputSpecs(ants_reg_anat_mni,c):
     ants_reg_anat_mni.inputs.inputspec.smoothing_sigmas = [[3,2,1,0],[3,2,1,0],[3,2,1,0]] 
     return ants_reg_anat_mni
     
-    
 def runSegmentationPreprocessing(c,subject_id,sub_dict,workflow,\
                                 workflow_bit_id,workflow_counter,\
                                 strat_list,logger,log_dir):
@@ -643,7 +642,6 @@ def fisher_z_score_standardize(workflow,output_name, output_resource, \
     """
     fisher_z_score_std = get_fisher_zscore(output_resource, map_node, \
                         'fisher_z_score_std_%s_%d' % (output_name, num_strat))
-
     try:
         node, out_file = strat.get_node_from_resource_pool(output_resource,logger)
         workflow.connect(node, out_file, fisher_z_score_std, 'inputspec.correlation_file')
@@ -725,7 +723,8 @@ def output_smooth_FuncToMNI(workflow,output_name,num_strat,logger,strat,log_dir,
                     (standard_mean_to_csv, 'output_mean')},logger)
     create_log_node(workflow,output_to_standard_smooth, 'out_file', num_strat,log_dir)
     
-def output_smooth(workflow,inputnode_fwhm,output_name,output_resource,strat,num_strat,logger,c,log_dir,map_node=0):
+def output_smooth(workflow,inputnode_fwhm,output_name,output_resource,strat,\
+                    num_strat,logger,c,log_dir,map_node=0):
     """
     """
     output_to_standard_smooth = None
@@ -805,16 +804,136 @@ def output_smooth(workflow,inputnode_fwhm,output_name,output_resource,strat,num_
         create_log_node(workflow,output_to_standard_smooth, 'out_file', num_strat,log_dir)  
     num_strat += 1
     return num_strat
-        
+
+def output_to_standard_FSL(c,workflow,logger,output_name, output_resource, strat, \
+                                num_strat, map_node=0, input_image_type=0):
+    """
+    """
+    if map_node == 0:
+        apply_fsl_warp = pe.Node(interface=fsl.ApplyWarp(),\
+                    name='%s_to_standard_%d' % (output_name, num_strat))       
+    elif map_node == 1:
+        apply_fsl_warp = pe.MapNode(interface=fsl.ApplyWarp(),\
+                    name='%s_to_standard_%d' % (output_name, num_strat),\
+                    iterfield=['in_file'])
+    apply_fsl_warp.inputs.ref_file = c.template_skull_for_func
+
+    try:
+        # output file to be warped
+        node, out_file = strat.get_node_from_resource_pool(output_resource,logger)
+        workflow.connect(node, out_file, apply_fsl_warp, 'in_file')
+
+        # linear affine from func->anat linear FLIRT registration
+        node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
+        workflow.connect(node, out_file, apply_fsl_warp, 'premat')
+
+        # nonlinear warp from anatomical->template FNIRT registration
+        node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
+        workflow.connect(node, out_file, apply_fsl_warp, 'field_file')
+    except:
+        logConnectionError('%s to MNI (FSL)' % (output_name),num_strat, \
+                                strat.get_resource_pool(), '0021',logger)
+        raise Exception
+    strat.update_resource_pool(\
+    {'%s_to_standard' % (output_name):(apply_fsl_warp, 'out_file')},logger)
+    strat.append_name(apply_fsl_warp.name)
+    num_strat += 1
+    return num_strat
+
+def connectNodes_to_standard_ANTS(workflow,strat,fsl_to_itk_convert,\
+                        collect_transforms,apply_ants_warp, output_resource):
+    """
+    """
+    # affine from FLIRT func->anat linear registration
+    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
+    workflow.connect(node, out_file, fsl_to_itk_convert,'inputspec.affine_file')
+
+    # reference used in FLIRT func->anat linear registration
+    node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
+    workflow.connect(node, out_file, fsl_to_itk_convert,'inputspec.reference_file')
+
+    # output file to be converted
+    node, out_file = strat.get_node_from_resource_pool(output_resource,logger)
+    workflow.connect(node, out_file, fsl_to_itk_convert,'inputspec.source_file')
+
+    # nonlinear warp from anatomical->template ANTS registration
+    node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
+    workflow.connect(node, out_file, collect_transforms,'inputspec.warp_file')
+
+    # linear initial from anatomical->template ANTS registration
+    node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm',logger)
+    workflow.connect(node, out_file, collect_transforms,'inputspec.linear_initial')
+
+    # linear affine from anatomical->template ANTS registration
+    node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm',logger)
+    workflow.connect(node, out_file, collect_transforms,'inputspec.linear_affine')
+
+    # rigid affine from anatomical->template ANTS registration
+    node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
+    workflow.connect(node, out_file, collect_transforms,'inputspec.linear_rigid')
+
+    # converted FLIRT func->anat affine, now in ITK (ANTS) format
+    workflow.connect(fsl_to_itk_convert,'outputspec.itk_transform', \
+                collect_transforms,'inputspec.fsl_to_itk_affine')
+
+    # output file to be converted
+    node, out_file = strat.get_node_from_resource_pool(output_resource,logger)
+    workflow.connect(node, out_file, apply_ants_warp,'inputspec.input_image')
+
+    # collection of warps to be applied to the output file
+    workflow.connect(collect_transforms,'outputspec.transformation_series', \
+                        apply_ants_warp,'inputspec.transforms')
+    return workflow
+
+def output_to_standard_ANTS(c,workflow,logger,output_name, output_resource, strat, \
+                                num_strat, map_node=0, input_image_type=0):
+    """
+    """
+    fsl_to_itk_convert = create_wf_c3d_fsl_to_itk(map_node, \
+                    name= '%s_fsl_to_itk_%d' % (output_name, num_strat))
+    collect_transforms = create_wf_collect_transforms(map_node,\
+                    name='%s_collect_transforms_%d'% (output_name, num_strat))
+    
+    apply_ants_warp = create_wf_apply_ants_warp(map_node, \
+                    name='%s_to_standard_%d' % (output_name, num_strat))
+    apply_ants_warp.inputs.inputspec.dimension = 3
+    apply_ants_warp.inputs.inputspec.interpolation = 'Linear'
+    apply_ants_warp.inputs.inputspec.reference_image = c.template_brain_only_for_func
+    apply_ants_warp.inputs.inputspec.input_image_type = input_image_type
+
+    try:
+        workflow = connectNodes_to_standard_ANTS(workflow,strat,\
+                    fsl_to_itk_convert,collect_transforms,apply_ants_warp,\
+                    output_resource)
+    except:
+        logConnectionError('%s to MNI (ANTS)' % (output_name),num_strat, \
+                    strat.get_resource_pool(), '0022',logger)
+        raise
+    strat.update_resource_pool({'%s_to_standard' % (output_name): \
+            (apply_ants_warp, 'outputspec.output_image')},logger)
+    strat.append_name(apply_ants_warp.name)
+    num_strat += 1
+    return num_strat
+
+def output_to_standard(c,workflow,logger,output_name, output_resource, strat, \
+                        num_strat, map_node=0, input_image_type=0):
+    """
+    """
+    nodes = getNodeList(strat)           
+    if 'apply_ants_warp_functional_mni' in nodes:
+        num_strat = output_to_standard_ANTS(c,workflow,logger,output_name,\
+                    output_resource,strat,num_strat,map_node,input_image_type)
+    else:
+        num_strat = output_to_standard_FSL(c,workflow,logger,output_name, \
+                output_resource, strat,num_strat, map_node, input_image_type)
+    return num_strat
         
 def setScanParamsInputSpecs(c,sub_dict,num_strat):
     """
     """
     scan_params = pe.Node(util.Function(\
-                    input_names=['subject','scan','subject_map','start_indx',\
-                                'stop_indx'],
-                    output_names=['tr','tpattern','ref_slice','start_indx',\
-                                 'stop_indx'],
+                    input_names=['subject','scan','subject_map','start_indx','stop_indx'],
+                    output_names=['tr','tpattern','ref_slice','start_indx','stop_indx'],
                     function=get_scan_params),
                     name='scan_params_%d' % num_strat)
     scan_params.inputs.subject_map = sub_dict
@@ -825,11 +944,8 @@ def setScanParamsInputSpecs(c,sub_dict,num_strat):
 def setConvertTrParams(num_strat):
     """
     """
-    convert_tr = pe.Node(util.Function(\
-                    input_names=['tr'],
-                    output_names=['tr'],
-                    function=get_tr),
-                    name='convert_tr_%d' % num_strat)
+    convert_tr = pe.Node(util.Function(input_names=['tr'],output_names=['tr'],\
+                            function=get_tr),name='convert_tr_%d' % num_strat)
     convert_tr.inputs.tr = c.TR
     return convert_tr
 

@@ -63,7 +63,8 @@ from CPAC.pipeline.utils import    strategy, create_log_node, logStandardError,\
                         runFunctionalDataGathering, collect_transforms_func_mni,\
                         fsl_to_itk_conversion, ants_apply_warps_func_mni,\
                         fisher_z_score_standardize, z_score_standardize,\
-                        connectCentralityWorkflow, output_smooth,output_smooth_FuncToMNI
+                        connectCentralityWorkflow, output_smooth,output_smooth_FuncToMNI,\
+                        output_to_standard
 import zlib
 import linecache
 import csv
@@ -2135,12 +2136,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 tmp.name = list(strat.name)
                 strat = tmp
                 new_strat_list.append(strat)
-
             num_strat += 1
-
     strat_list += new_strat_list
-
-
     num_strat = 0
 
 
@@ -2152,230 +2149,41 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     """""""""""""""""""""""""""""""""""""""""""""""""""
 
     '''
-    OUTPUT TO STANDARD
-    '''
-
-    def output_to_standard(output_name, output_resource, strat, num_strat, map_node=0, input_image_type=0):
-            
-
-        nodes = getNodeList(strat)
-           
-        if 'apply_ants_warp_functional_mni' in nodes:
-
-            # ANTS WARP APPLICATION
-
-            fsl_to_itk_convert = create_wf_c3d_fsl_to_itk(map_node, name= \
-                    '%s_fsl_to_itk_%d' % (output_name, num_strat))
-
-            collect_transforms = create_wf_collect_transforms(map_node, \
-                    name='%s_collect_transforms_%d' \
-                    % (output_name, num_strat))
-
-            apply_ants_warp = create_wf_apply_ants_warp(map_node, name= \
-                    '%s_to_standard_%d' % (output_name, num_strat))
-
-            apply_ants_warp.inputs.inputspec.dimension = 3
-            apply_ants_warp.inputs.inputspec.interpolation = 'Linear'
-            apply_ants_warp.inputs.inputspec. \
-                    reference_image = c.template_brain_only_for_func
-
-            apply_ants_warp.inputs.inputspec. \
-                    input_image_type = input_image_type
-
-
-            try:
-
-                # affine from FLIRT func->anat linear registration
-                node, out_file = strat.get_node_from_resource_pool('func' \
-                        'tional_to_anat_linear_xfm',logger)
-                workflow.connect(node, out_file, fsl_to_itk_convert,
-                        'inputspec.affine_file')
-
-                # reference used in FLIRT func->anat linear registration
-                node, out_file = strat.get_node_from_resource_pool('anat' \
-                        'omical_brain',logger)
-                workflow.connect(node, out_file, fsl_to_itk_convert,
-                        'inputspec.reference_file')
-
-                # output file to be converted
-                node, out_file = strat. \
-                        get_node_from_resource_pool(output_resource,logger)
-                workflow.connect(node, out_file, fsl_to_itk_convert,
-                        'inputspec.source_file')
-
-
-                # nonlinear warp from anatomical->template ANTS registration
-                node, out_file = strat.get_node_from_resource_pool('anat' \
-                        'omical_to_mni_nonlinear_xfm',logger)
-                workflow.connect(node, out_file, collect_transforms,
-                        'inputspec.warp_file')
-
-                # linear initial from anatomical->template ANTS registration
-                node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm',logger)
-                workflow.connect(node, out_file, collect_transforms,
-                        'inputspec.linear_initial')
-
-                # linear affine from anatomical->template ANTS registration
-                node, out_file = strat.get_node_from_resource_pool('ants' \
-                        '_affine_xfm',logger)
-                workflow.connect(node, out_file, collect_transforms,
-                        'inputspec.linear_affine')
-
-                # rigid affine from anatomical->template ANTS registration
-                node, out_file = strat.get_node_from_resource_pool('ants' \
-                        '_rigid_xfm',logger)
-                workflow.connect(node, out_file, collect_transforms,
-                        'inputspec.linear_rigid')
-
-                # converted FLIRT func->anat affine, now in ITK (ANTS) format
-                workflow.connect(fsl_to_itk_convert,
-                        'outputspec.itk_transform', collect_transforms,
-                        'inputspec.fsl_to_itk_affine')
-
-
-                # output file to be converted
-                node, out_file = strat. \
-                        get_node_from_resource_pool(output_resource,logger)
-                workflow.connect(node, out_file, apply_ants_warp,
-                        'inputspec.input_image')
-
-                # collection of warps to be applied to the output file
-                workflow.connect(collect_transforms,
-                        'outputspec.transformation_series', apply_ants_warp,
-                        'inputspec.transforms')
-
-
-
-            except:
-                logConnectionError('%s to MNI (ANTS)' % (output_name),
-                        num_strat, strat.get_resource_pool(), '0022',logger)
-                raise
-
-            strat.update_resource_pool({'%s_to_standard' % (output_name): \
-                    (apply_ants_warp, 'outputspec.output_image')},logger)
-            strat.append_name(apply_ants_warp.name)
-            
-            num_strat += 1
-
-
-
-        else:
-
-            # FSL WARP APPLICATION
-
-            if map_node == 0:
-                apply_fsl_warp = pe.Node(interface=fsl.ApplyWarp(),
-                        name='%s_to_standard_%d' % (output_name, num_strat))       
-
-            elif map_node == 1:
-                apply_fsl_warp = pe.MapNode(interface=fsl.ApplyWarp(),
-                        name='%s_to_standard_%d' % (output_name, num_strat), \
-                        iterfield=['in_file'])
-
-
-            apply_fsl_warp.inputs.ref_file = c.template_skull_for_func
-
-
-            try:
-
-                # output file to be warped
-                node, out_file = strat. \
-                        get_node_from_resource_pool(output_resource,logger)
-                workflow.connect(node, out_file, apply_fsl_warp, 'in_file')
-
-                # linear affine from func->anat linear FLIRT registration
-                node, out_file = strat.get_node_from_resource_pool('func' \
-                        'tional_to_anat_linear_xfm',logger)
-                workflow.connect(node, out_file, apply_fsl_warp, 'premat')
-
-                # nonlinear warp from anatomical->template FNIRT registration
-                node, out_file = strat.get_node_from_resource_pool('anat' \
-                        'omical_to_mni_nonlinear_xfm',logger)
-                workflow.connect(node, out_file, apply_fsl_warp, 'field_file')
-
-
-
-            except:
-                logConnectionError('%s to MNI (FSL)' % (output_name), \
-                        num_strat, strat.get_resource_pool(), '0021',logger)
-                raise Exception
-
-            strat.update_resource_pool({'%s_to_standard' % (output_name): \
-                    (apply_fsl_warp, 'out_file')},logger)
-            strat.append_name(apply_fsl_warp.name)
-            
-            num_strat += 1
-
-
-
-
-    '''
-    OUTPUT TO SMOOTH
-    '''
-
-    
-
-    '''
     Transforming Dual Regression outputs to MNI
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if (1 in c.runRegisterFuncToMNI) and (1 in c.runDualReg) and (1 in c.runSpatialRegression):
         for strat in strat_list:
-
-            output_to_standard('dr_tempreg_maps_stack', 'dr_tempreg_maps_stack', strat, num_strat)
-
-            output_to_standard('dr_tempreg_maps_zstat_stack', 'dr_tempreg_maps_zstat_stack', strat, num_strat)
-
-            # dual reg 'files', too
-            output_to_standard('dr_tempreg_maps_files', 'dr_tempreg_maps_files', strat, num_strat, 1)
-            output_to_standard('dr_tempreg_maps_zstat_files', 'dr_tempreg_maps_zstat_files', strat, num_strat, 1)
-
-                
-            num_strat += 1
-    
+            num_strat = output_to_standard(c,workflow,logger,'dr_tempreg_maps_stack', 'dr_tempreg_maps_stack', strat, num_strat)
+            num_strat = output_to_standard(c,workflow,logger,'dr_tempreg_maps_zstat_stack', 'dr_tempreg_maps_zstat_stack', strat, num_strat)
+            num_strat = output_to_standard(c,workflow,logger,'dr_tempreg_maps_files', 'dr_tempreg_maps_files', strat, num_strat, 1)
+            num_strat = output_to_standard(c,workflow,logger,'dr_tempreg_maps_zstat_files', 'dr_tempreg_maps_zstat_files', strat, num_strat, 1)
+            num_strat += 1    
     strat_list += new_strat_list
-
-
 
     '''
     Transforming alff/falff outputs to MNI
     '''
-
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runRegisterFuncToMNI and (1 in c.runALFF):
-
         for strat in strat_list:
-            output_to_standard('alff', 'alff_img', strat, num_strat)
-            output_to_standard('falff', 'falff_img', strat, num_strat)               
-            num_strat += 1
-    
+            num_strat = output_to_standard(c,workflow,logger,'alff', 'alff_img', strat, num_strat)
+            num_strat = output_to_standard(c,workflow,logger,'falff', 'falff_img', strat, num_strat)               
+            num_strat += 1    
     strat_list += new_strat_list
-
-
-
 
     '''
     Transforming ReHo outputs to MNI
-    '''
-    
+    '''    
     new_strat_list = []
     num_strat = 0
-
-
     if 1 in c.runRegisterFuncToMNI and (1 in c.runReHo):
         for strat in strat_list:
-
-            output_to_standard('reho', 'raw_reho_map', strat, num_strat)
-
+            num_strat = output_to_standard(c,workflow,logger,'reho', 'raw_reho_map', strat, num_strat)
             num_strat += 1
-
     strat_list += new_strat_list
-
 
 
     '''
@@ -2383,17 +2191,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     new_strat_list = []
     num_strat = 0
-
-
     if 1 in c.runRegisterFuncToMNI and (1 in c.runSCA) and (1 in c.runROITimeseries):
         for strat in strat_list:
-
-            output_to_standard('sca_roi', 'sca_roi_correlations', strat, num_strat)
-            
+            num_strat = output_to_standard(c,workflow,logger,'sca_roi', 'sca_roi_correlations', strat, num_strat)            
             num_strat += 1
-
     strat_list += new_strat_list
-
 
 
     '''
@@ -2401,18 +2203,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     new_strat_list = []
     num_strat = 0
-
     if 1 in c.runRegisterFuncToMNI and (1 in c.runSCA) and (1 in c.runVoxelTimeseries):
         for strat in strat_list:
-
-            output_to_standard('sca_seed', 'sca_seed_correlations', strat, num_strat)
-            
-            num_strat += 1
-    
+            num_strat = output_to_standard(workflow,logger,'sca_seed', 'sca_seed_correlations', strat, num_strat)            
+            num_strat += 1    
     strat_list += new_strat_list
-
-
-
 
 
     """""""""""""""""""""""""""""""""""""""""""""""""""
@@ -2424,7 +2219,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     new_strat_list = []
     num_strat = 0
-
     if (1 in c.runMultRegSCA) and (1 in c.runROITimeseries) and c.fwhm != None:
         for strat in strat_list:
 
