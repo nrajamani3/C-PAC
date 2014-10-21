@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="utf-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph edgedefault="directed">
+    <node id="sca_seed_smooth_mean_0" />
+    <node id="resample_functional_to_roi_for_sca_0" />
+    <node id="hist_reho_1" />
+    <node id="falff_to_standard_smooth_mean_to_txt_1" />
+    <node id="z_score_std_alff_0" />
+    <node id="fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <node id="falff_smooth_1" />
+    <node id="dr_tempreg_maps_files_fsl_to_itk_2" />
+    <node id="fsl_to_itk_functional_mni_0" />
+    <node id="dr_tempreg_maps_stack_collect_transforms_0" />
+    <node id="reho_fsl_to_itk_0" />
+    <node id="roi_dataflow_0" />
+    <node id="log_reho_to_standard_smooth_0" />
+    <node id="edit_func_0" />
+    <node id="resample_functional_to_mask_0" />
+    <node id="hist_reho_zstd_1" />
+    <node id="sca_tempreg_maps_Z_stack_smooth_0" />
+    <node id="log_collect_transforms_mean_functional_in_mni_0" />
+    <node id="dr_tempreg_maps_files_to_standard_2" />
+    <node id="temporal_dual_regression_0" />
+    <node id="falff_to_standard_smooth_1" />
+    <node id="collect_transforms_mean_functional_in_mni_0" />
+    <node id="dp_temporal_regression_sca_1" />
+    <node id="anat_gather_0" />
+    <node id="log_fsl_to_itk_functional_mni_0" />
+    <node id="log_reho_0" />
+    <node id="sca_seed_smooth_mean_to_txt_0" />
+    <node id="z_score_std_falff_0" />
+    <node id="log_collect_transforms_functional_mni_0" />
+    <node id="falff_to_standard_smooth_mean_1" />
+    <node id="log_fsl_to_itk_mean_functional_in_mni_0" />
+    <node id="resample_functional_to_roi_0" />
+    <node id="sca_roi_to_standard_0" />
+    <node id="anat_edge_1" />
+    <node id="log_sca_seed_to_standard_smooth_0" />
+    <node id="log_roi_timeseries_0" />
+    <node id="hist_falff_1" />
+    <node id="log_voxel_timeseries_for_sca_0" />
+    <node id="fsl_to_itk_mean_functional_in_mni_0" />
+    <node id="montage_temporal_regression_sca_1" />
+    <node id="montage_snr_1" />
+    <node id="dr_tempreg_maps_files_collect_transforms_2" />
+    <node id="log_sca_tempreg_maps_stack_smooth_0" />
+    <node id="log_sca_roi_to_standard_smooth_0" />
+    <node id="dp_vmhc1" />
+    <node id="resample_functional_to_mask_for_sca_0" />
+    <node id="log_apply_ants_warp_functional_brain_mask_to_standard_0" />
+    <node id="reho_smooth_0" />
+    <node id="dr_tempreg_maps_stack_to_standard_0" />
+    <node id="fisher_z_score_std_sca_roi_0" />
+    <node id="dr_tempreg_maps_Z_files_smooth_0" />
+    <node id="sca_seed_0" />
+    <node id="roi_dataflow_for_sca_0" />
+    <node id="alff_smooth_mean_to_txt_0" />
+    <node id="alff_smooth_mean_0" />
+    <node id="dp_alff_1" />
+    <node id="func_to_anat_FLIRT_0" />
+    <node id="fristons_parameter_model_0" />
+    <node id="alff_to_standard_smooth_mean_to_txt_0" />
+    <node id="log_alff_falff_0" />
+    <node id="falff_to_standard_1" />
+    <node id="montage_falff_1" />
+    <node id="convert_tr_0" />
+    <node id="apply_ants_warp_functional_mni_0" />
+    <node id="reho_0" />
+    <node id="dr_tempreg_maps_zstat_files_collect_transforms_3" />
+    <node id="log_collect_transforms_functional_brain_mask_to_standard_0" />
+    <node id="montage_temporal_dual_regression_1" />
+    <node id="montage_skull_1" />
+    <node id="sca_seed_fsl_to_itk_0" />
+    <node id="std_dev_1" />
+    <node id="log_apply_ants_warp_mean_functional_in_mni_0" />
+    <node id="log_dr_tempreg_maps_stack_smooth_0" />
+    <node id="log_voxel_timeseries_0" />
+    <node id="reho_to_standard_smooth_0" />
+    <node id="sca_roi_to_standard_smooth_0" />
+    <node id="hist_vmhc_1" />
+    <node id="collect_transforms_functional_mni_0" />
+    <node id="dr_tempreg_maps_stack_smooth_0" />
+    <node id="sca_roi_to_standard_smooth_mean_to_txt_0" />
+    <node id="alff_smooth_0" />
+    <node id="dr_tempreg_maps_zstat_stack_to_standard_1" />
+    <node id="sca_seed_to_standard_smooth_mean_0" />
+    <node id="log_apply_ants_warp_functional_mni_0" />
+    <node id="mask_dataflow_for_sca_0" />
+    <node id="sca_roi_smooth_mean_to_txt_0" />
+    <node id="hist_temp_dr_1" />
+    <node id="falff_fsl_to_itk_1" />
+    <node id="anat_preproc_0" />
+    <node id="nuisance_0" />
+    <node id="sca_roi_0" />
+    <node id="reho_to_standard_0" />
+    <node id="dr_tempreg_maps_zstat_stack_fsl_to_itk_1" />
+    <node id="falff_smooth_mean_1" />
+    <node id="log_temporal_regression_sca_0" />
+    <node id="dp_reho_zstd_1" />
+    <node id="log_anat_preproc_0" />
+    <node id="scan_params_0" />
+    <node id="z_score_std_reho_0" />
+    <node id="montage_anat_1" />
+    <node id="dr_tempreg_maps_Z_stack_smooth_0" />
+    <node id="skull_edge_1" />
+    <node id="roi_timeseries_for_sca_0" />
+    <node id="snr_val1" />
+    <node id="dp_falff_zstd_1" />
+    <node id="hist_alff_zstd_1" />
+    <node id="sca_roi_collect_transforms_0" />
+    <node id="log_seg_preproc_0" />
+    <node id="voxel_timeseries_0" />
+    <node id="montage_reho_1" />
+    <node id="dp_snr_1" />
+    <node id="log_anat_mni_ants_register_0" />
+    <node id="spatial_map_timeseries_0" />
+    <node id="apply_ants_warp_functional_brain_mask_to_standard_0" />
+    <node id="fd_plot_1" />
+    <node id="alff_to_standard_smooth_0" />
+    <node id="func_to_anat_bbreg_0" />
+    <node id="montage_reho_zstd_1" />
+    <node id="voxel_timeseries_for_sca_0" />
+    <node id="montage_mfi_1" />
+    <node id="anat_mni_ants_register_0" />
+    <node id="alff_fsl_to_itk_0" />
+    <node id="log_frequency_filter_0" />
+    <node id="dp_reho_1" />
+    <node id="frequency_filter_0" />
+    <node id="sca_seed_to_standard_smooth_0" />
+    <node id="montage_alff_1" />
+    <node id="func_preproc_automask_0" />
+    <node id="sca_seed_smooth_0" />
+    <node id="log_fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <node id="log_gen_motion_stats_0" />
+    <node id="vmhc_0" />
+    <node id="sca_tempreg_maps_Z_files_smooth_0" />
+    <node id="hist_dr_sca_1" />
+    <node id="montage_alff_zstd_1" />
+    <node id="dp_alff_zstd_1" />
+    <node id="log_falff_to_standard_smooth_1" />
+    <node id="log_spatial_map_timeseries_0" />
+    <node id="sca_roi_smooth_mean_0" />
+    <node id="fisher_z_score_std_sca_seed_0" />
+    <node id="hist_falff_zstd_1" />
+    <node id="gen_motion_stats_0" />
+    <node id="temporal_regression_sca_0" />
+    <node id="dp_falff_1" />
+    <node id="func_gather_0" />
+    <node id="alff_falff_0" />
+    <node id="dp_temporal_dual_regression_1" />
+    <node id="resample_spatial_map_to_native_space_0" />
+    <node id="hist_alff_1" />
+    <node id="log_nuisance_0" />
+    <node id="spatial_map_dataflow_0" />
+    <node id="reho_to_standard_smooth_mean_to_txt_0" />
+    <node id="dr_tempreg_maps_zstat_files_to_standard_3" />
+    <node id="montage_mni_anat_1" />
+    <node id="falff_collect_transforms_1" />
+    <node id="reho_collect_transforms_0" />
+    <node id="fwhm_input" />
+    <node id="log_sca_roi_0" />
+    <node id="alff_to_standard_0" />
+    <node id="falff_smooth_mean_to_txt_1" />
+    <node id="montage_falff_zstd_1" />
+    <node id="log_func_preproc_automask_0" />
+    <node id="alff_collect_transforms_0" />
+    <node id="dr_tempreg_maps_zstat_stack_collect_transforms_1" />
+    <node id="log_fristons_parameter_model_0" />
+    <node id="sca_seed_to_standard_smooth_mean_to_txt_0" />
+    <node id="montage_vmhc_1" />
+    <node id="dr_tempreg_maps_zstat_files_fsl_to_itk_3" />
+    <node id="sca_seed_to_standard_0" />
+    <node id="mask_dataflow_0" />
+    <node id="sca_roi_smooth_0" />
+    <node id="reho_to_standard_smooth_mean_0" />
+    <node id="alff_to_standard_smooth_mean_0" />
+    <node id="dr_tempreg_maps_stack_fsl_to_itk_0" />
+    <node id="collect_transforms_functional_brain_mask_to_standard_0" />
+    <node id="sca_roi_to_standard_smooth_mean_0" />
+    <node id="seg_preproc_0" />
+    <node id="log_vmhc_0" />
+    <node id="dr_tempreg_maps_files_smooth_0" />
+    <node id="std_dev_anat_1" />
+    <node id="sca_tempreg_maps_files_smooth_0" />
+    <node id="hist_snr_1" />
+    <node id="sca_roi_fsl_to_itk_0" />
+    <node id="reho_smooth_mean_to_txt_0" />
+    <node id="sca_tempreg_maps_stack_smooth_0" />
+    <node id="log_alff_to_standard_smooth_0" />
+    <node id="reho_smooth_mean_0" />
+    <node id="montage_csf_gm_wm_1" />
+    <node id="log_temporal_dual_regression_0" />
+    <node id="sca_seed_collect_transforms_0" />
+    <node id="snr_1" />
+    <node id="motion_plt_1" />
+    <node id="roi_timeseries_0" />
+    <node id="apply_ants_warp_mean_functional_in_mni_0" />
+    <node id="log_roi_timeseries_for_sca_0" />
+    <edge source="sca_seed_smooth_mean_0" target="sca_seed_smooth_mean_to_txt_0" />
+    <edge source="resample_functional_to_roi_for_sca_0" target="roi_timeseries_for_sca_0" />
+    <edge source="z_score_std_alff_0" target="dp_alff_zstd_1" />
+    <edge source="z_score_std_alff_0" target="hist_alff_zstd_1" />
+    <edge source="fsl_to_itk_functional_brain_mask_to_standard_0" target="log_fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <edge source="fsl_to_itk_functional_brain_mask_to_standard_0" target="collect_transforms_functional_brain_mask_to_standard_0" />
+    <edge source="falff_smooth_1" target="falff_smooth_mean_1" />
+    <edge source="dr_tempreg_maps_files_fsl_to_itk_2" target="dr_tempreg_maps_files_collect_transforms_2" />
+    <edge source="fsl_to_itk_functional_mni_0" target="log_fsl_to_itk_functional_mni_0" />
+    <edge source="fsl_to_itk_functional_mni_0" target="collect_transforms_functional_mni_0" />
+    <edge source="dr_tempreg_maps_stack_collect_transforms_0" target="dr_tempreg_maps_stack_to_standard_0" />
+    <edge source="reho_fsl_to_itk_0" target="reho_collect_transforms_0" />
+    <edge source="roi_dataflow_0" target="roi_timeseries_0" />
+    <edge source="roi_dataflow_0" target="resample_functional_to_roi_0" />
+    <edge source="edit_func_0" target="func_preproc_automask_0" />
+    <edge source="resample_functional_to_mask_0" target="voxel_timeseries_0" />
+    <edge source="dr_tempreg_maps_files_to_standard_2" target="dr_tempreg_maps_files_smooth_0" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_zstat_files_fsl_to_itk_3" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_zstat_stack_fsl_to_itk_1" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_zstat_stack_to_standard_1" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_files_to_standard_2" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_stack_to_standard_0" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_files_fsl_to_itk_2" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_zstat_files_to_standard_3" />
+    <edge source="temporal_dual_regression_0" target="log_temporal_dual_regression_0" />
+    <edge source="temporal_dual_regression_0" target="dr_tempreg_maps_stack_fsl_to_itk_0" />
+    <edge source="falff_to_standard_smooth_1" target="falff_to_standard_smooth_mean_1" />
+    <edge source="falff_to_standard_smooth_1" target="dp_falff_1" />
+    <edge source="falff_to_standard_smooth_1" target="hist_falff_1" />
+    <edge source="falff_to_standard_smooth_1" target="log_falff_to_standard_smooth_1" />
+    <edge source="falff_to_standard_smooth_1" target="z_score_std_falff_0" />
+    <edge source="collect_transforms_mean_functional_in_mni_0" target="log_collect_transforms_mean_functional_in_mni_0" />
+    <edge source="collect_transforms_mean_functional_in_mni_0" target="apply_ants_warp_mean_functional_in_mni_0" />
+    <edge source="dp_temporal_regression_sca_1" target="montage_temporal_regression_sca_1" />
+    <edge source="anat_gather_0" target="anat_preproc_0" />
+    <edge source="z_score_std_falff_0" target="hist_falff_zstd_1" />
+    <edge source="z_score_std_falff_0" target="dp_falff_zstd_1" />
+    <edge source="falff_to_standard_smooth_mean_1" target="falff_to_standard_smooth_mean_to_txt_1" />
+    <edge source="resample_functional_to_roi_0" target="roi_timeseries_0" />
+    <edge source="sca_roi_to_standard_0" target="sca_roi_to_standard_smooth_0" />
+    <edge source="anat_edge_1" target="montage_anat_1" />
+    <edge source="fsl_to_itk_mean_functional_in_mni_0" target="collect_transforms_mean_functional_in_mni_0" />
+    <edge source="fsl_to_itk_mean_functional_in_mni_0" target="log_fsl_to_itk_mean_functional_in_mni_0" />
+    <edge source="dr_tempreg_maps_files_collect_transforms_2" target="dr_tempreg_maps_files_to_standard_2" />
+    <edge source="dp_vmhc1" target="montage_vmhc_1" />
+    <edge source="resample_functional_to_mask_for_sca_0" target="voxel_timeseries_for_sca_0" />
+    <edge source="reho_smooth_0" target="reho_smooth_mean_0" />
+    <edge source="dr_tempreg_maps_stack_to_standard_0" target="dr_tempreg_maps_stack_smooth_0" />
+    <edge source="dr_tempreg_maps_Z_files_smooth_0" target="dp_temporal_dual_regression_1" />
+    <edge source="dr_tempreg_maps_Z_files_smooth_0" target="hist_temp_dr_1" />
+    <edge source="sca_seed_0" target="sca_seed_smooth_0" />
+    <edge source="sca_seed_0" target="sca_seed_to_standard_0" />
+    <edge source="sca_seed_0" target="sca_seed_fsl_to_itk_0" />
+    <edge source="roi_dataflow_for_sca_0" target="resample_functional_to_roi_for_sca_0" />
+    <edge source="roi_dataflow_for_sca_0" target="roi_timeseries_for_sca_0" />
+    <edge source="alff_smooth_mean_0" target="alff_smooth_mean_to_txt_0" />
+    <edge source="dp_alff_1" target="montage_alff_1" />
+    <edge source="func_to_anat_FLIRT_0" target="func_to_anat_bbreg_0" />
+    <edge source="fristons_parameter_model_0" target="nuisance_0" />
+    <edge source="fristons_parameter_model_0" target="motion_plt_1" />
+    <edge source="fristons_parameter_model_0" target="gen_motion_stats_0" />
+    <edge source="fristons_parameter_model_0" target="log_fristons_parameter_model_0" />
+    <edge source="falff_to_standard_1" target="falff_to_standard_smooth_1" />
+    <edge source="apply_ants_warp_functional_mni_0" target="temporal_regression_sca_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="resample_functional_to_roi_for_sca_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="resample_functional_to_mask_for_sca_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="resample_functional_to_mask_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="spatial_map_timeseries_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="resample_spatial_map_to_native_space_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="log_apply_ants_warp_functional_mni_0" />
+    <edge source="apply_ants_warp_functional_mni_0" target="resample_functional_to_roi_0" />
+    <edge source="reho_0" target="reho_smooth_0" />
+    <edge source="reho_0" target="log_reho_0" />
+    <edge source="reho_0" target="reho_fsl_to_itk_0" />
+    <edge source="reho_0" target="reho_to_standard_0" />
+    <edge source="dr_tempreg_maps_zstat_files_collect_transforms_3" target="dr_tempreg_maps_zstat_files_to_standard_3" />
+    <edge source="sca_seed_fsl_to_itk_0" target="sca_seed_collect_transforms_0" />
+    <edge source="std_dev_1" target="std_dev_anat_1" />
+    <edge source="reho_to_standard_smooth_0" target="hist_reho_1" />
+    <edge source="reho_to_standard_smooth_0" target="z_score_std_reho_0" />
+    <edge source="reho_to_standard_smooth_0" target="dp_reho_1" />
+    <edge source="reho_to_standard_smooth_0" target="reho_to_standard_smooth_mean_0" />
+    <edge source="reho_to_standard_smooth_0" target="log_reho_to_standard_smooth_0" />
+    <edge source="sca_roi_to_standard_smooth_0" target="sca_roi_to_standard_smooth_mean_0" />
+    <edge source="sca_roi_to_standard_smooth_0" target="fisher_z_score_std_sca_roi_0" />
+    <edge source="sca_roi_to_standard_smooth_0" target="log_sca_roi_to_standard_smooth_0" />
+    <edge source="collect_transforms_functional_mni_0" target="log_collect_transforms_functional_mni_0" />
+    <edge source="collect_transforms_functional_mni_0" target="apply_ants_warp_functional_mni_0" />
+    <edge source="dr_tempreg_maps_stack_smooth_0" target="log_dr_tempreg_maps_stack_smooth_0" />
+    <edge source="alff_smooth_0" target="alff_smooth_mean_0" />
+    <edge source="dr_tempreg_maps_zstat_stack_to_standard_1" target="dr_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="sca_seed_to_standard_smooth_mean_0" target="sca_seed_to_standard_smooth_mean_to_txt_0" />
+    <edge source="mask_dataflow_for_sca_0" target="voxel_timeseries_for_sca_0" />
+    <edge source="mask_dataflow_for_sca_0" target="resample_functional_to_mask_for_sca_0" />
+    <edge source="falff_fsl_to_itk_1" target="falff_collect_transforms_1" />
+    <edge source="anat_preproc_0" target="func_to_anat_bbreg_0" />
+    <edge source="anat_preproc_0" target="dr_tempreg_maps_zstat_stack_fsl_to_itk_1" />
+    <edge source="anat_preproc_0" target="fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <edge source="anat_preproc_0" target="log_anat_preproc_0" />
+    <edge source="anat_preproc_0" target="dr_tempreg_maps_files_fsl_to_itk_2" />
+    <edge source="anat_preproc_0" target="fsl_to_itk_functional_mni_0" />
+    <edge source="anat_preproc_0" target="reho_fsl_to_itk_0" />
+    <edge source="anat_preproc_0" target="skull_edge_1" />
+    <edge source="anat_preproc_0" target="montage_csf_gm_wm_1" />
+    <edge source="anat_preproc_0" target="func_to_anat_FLIRT_0" />
+    <edge source="anat_preproc_0" target="dr_tempreg_maps_zstat_files_fsl_to_itk_3" />
+    <edge source="anat_preproc_0" target="montage_skull_1" />
+    <edge source="anat_preproc_0" target="anat_mni_ants_register_0" />
+    <edge source="anat_preproc_0" target="alff_fsl_to_itk_0" />
+    <edge source="anat_preproc_0" target="falff_fsl_to_itk_1" />
+    <edge source="anat_preproc_0" target="dr_tempreg_maps_stack_fsl_to_itk_0" />
+    <edge source="anat_preproc_0" target="seg_preproc_0" />
+    <edge source="anat_preproc_0" target="anat_edge_1" />
+    <edge source="anat_preproc_0" target="sca_roi_fsl_to_itk_0" />
+    <edge source="anat_preproc_0" target="vmhc_0" />
+    <edge source="anat_preproc_0" target="fsl_to_itk_mean_functional_in_mni_0" />
+    <edge source="anat_preproc_0" target="sca_seed_fsl_to_itk_0" />
+    <edge source="anat_preproc_0" target="montage_snr_1" />
+    <edge source="anat_preproc_0" target="std_dev_anat_1" />
+    <edge source="nuisance_0" target="log_nuisance_0" />
+    <edge source="nuisance_0" target="alff_falff_0" />
+    <edge source="nuisance_0" target="frequency_filter_0" />
+    <edge source="sca_roi_0" target="sca_roi_smooth_0" />
+    <edge source="sca_roi_0" target="sca_roi_to_standard_0" />
+    <edge source="sca_roi_0" target="sca_roi_fsl_to_itk_0" />
+    <edge source="sca_roi_0" target="log_sca_roi_0" />
+    <edge source="reho_to_standard_0" target="reho_to_standard_smooth_0" />
+    <edge source="dr_tempreg_maps_zstat_stack_fsl_to_itk_1" target="dr_tempreg_maps_zstat_stack_collect_transforms_1" />
+    <edge source="falff_smooth_mean_1" target="falff_smooth_mean_to_txt_1" />
+    <edge source="dp_reho_zstd_1" target="montage_reho_zstd_1" />
+    <edge source="scan_params_0" target="convert_tr_0" />
+    <edge source="scan_params_0" target="edit_func_0" />
+    <edge source="z_score_std_reho_0" target="hist_reho_zstd_1" />
+    <edge source="z_score_std_reho_0" target="dp_reho_zstd_1" />
+    <edge source="skull_edge_1" target="montage_skull_1" />
+    <edge source="roi_timeseries_for_sca_0" target="temporal_regression_sca_0" />
+    <edge source="roi_timeseries_for_sca_0" target="sca_roi_0" />
+    <edge source="roi_timeseries_for_sca_0" target="fisher_z_score_std_sca_roi_0" />
+    <edge source="roi_timeseries_for_sca_0" target="log_roi_timeseries_for_sca_0" />
+    <edge source="dp_falff_zstd_1" target="montage_falff_zstd_1" />
+    <edge source="sca_roi_collect_transforms_0" target="sca_roi_to_standard_0" />
+    <edge source="voxel_timeseries_0" target="log_voxel_timeseries_0" />
+    <edge source="dp_snr_1" target="montage_snr_1" />
+    <edge source="spatial_map_timeseries_0" target="temporal_dual_regression_0" />
+    <edge source="spatial_map_timeseries_0" target="log_spatial_map_timeseries_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="alff_to_standard_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_tempreg_maps_Z_files_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="temporal_regression_sca_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="dr_tempreg_maps_stack_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="z_score_std_reho_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_tempreg_maps_files_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_roi_to_standard_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_tempreg_maps_stack_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="z_score_std_alff_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="spatial_map_timeseries_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="z_score_std_falff_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="dr_tempreg_maps_files_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="reho_to_standard_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="falff_to_standard_smooth_1" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="dr_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="sca_seed_to_standard_smooth_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="log_apply_ants_warp_functional_brain_mask_to_standard_0" />
+    <edge source="apply_ants_warp_functional_brain_mask_to_standard_0" target="dr_tempreg_maps_Z_files_smooth_0" />
+    <edge source="alff_to_standard_smooth_0" target="log_alff_to_standard_smooth_0" />
+    <edge source="alff_to_standard_smooth_0" target="z_score_std_alff_0" />
+    <edge source="alff_to_standard_smooth_0" target="alff_to_standard_smooth_mean_0" />
+    <edge source="alff_to_standard_smooth_0" target="dp_alff_1" />
+    <edge source="alff_to_standard_smooth_0" target="hist_alff_1" />
+    <edge source="func_to_anat_bbreg_0" target="dr_tempreg_maps_zstat_files_fsl_to_itk_3" />
+    <edge source="func_to_anat_bbreg_0" target="std_dev_anat_1" />
+    <edge source="func_to_anat_bbreg_0" target="sca_roi_fsl_to_itk_0" />
+    <edge source="func_to_anat_bbreg_0" target="sca_seed_fsl_to_itk_0" />
+    <edge source="func_to_anat_bbreg_0" target="nuisance_0" />
+    <edge source="func_to_anat_bbreg_0" target="dr_tempreg_maps_zstat_stack_fsl_to_itk_1" />
+    <edge source="func_to_anat_bbreg_0" target="vmhc_0" />
+    <edge source="func_to_anat_bbreg_0" target="fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <edge source="func_to_anat_bbreg_0" target="alff_fsl_to_itk_0" />
+    <edge source="func_to_anat_bbreg_0" target="fsl_to_itk_mean_functional_in_mni_0" />
+    <edge source="func_to_anat_bbreg_0" target="dr_tempreg_maps_stack_fsl_to_itk_0" />
+    <edge source="func_to_anat_bbreg_0" target="dr_tempreg_maps_files_fsl_to_itk_2" />
+    <edge source="func_to_anat_bbreg_0" target="montage_anat_1" />
+    <edge source="func_to_anat_bbreg_0" target="falff_fsl_to_itk_1" />
+    <edge source="func_to_anat_bbreg_0" target="snr_1" />
+    <edge source="func_to_anat_bbreg_0" target="fsl_to_itk_functional_mni_0" />
+    <edge source="func_to_anat_bbreg_0" target="reho_fsl_to_itk_0" />
+    <edge source="voxel_timeseries_for_sca_0" target="fisher_z_score_std_sca_seed_0" />
+    <edge source="voxel_timeseries_for_sca_0" target="sca_seed_0" />
+    <edge source="voxel_timeseries_for_sca_0" target="log_voxel_timeseries_for_sca_0" />
+    <edge source="anat_mni_ants_register_0" target="falff_collect_transforms_1" />
+    <edge source="anat_mni_ants_register_0" target="nuisance_0" />
+    <edge source="anat_mni_ants_register_0" target="seg_preproc_0" />
+    <edge source="anat_mni_ants_register_0" target="collect_transforms_functional_mni_0" />
+    <edge source="anat_mni_ants_register_0" target="sca_roi_collect_transforms_0" />
+    <edge source="anat_mni_ants_register_0" target="reho_collect_transforms_0" />
+    <edge source="anat_mni_ants_register_0" target="dr_tempreg_maps_zstat_stack_collect_transforms_1" />
+    <edge source="anat_mni_ants_register_0" target="log_anat_mni_ants_register_0" />
+    <edge source="anat_mni_ants_register_0" target="dr_tempreg_maps_zstat_files_collect_transforms_3" />
+    <edge source="anat_mni_ants_register_0" target="alff_collect_transforms_0" />
+    <edge source="anat_mni_ants_register_0" target="collect_transforms_functional_brain_mask_to_standard_0" />
+    <edge source="anat_mni_ants_register_0" target="dr_tempreg_maps_files_collect_transforms_2" />
+    <edge source="anat_mni_ants_register_0" target="collect_transforms_mean_functional_in_mni_0" />
+    <edge source="anat_mni_ants_register_0" target="montage_mni_anat_1" />
+    <edge source="anat_mni_ants_register_0" target="dr_tempreg_maps_stack_collect_transforms_0" />
+    <edge source="anat_mni_ants_register_0" target="sca_seed_collect_transforms_0" />
+    <edge source="alff_fsl_to_itk_0" target="alff_collect_transforms_0" />
+    <edge source="dp_reho_1" target="montage_reho_1" />
+    <edge source="frequency_filter_0" target="sca_roi_0" />
+    <edge source="frequency_filter_0" target="vmhc_0" />
+    <edge source="frequency_filter_0" target="log_frequency_filter_0" />
+    <edge source="frequency_filter_0" target="apply_ants_warp_functional_mni_0" />
+    <edge source="frequency_filter_0" target="reho_0" />
+    <edge source="frequency_filter_0" target="sca_seed_0" />
+    <edge source="frequency_filter_0" target="temporal_dual_regression_0" />
+    <edge source="sca_seed_to_standard_smooth_0" target="fisher_z_score_std_sca_seed_0" />
+    <edge source="sca_seed_to_standard_smooth_0" target="log_sca_seed_to_standard_smooth_0" />
+    <edge source="sca_seed_to_standard_smooth_0" target="sca_seed_to_standard_smooth_mean_0" />
+    <edge source="func_preproc_automask_0" target="func_to_anat_bbreg_0" />
+    <edge source="func_preproc_automask_0" target="sca_seed_smooth_0" />
+    <edge source="func_preproc_automask_0" target="vmhc_0" />
+    <edge source="func_preproc_automask_0" target="nuisance_0" />
+    <edge source="func_preproc_automask_0" target="sca_roi_smooth_0" />
+    <edge source="func_preproc_automask_0" target="func_to_anat_FLIRT_0" />
+    <edge source="func_preproc_automask_0" target="fristons_parameter_model_0" />
+    <edge source="func_preproc_automask_0" target="alff_smooth_0" />
+    <edge source="func_preproc_automask_0" target="alff_falff_0" />
+    <edge source="func_preproc_automask_0" target="reho_0" />
+    <edge source="func_preproc_automask_0" target="fsl_to_itk_functional_brain_mask_to_standard_0" />
+    <edge source="func_preproc_automask_0" target="fsl_to_itk_mean_functional_in_mni_0" />
+    <edge source="func_preproc_automask_0" target="falff_smooth_1" />
+    <edge source="func_preproc_automask_0" target="log_func_preproc_automask_0" />
+    <edge source="func_preproc_automask_0" target="reho_smooth_0" />
+    <edge source="func_preproc_automask_0" target="apply_ants_warp_functional_brain_mask_to_standard_0" />
+    <edge source="func_preproc_automask_0" target="temporal_dual_regression_0" />
+    <edge source="func_preproc_automask_0" target="fsl_to_itk_functional_mni_0" />
+    <edge source="func_preproc_automask_0" target="gen_motion_stats_0" />
+    <edge source="func_preproc_automask_0" target="std_dev_1" />
+    <edge source="func_preproc_automask_0" target="apply_ants_warp_mean_functional_in_mni_0" />
+    <edge source="sca_seed_smooth_0" target="sca_seed_smooth_mean_0" />
+    <edge source="vmhc_0" target="dp_vmhc1" />
+    <edge source="vmhc_0" target="hist_vmhc_1" />
+    <edge source="vmhc_0" target="log_vmhc_0" />
+    <edge source="sca_tempreg_maps_Z_files_smooth_0" target="hist_dr_sca_1" />
+    <edge source="sca_tempreg_maps_Z_files_smooth_0" target="dp_temporal_regression_sca_1" />
+    <edge source="dp_alff_zstd_1" target="montage_alff_zstd_1" />
+    <edge source="sca_roi_smooth_mean_0" target="sca_roi_smooth_mean_to_txt_0" />
+    <edge source="gen_motion_stats_0" target="fd_plot_1" />
+    <edge source="gen_motion_stats_0" target="log_gen_motion_stats_0" />
+    <edge source="temporal_regression_sca_0" target="sca_tempreg_maps_Z_files_smooth_0" />
+    <edge source="temporal_regression_sca_0" target="log_temporal_regression_sca_0" />
+    <edge source="temporal_regression_sca_0" target="sca_tempreg_maps_stack_smooth_0" />
+    <edge source="temporal_regression_sca_0" target="sca_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="temporal_regression_sca_0" target="sca_tempreg_maps_files_smooth_0" />
+    <edge source="dp_falff_1" target="montage_falff_1" />
+    <edge source="func_gather_0" target="scan_params_0" />
+    <edge source="func_gather_0" target="gen_motion_stats_0" />
+    <edge source="func_gather_0" target="edit_func_0" />
+    <edge source="alff_falff_0" target="alff_to_standard_0" />
+    <edge source="alff_falff_0" target="alff_smooth_0" />
+    <edge source="alff_falff_0" target="log_alff_falff_0" />
+    <edge source="alff_falff_0" target="falff_to_standard_1" />
+    <edge source="alff_falff_0" target="alff_fsl_to_itk_0" />
+    <edge source="alff_falff_0" target="falff_smooth_1" />
+    <edge source="alff_falff_0" target="falff_fsl_to_itk_1" />
+    <edge source="dp_temporal_dual_regression_1" target="montage_temporal_dual_regression_1" />
+    <edge source="resample_spatial_map_to_native_space_0" target="spatial_map_timeseries_0" />
+    <edge source="spatial_map_dataflow_0" target="resample_spatial_map_to_native_space_0" />
+    <edge source="dr_tempreg_maps_zstat_files_to_standard_3" target="dr_tempreg_maps_Z_files_smooth_0" />
+    <edge source="falff_collect_transforms_1" target="falff_to_standard_1" />
+    <edge source="reho_collect_transforms_0" target="reho_to_standard_0" />
+    <edge source="fwhm_input" target="alff_to_standard_smooth_0" />
+    <edge source="fwhm_input" target="sca_tempreg_maps_Z_files_smooth_0" />
+    <edge source="fwhm_input" target="sca_seed_smooth_0" />
+    <edge source="fwhm_input" target="sca_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="fwhm_input" target="dr_tempreg_maps_stack_smooth_0" />
+    <edge source="fwhm_input" target="sca_roi_smooth_0" />
+    <edge source="fwhm_input" target="reho_to_standard_smooth_0" />
+    <edge source="fwhm_input" target="alff_smooth_0" />
+    <edge source="fwhm_input" target="sca_tempreg_maps_stack_smooth_0" />
+    <edge source="fwhm_input" target="sca_tempreg_maps_files_smooth_0" />
+    <edge source="fwhm_input" target="dr_tempreg_maps_files_smooth_0" />
+    <edge source="fwhm_input" target="reho_smooth_0" />
+    <edge source="fwhm_input" target="falff_smooth_1" />
+    <edge source="fwhm_input" target="dr_tempreg_maps_Z_stack_smooth_0" />
+    <edge source="fwhm_input" target="falff_to_standard_smooth_1" />
+    <edge source="fwhm_input" target="sca_seed_to_standard_smooth_0" />
+    <edge source="fwhm_input" target="sca_roi_to_standard_smooth_0" />
+    <edge source="fwhm_input" target="dr_tempreg_maps_Z_files_smooth_0" />
+    <edge source="alff_to_standard_0" target="alff_to_standard_smooth_0" />
+    <edge source="alff_collect_transforms_0" target="alff_to_standard_0" />
+    <edge source="dr_tempreg_maps_zstat_stack_collect_transforms_1" target="dr_tempreg_maps_zstat_stack_to_standard_1" />
+    <edge source="dr_tempreg_maps_zstat_files_fsl_to_itk_3" target="dr_tempreg_maps_zstat_files_collect_transforms_3" />
+    <edge source="sca_seed_to_standard_0" target="sca_seed_to_standard_smooth_0" />
+    <edge source="mask_dataflow_0" target="resample_functional_to_mask_0" />
+    <edge source="mask_dataflow_0" target="voxel_timeseries_0" />
+    <edge source="sca_roi_smooth_0" target="sca_roi_smooth_mean_0" />
+    <edge source="reho_to_standard_smooth_mean_0" target="reho_to_standard_smooth_mean_to_txt_0" />
+    <edge source="alff_to_standard_smooth_mean_0" target="alff_to_standard_smooth_mean_to_txt_0" />
+    <edge source="dr_tempreg_maps_stack_fsl_to_itk_0" target="dr_tempreg_maps_stack_collect_transforms_0" />
+    <edge source="collect_transforms_functional_brain_mask_to_standard_0" target="log_collect_transforms_functional_brain_mask_to_standard_0" />
+    <edge source="collect_transforms_functional_brain_mask_to_standard_0" target="apply_ants_warp_functional_brain_mask_to_standard_0" />
+    <edge source="sca_roi_to_standard_smooth_mean_0" target="sca_roi_to_standard_smooth_mean_to_txt_0" />
+    <edge source="seg_preproc_0" target="func_to_anat_bbreg_0" />
+    <edge source="seg_preproc_0" target="log_seg_preproc_0" />
+    <edge source="seg_preproc_0" target="montage_csf_gm_wm_1" />
+    <edge source="seg_preproc_0" target="nuisance_0" />
+    <edge source="std_dev_anat_1" target="snr_1" />
+    <edge source="sca_roi_fsl_to_itk_0" target="sca_roi_collect_transforms_0" />
+    <edge source="sca_tempreg_maps_stack_smooth_0" target="log_sca_tempreg_maps_stack_smooth_0" />
+    <edge source="reho_smooth_mean_0" target="reho_smooth_mean_to_txt_0" />
+    <edge source="sca_seed_collect_transforms_0" target="sca_seed_to_standard_0" />
+    <edge source="snr_1" target="hist_snr_1" />
+    <edge source="snr_1" target="dp_snr_1" />
+    <edge source="snr_1" target="snr_val1" />
+    <edge source="roi_timeseries_0" target="log_roi_timeseries_0" />
+    <edge source="apply_ants_warp_mean_functional_in_mni_0" target="log_apply_ants_warp_mean_functional_in_mni_0" />
+    <edge source="apply_ants_warp_mean_functional_in_mni_0" target="montage_mfi_1" />
+  </graph>
+</graphml>
