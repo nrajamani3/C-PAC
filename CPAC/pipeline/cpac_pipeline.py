@@ -63,8 +63,10 @@ from CPAC.pipeline.utils import    strategy, create_log_node, logStandardError,\
                         runFunctionalDataGathering, collect_transforms_func_mni,\
                         fsl_to_itk_conversion, ants_apply_warps_func_mni,\
                         fisher_z_score_standardize, z_score_standardize,\
-                        connectCentralityWorkflow, output_smooth,output_smooth_FuncToMNI,\
-                        output_to_standard
+                        connectCentralityWorkflow, output_smooth,\
+                        output_smooth_FuncToMNI,output_to_standard, pick_wm, \
+                        runFristonModel, runRegisterFuncToAnat,\
+                        runGenerateMotionStatistics
 import zlib
 import linecache
 import csv
@@ -197,7 +199,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
 
 
     num_strat = 0
-
     if 1 in c.runFunctionalDataGathering:
         for strat in strat_list:
             # create a new node, Remember to change its name!
@@ -216,19 +217,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             """
             try:
                 # a node which checks if scan _parameters are present for each scan
-                scan_params = pe.Node(util.Function(input_names=['subject',
-                                                                 'scan',
-                                                                 'subject_map',
-                                                                 'start_indx',
-                                                                 'stop_indx',
-                                                                 'tr',
-                                                                 'tpattern'],
-                                                   output_names=['tr',
-                                                                 'tpattern',
-                                                                 'ref_slice',
-                                                                 'start_indx',
-                                                                 'stop_indx'],
-                                                   function=get_scan_params),
+                scan_params = pe.Node(util.Function(input_names=['subject','scan','subject_map',
+                                                                 'start_indx','stop_indx','tr','tpattern'],
+                                                    output_names=['tr','tpattern','ref_slice',
+                                                                 'start_indx','stop_indx'],
+                                                    function=get_scan_params),
                                        name='scan_params_%d' % num_strat)
             except Exception as xxx:
                 logger.info( "Error creating scan_params node."+\
@@ -244,7 +237,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 logger.info( "Error connecting scan_params 'subject' input."+\
                       " (%s:%d)" % dbg_file_lineno() )
                 raise
-
 
             try:
                 workflow.connect(funcFlow, 'outputspec.scan',
@@ -441,8 +433,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
             logger.info( " finsihed connected slice timing pattern")
 
         """
-        Inserting Functional Image Preprocessing
-        Workflow
+        Inserting Functional Image Preprocessing Workflow
         """
         new_strat_list = []
         num_strat = 0
@@ -492,8 +483,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                         strat = tmp
                         new_strat_list.append(strat)
     
-                    strat.append_name(func_preproc.name)
-    
+                    strat.append_name(func_preproc.name)    
                     strat.set_leaf_properties(func_preproc, 'outputspec.preprocessed')
     
                     # add stuff to resource pool if we need it
@@ -557,8 +547,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     strat.update_resource_pool({'functional_brain_mask':(func_preproc, 'outputspec.mask')},logger)
                     strat.update_resource_pool({'motion_correct':(func_preproc, 'outputspec.motion_correct')},logger)
                     strat.update_resource_pool({'coordinate_transformation':(func_preproc, 'outputspec.oned_matrix_save')},logger)
-    
-    
                     create_log_node(workflow,func_preproc, 'outputspec.preprocessed', num_strat,log_dir)
                     num_strat += 1
     
@@ -570,125 +558,27 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
         So the file contains 24 parameters for motion and that gets wired to all the workflows
         that depend on. The effect should be seen when regressing out nuisance signals and motion
         is used as one of the regressors
-        '''
-        
-        new_strat_list = []
-        num_strat = 0
-   
-        print "made it to line 981" 
+        '''        
         workflow_counter += 1
-        if 1 in c.runFristonModel:
-            workflow_bit_id['fristons_parameter_model'] = workflow_counter
-            for strat in strat_list:
-    
-                fristons_model = fristons_twenty_four(wf_name='fristons_parameter_model_%d' % num_strat)
-    
-                try:
-    
-                    node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
-                    workflow.connect(node, out_file,
-                                     fristons_model, 'inputspec.movement_file')
-    
-                except Exception as xxx:
-                    logConnectionError('Friston\'s Parameter Model', num_strat, strat.get_resource_pool(), '0006',logger)
-                    raise
-    
-                if 0 in c.runFristonModel:
-                    tmp = strategy()
-                    tmp.resource_pool = dict(strat.resource_pool)
-                    tmp.leaf_node = (strat.leaf_node)
-                    tmp.leaf_out_file = str(strat.leaf_out_file)
-                    tmp.name = list(strat.name)
-                    strat = tmp
-                    new_strat_list.append(strat)
-                strat.append_name(fristons_model.name)
-    
-                strat.update_resource_pool({'movement_parameters':(fristons_model, 'outputspec.movement_file')},logger)
-    
-        
-                create_log_node(workflow,fristons_model, 'outputspec.movement_file', num_strat,log_dir)
-                
-                num_strat += 1
-                
-        strat_list += new_strat_list
+        num_strat = runFristonModel(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                    workflow_counter,strat_list,logger,log_dir)
 
     '''
     Func -> T1 Registration (Initial Linear reg)
+    Depending on configuration, either passes output matrix to 
+    Func -> Template ApplyWarp, or feeds into linear reg of BBReg operation 
+    (if BBReg is enabled)
     '''
-
-    # Depending on configuration, either passes output matrix to Func -> Template ApplyWarp,
-    # or feeds into linear reg of BBReg operation (if BBReg is enabled)
-
-    new_strat_list = []
-    num_strat = 0
     workflow_counter += 1
-    
-    if 1 in c.runRegisterFuncToAnat:
-
-        workflow_bit_id['func_to_anat'] = workflow_counter
-
-        for strat in strat_list:
-            func_to_anat = create_register_func_to_anat('func_to_anat_FLIRT_%d' % num_strat)
-       
-            # Input registration parameters
-            func_to_anat.inputs.inputspec.interp = 'trilinear'
-
-
-            try:
-                def pick_wm(seg_prob_list):
-                    seg_prob_list.sort()
-                    return seg_prob_list[-1]
-
-                # Input functional image (func.nii.gz)
-                node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
-                workflow.connect(node, out_file,func_to_anat, 'inputspec.func')
-
-                # Input skull-stripped anatomical (anat.nii.gz)
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain',logger)
-                workflow.connect(node, out_file,func_to_anat, 'inputspec.anat')
-
-   
-
-            except:               
-                logConnectionError('Register Functional to Anatomical (pre BBReg)', \
-                                   num_strat, strat.get_resource_pool(), '0007',logger)
-                raise
-
-            if 0 in c.runRegisterFuncToAnat:
-                tmp = strategy()
-                tmp.resource_pool = dict(strat.resource_pool)
-                tmp.leaf_node = (strat.leaf_node)
-                tmp.out_file = str(strat.leaf_out_file)
-                tmp.name = list(strat.name)
-                strat = tmp
-                new_strat_list.append(strat)
-
-            strat.append_name(func_to_anat.name)
-            # strat.set_leaf_properties(func_mni_warp, 'out_file')
-
-            strat.update_resource_pool({'mean_functional_in_anat':\
-                        (func_to_anat, 'outputspec.anat_func_nobbreg'),
-                                        'functional_to_anat_linear_xfm':\
-                        (func_to_anat, 'outputspec.func_to_anat_linear_xfm_nobbreg')},logger)
-
-            # Outputs:
-            # functional_to_anat_linear_xfm = func-t1.mat, linear, sent to 'premat' of post-FNIRT applywarp,
-            #                                 or to the input of the post-ANTS c3d_affine_tool
-            
-            #create_log_node(func_to_anat, 'outputspec.mni_func', num_strat,log_dir)
-            num_strat += 1
-
-    strat_list += new_strat_list
-
-
-
+    strat_list = runRegisterFuncToAnat(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                            workflow_counter,strat_list,logger,log_dir)
+ 
     '''
     Func -> T1 Registration (BBREG)
+    Outputs 'functional_to_anat_linear_xfm', a matrix file of the 
+    functional-to-anatomical registration warp to be applied LATER in 
+    func_mni_warp, which accepts it as input 'premat'
     '''
-
-    # Outputs 'functional_to_anat_linear_xfm', a matrix file of the functional-to-anatomical
-    # registration warp to be applied LATER in func_mni_warp, which accepts it as input 'premat'
-
     new_strat_list = []
     num_strat = 0
     workflow_counter += 1
@@ -780,77 +670,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
     '''
     Inserting Generate Motion Statistics Workflow
     '''
-
-    new_strat_list = []
-    num_strat = 0
-
     workflow_counter += 1
-    if 1 in c.runGenerateMotionStatistics:
-        workflow_bit_id['gen_motion_stats'] = workflow_counter
-        for strat in strat_list:
-
-            gen_motion_stats = motion_power_statistics('gen_motion_stats_%d' % num_strat)
-            gen_motion_stats.inputs.scrubbing_input.threshold = c.scrubbingThreshold
-            gen_motion_stats.inputs.scrubbing_input.remove_frames_before = c.numRemovePrecedingFrames
-            gen_motion_stats.inputs.scrubbing_input.remove_frames_after = c.numRemoveSubsequentFrames
-            gen_motion_stats.get_node('scrubbing_input').iterables = ('threshold', c.scrubbingThreshold)
-
-            try:
-                # #**special case where the workflow is not getting outputs from resource pool
-                # but is connected to functional datasource
-                workflow.connect(funcFlow, 'outputspec.subject',
-                             gen_motion_stats, 'inputspec.subject_id')
-
-                workflow.connect(funcFlow, 'outputspec.scan',
-                             gen_motion_stats, 'inputspec.scan_id')
-
-                node, out_file = strat.get_node_from_resource_pool('motion_correct',logger)
-                workflow.connect(node, out_file,
-                                 gen_motion_stats, 'inputspec.motion_correct')
-
-                node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
-                workflow.connect(node, out_file,
-                                 gen_motion_stats, 'inputspec.movement_parameters')
-
-                node, out_file = strat.get_node_from_resource_pool('max_displacement',logger)
-                workflow.connect(node, out_file,
-                                 gen_motion_stats, 'inputspec.max_displacement')
-
-                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
-                workflow.connect(node, out_file,
-                                 gen_motion_stats, 'inputspec.mask')
-
-                node, out_file = strat.get_node_from_resource_pool('coordinate_transformation',logger)
-                workflow.connect(node, out_file,
-                                 gen_motion_stats, 'inputspec.oned_matrix_save')
-
-            except:
-                logConnectionError('Generate Motion Statistics', \
-                                   num_strat, strat.get_resource_pool(), '0009',logger)
-                raise
-
-            if 0 in c.runGenerateMotionStatistics:
-                tmp = strategy()
-                tmp.resource_pool = dict(strat.resource_pool)
-                tmp.leaf_node = (strat.leaf_node)
-                tmp.leaf_out_file = str(strat.leaf_out_file)
-                tmp.name = list(strat.name)
-                strat = tmp
-                new_strat_list.append(strat)
-
-            strat.append_name(gen_motion_stats.name)
-
-            strat.update_resource_pool({'frame_wise_displacement':(gen_motion_stats, 'outputspec.FD_1D'),
-                                        'scrubbing_frames_excluded':(gen_motion_stats, 'outputspec.frames_ex_1D'),
-                                        'scrubbing_frames_included':(gen_motion_stats, 'outputspec.frames_in_1D'),
-                                        'power_params':(gen_motion_stats, 'outputspec.power_params'),
-                                        'motion_params':(gen_motion_stats, 'outputspec.motion_params')},logger)
-            
-            create_log_node(workflow,gen_motion_stats, 'outputspec.motion_params', num_strat,log_dir)
-            num_strat += 1
-
-    strat_list += new_strat_list
-
+    strat_list = runGenerateMotionStatistics(c,subject_id,sub_dict,workflow,\
+                    workflow_bit_id,workflow_counter,strat_list,logger,log_dir,funcFlow)
 
 
     '''
