@@ -1025,7 +1025,150 @@ def runRegisterFuncToAnat(c,subject_id,sub_dict,workflow,workflow_bit_id,\
             num_strat += 1
     strat_list += new_strat_list
     return strat_list
-    
+ 
+def runALFF(c,subject_id,sub_dict,workflow,workflow_bit_id,workflow_counter,\
+            strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runALFF:
+        for strat in strat_list:
+            alff = create_alff('alff_falff_%d' % num_strat)
+            alff.inputs.hp_input.hp = c.highPassFreqALFF
+            alff.inputs.lp_input.lp = c.lowPassFreqALFF
+            alff.get_node('hp_input').iterables = ('hp',c.highPassFreqALFF)
+            alff.get_node('lp_input').iterables = ('lp',c.lowPassFreqALFF)
+            try:
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,alff, 'inputspec.rest_res')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
+                workflow.connect(node, out_file,alff, 'inputspec.rest_mask')
+            except:
+                logConnectionError('ALFF',num_strat, strat.get_resource_pool(), '0012',logger)
+                raise
+            strat.append_name(alff.name)
+            strat.update_resource_pool({'alff_img':(alff, 'outputspec.alff_img')},logger)
+            strat.update_resource_pool({'falff_img':(alff, 'outputspec.falff_img')},logger)            
+            create_log_node(workflow,alff, 'outputspec.falff_img', num_strat,log_dir)
+            num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
+
+def runMedianAngleCorrection(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                                workflow_counter,strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runMedianAngleCorrection:
+        workflow_bit_id['median_angle_corr'] = workflow_counter
+        for strat in strat_list:
+            median_angle_corr = create_median_angle_correction('median_angle_corr_%d' % num_strat)
+            median_angle_corr.get_node('median_angle_correct').iterables = ('target_angle_deg', c.targetAngleDeg)
+            try:
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,median_angle_corr, 'inputspec.subject')
+            except:
+                logConnectionError('Median Angle Correction', \
+                                   num_strat, strat.get_resource_pool(), '0011',logger)
+                raise
+
+            if 0 in c.runMedianAngleCorrection:
+                new_strat_list,strat=createNewStrategy(strat,new_strat_list)
+            strat.append_name(median_angle_corr.name)
+            strat.set_leaf_properties(median_angle_corr, 'outputspec.subject')
+            strat.update_resource_pool({'functional_median_angle_corrected':(median_angle_corr, 'outputspec.subject')},logger)            
+            create_log_node(workflow,median_angle_corr, 'outputspec.subject', num_strat,log_dir)
+            num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
+
+def runFrequencyFiltering(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                        workflow_counter,strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runFrequencyFiltering:
+        workflow_bit_id['frequency_filter'] = workflow_counter
+        for strat in strat_list:
+            frequency_filter = pe.Node(\
+                util.Function(input_names=['realigned_file','bandpass_freqs',\
+                                           'sample_period'],\
+                            output_names=['bandpassed_file'],\
+                            function=bandpass_voxels),\
+                            name='frequency_filter_%d' % num_strat)
+            frequency_filter.iterables = ('bandpass_freqs', c.nuisanceBandpassFreq)
+            try:
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,frequency_filter, 'realigned_file')
+            except:
+                logConnectionError('Frequency Filtering',num_strat, strat.get_resource_pool(), '0013',logger)
+                raise
+            if 0 in c.runFrequencyFiltering:
+                new_strat_list,strat=createNewStrategy(strat,new_strat_list)
+            strat.append_name(frequency_filter.name)
+            strat.set_leaf_properties(frequency_filter, 'bandpassed_file')
+            strat.update_resource_pool({'functional_freq_filtered':(frequency_filter, 'bandpassed_file')},logger)
+            create_log_node(workflow,frequency_filter, 'bandpassed_file', num_strat,log_dir)            
+            num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
+
+def runSCAforROIinput(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                        workflow_counter,strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runSCA and (1 in c.runROITimeseries):
+        for strat in strat_list:
+            sca_roi = create_sca('sca_roi_%d' % num_strat)
+            try:
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,sca_roi, 'inputspec.functional_file')
+
+                node, out_file = strat.get_node_from_resource_pool('roi_timeseries_for_SCA',logger)
+                workflow.connect(node, (out_file, extract_one_d),sca_roi, 'inputspec.timeseries_one_d')
+            except:
+                logConnectionError('SCA ROI', num_strat,strat.get_resource_pool(), '0032',logger)
+                raise
+
+            strat.update_resource_pool({'sca_roi_correlations':(sca_roi, 'outputspec.correlation_file')},logger)
+            create_log_node(workflow,sca_roi, 'outputspec.correlation_file', num_strat,log_dir)            
+            strat.append_name(sca_roi.name)
+            num_strat += 1            
+    strat_list += new_strat_list
+    return strat_list
+
+
+def runReHo(c,subject_id,sub_dict,workflow,workflow_bit_id,workflow_counter,\
+            strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runReHo:
+        for strat in strat_list:
+            preproc = create_reho()
+            preproc.inputs.inputspec.cluster_size = c.clusterSize
+            reho = preproc.clone('reho_%d' % num_strat)
+            try:
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,reho, 'inputspec.rest_res_filt')
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
+                workflow.connect(node, out_file,reho, 'inputspec.rest_mask')
+            except:
+                logConnectionError('ReHo', num_strat, strat.get_resource_pool(), '0020',logger)
+                raise
+            strat.update_resource_pool({'raw_reho_map':(reho, 'outputspec.raw_reho_map')},logger)
+            strat.append_name(reho.name)            
+            create_log_node(workflow,reho, 'outputspec.raw_reho_map', num_strat,log_dir)            
+            num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
+
 def runGenerateMotionStatistics(c,subject_id,sub_dict,workflow,\
                     workflow_bit_id,workflow_counter,strat_list,logger,\
                     log_dir,funcFlow):
@@ -1086,7 +1229,77 @@ def setGenMotionStatsParams(c,gen_motion_stats):
     gen_motion_stats.get_node('scrubbing_input').iterables = ('threshold', c.scrubbingThreshold)
     return gen_motion_stats
     
+def runNuisance(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                workflow_counter,strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runNuisance:
+        workflow_bit_id['nuisance'] = workflow_counter
+        for strat in strat_list:            
+            nodes = getNodeList(strat)            
+            # this is needed here in case tissue segmentation is set on/off
+            # and you have nuisance enabled- this will ensure nuisance will
+            # run for the strat that has segmentation but will not run (thus
+            # avoiding a crash) on the strat without segmentation
+            if 'seg_preproc' in nodes:
+            
+                if 'anat_mni_fnirt_register' in nodes:
+                    nuisance = create_nuisance(False, 'nuisance_%d' % num_strat)
+                else:
+                    nuisance = create_nuisance(True, 'nuisance_%d' % num_strat)
+                nuisance.get_node('residuals').iterables = ([('selector', c.Corrections),
+                                                             ('compcor_ncomponents', c.nComponents)])
+                nuisance.inputs.inputspec.lat_ventricles_mask = c.lateral_ventricles_mask
 
+                try:
+                    node, out_file = strat.get_leaf_properties()
+                    workflow.connect(node, out_file,nuisance, 'inputspec.subject')
+
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_gm_mask',logger)
+                    workflow.connect(node, out_file,nuisance, 'inputspec.gm_mask')
+
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_wm_mask',logger)
+                    workflow.connect(node, out_file, nuisance, 'inputspec.wm_mask')
+
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_csf_mask',logger)
+                    workflow.connect(node, out_file,nuisance, 'inputspec.csf_mask')
+
+                    node, out_file = strat.get_node_from_resource_pool('movement_parameters',logger)
+                    workflow.connect(node, out_file,nuisance, 'inputspec.motion_components')
+
+                    node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
+                    workflow.connect(node, out_file,nuisance, 'inputspec.func_to_anat_linear_xfm')
+                
+                    if 'anat_mni_fnirt_register' in nodes:
+                        node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm',logger)
+                        workflow.connect(node, out_file,nuisance, 'inputspec.mni_to_anat_linear_xfm')
+                    else:
+                        # pass the ants_affine_xfm to the input for the
+                        # INVERSE transform, but ants_affine_xfm gets inverted
+                        # within the workflow
+                        node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm',logger)
+                        workflow.connect(node, out_file,nuisance, 'inputspec.anat_to_mni_initial_xfm')
+
+                        node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm',logger)
+                        workflow.connect(node, out_file,nuisance, 'inputspec.anat_to_mni_rigid_xfm')
+
+                        node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm',logger)
+                        workflow.connect(node, out_file,nuisance, 'inputspec.anat_to_mni_affine_xfm')
+                except:
+                    logConnectionError('Nuisance', num_strat, strat.get_resource_pool(), '0010',logger)
+                    raise
+                if 0 in c.runNuisance:
+                    new_strat_list,strat=createNewStrategy(strat,new_strat_list)
+
+                strat.append_name(nuisance.name)
+                strat.set_leaf_properties(nuisance, 'outputspec.subject')
+                strat.update_resource_pool({'functional_nuisance_residuals':(nuisance, 'outputspec.subject')},logger)
+                create_log_node(workflow,nuisance, 'outputspec.subject', num_strat,log_dir)            
+                num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
 
 
 ##def functionalMasking3dAutoMask(slice_timing,workflow,scan_params,convert_tr,\
