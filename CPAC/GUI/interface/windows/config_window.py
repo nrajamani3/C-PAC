@@ -709,7 +709,7 @@ class MainFrame(wx.Frame):
         dlg = wx.FileDialog(
             self, message="Save CPAC configuration file as ...", defaultDir=os.getcwd(),
             defaultFile=("pipeline_config_%s" % pipeline_name), wildcard="YAML files(*.yaml, *.yml)|*.yaml;*.yml", style=wx.SAVE)
-        dlg.SetFilterIndex(2)
+        #dlg.SetFilterIndex(2)
 
         if dlg.ShowModal() == wx.ID_OK:
             self.path = dlg.GetPath()
