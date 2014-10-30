@@ -36,6 +36,7 @@ priors_path,Priors Directory,Tissue Segmentation
 PRIORS_WHITE,White Matter Prior Probability Map,Tissue Segmentation
 PRIORS_GRAY,Gray Matter Prior Probability Map,Tissue Segmentation
 PRIORS_CSF,CSF Prior Probability Map,Tissue Segmentation
+runSubcortSegmentation,Run Subcortical Segmentation,Tissue Segmentation
 startIdx,First Timepoint,Time Series Options
 stopIdx,Last Timepoint,Time Series Options
 slice_timing_correction,Slice Timing Correction,Time Series Options

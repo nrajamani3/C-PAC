@@ -102,11 +102,19 @@ class Segmentation(wx.ScrolledWindow):
                  name='PRIORS_CSF', 
                  type=dtype.STR, 
                  values = '$priors_path/avg152T1_csf_bin.nii.gz',
-                 comment="Full path to a binarized CSF prior probability map.\n\nIt is not necessary to change this path unless you intend to use non-standard priors.")        
-                
+                 comment="Full path to a binarized CSF prior probability map.\n\nIt is not necessary to change this path unless you intend to use non-standard priors.")
+
+         # Subcortical segmentation dropdown
+         self.page.add(label="Run Subcortical Segmentation ",
+                 control=control.CHOICE_BOX,
+                 name='runSubcortSegmentation',
+                 type=dtype.LSTR,
+                 comment="Automatically segment subcortical components from anatomical images.",
+                 values=["On","Off"])
+
         self.page.set_sizer()
         parent.get_page_list().append(self)
-        
+
     def get_counter(self):
         return self.counter
     

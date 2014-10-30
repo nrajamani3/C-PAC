@@ -17,7 +17,7 @@ import pkg_resources as p
 import CPAC
 from CPAC.anat_preproc.anat_preproc import create_anat_preproc
 from CPAC.func_preproc.func_preproc import create_func_preproc, create_wf_edit_func
-from CPAC.seg_preproc.seg_preproc import create_seg_preproc
+from CPAC.seg_preproc.seg_preproc import create_seg_preproc, create_subcort_seg
 
 from CPAC.registration import create_nonlinear_register, \
                               create_register_func_to_anat, \
