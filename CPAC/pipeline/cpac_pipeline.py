@@ -658,6 +658,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 strat = tmp
                 new_strat_list.append(strat)
 
+            # Run subcortical segmentation (via FSL's FIRST)
+            if 1 in c.runSubcortSegmentation:
+                # Instantiate the workflow
+                subcort_seg = create_subcort_seg('subcort_seg_%d' % num_strat)
+                # Get the pipeline node and file for reoriented anatomical image
+                node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
+                # Connect the re-oriented image for the input
+                workflow.connect(node, out_file, subcort_seg, 'inputspec.reor_brain')
+                # Connect registration template
+                workflow.connect(ants_reg_anat_mni,'inputspec.reference_brain',subcort_seg,'inputspec.flirt_template')
+                # And update resource pool
+                strat.update_resource_pool({'subcort_segout' : (subcort_seg, 'outputspec.seg_out'),
+                                            'subcort_csvout' : (subcort_seg, 'outputspec.csv_out')})
+
+            # Update resource pool
             strat.append_name(seg_preproc.name)
             strat.update_resource_pool({'anatomical_gm_mask' : (seg_preproc, 'outputspec.gm_mask'),
                                         'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
@@ -666,12 +681,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                         'seg_mixeltype': (seg_preproc, 'outputspec.mixeltype'),
                                         'seg_partial_volume_map': (seg_preproc, 'outputspec.partial_volume_map'),
                                         'seg_partial_volume_files': (seg_preproc, 'outputspec.partial_volume_files')})
-
             create_log_node(seg_preproc, 'outputspec.partial_volume_map', num_strat)
             num_strat += 1
 
     strat_list += new_strat_list
-
 
 
 
