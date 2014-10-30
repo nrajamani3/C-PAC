@@ -665,30 +665,18 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 subcort_seg = create_subcort_seg('subcort_seg_%d' % num_strat)
                 # Get the pipeline node and file for reoriented anatomical image
                 node, out_file = strat.get_node_from_resource_pool('anatomical_reorient')
-<<<<<<< HEAD
-=======
-                
->>>>>>> ndar_dev
                 # Connect the re-oriented image for the input
                 workflow.connect(node, out_file, subcort_seg, 'inputspec.reor_brain')
                 # Connect registration template
                 workflow.connect(ants_reg_anat_mni,'inputspec.reference_brain',subcort_seg,'inputspec.flirt_template')
-<<<<<<< HEAD
                 # And update resource pool
                 strat.update_resource_pool({'subcort_segout' : (subcort_seg, 'outputspec.seg_out'),
                                             'subcort_csvout' : (subcort_seg, 'outputspec.csv_out')})
 
             # Update resource pool
-=======
-                
-                # And update resource pool
-                strat.update_resource_pool({'subcort_segout' : (subcort_seg, 'outputspec.seg_out'),
-                                            'subcort_csvout' : (subcort_seg, 'outputspec.csv_out')})
-                
->>>>>>> ndar_dev
             strat.append_name(seg_preproc.name)
             strat.update_resource_pool({'anatomical_gm_mask' : (seg_preproc, 'outputspec.gm_mask'),
-                                         'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
+                                        'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
                                         'anatomical_wm_mask' : (seg_preproc, 'outputspec.wm_mask'),
                                         'seg_probability_maps': (seg_preproc, 'outputspec.probability_maps'),
                                         'seg_mixeltype': (seg_preproc, 'outputspec.mixeltype'),
@@ -5279,7 +5267,7 @@ def run(config, subject_list_file, indx, strategies, \
      maskSpecificationFile, roiSpecificationFile, templateSpecificationFile, p_name = None):
     import commands
     commands.getoutput('source ~/.bashrc')
-    #import pickle
+    import pickle
     import yaml
 
 

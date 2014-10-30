@@ -1,7 +1,6 @@
 from inspect import currentframe, getframeinfo
 
 import threading
-from posix import lstat
 global_lock = threading.Lock()
 
 
@@ -536,7 +535,7 @@ def get_workflow(remainder_path):
     lst = remainder_path.split('/')
 
     lst = [x for x in lst if not ('' == x) ]
-    
+
     return lst[0], files_folders_wf[lst[0]], remainder_path.split(lst[0])[1]
 
 

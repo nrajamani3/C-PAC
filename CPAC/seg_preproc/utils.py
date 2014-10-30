@@ -254,7 +254,6 @@ def vol_ctr(seg_nifti_file):
     # Import packages
     import numpy as np
     import nibabel as nb
-    import os.path as op    
 
     # Segment labels dictionary
     labels = {'Left-Thalamus-Proper':10,
