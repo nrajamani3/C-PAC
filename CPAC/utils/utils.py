@@ -1,6 +1,7 @@
 from inspect import currentframe, getframeinfo
 
 import threading
+from posix import lstat
 global_lock = threading.Lock()
 
 
@@ -113,6 +114,8 @@ files_folders_wf = {
     'seg_mixeltype': 'anat',
     'seg_partial_volume_map': 'anat',
     'seg_partial_volume_files': 'anat',
+    'subcort_segout': 'anat',
+    'subcort_csvout': 'anat',
     'spatial_map_timeseries': 'timeseries',
     'dr_tempreg_maps_stack': 'spatial_regression',
     'dr_tempreg_maps_files': 'spatial_regression',
@@ -533,7 +536,7 @@ def get_workflow(remainder_path):
     lst = remainder_path.split('/')
 
     lst = [x for x in lst if not ('' == x) ]
-
+    
     return lst[0], files_folders_wf[lst[0]], remainder_path.split(lst[0])[1]
 
 

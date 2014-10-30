@@ -152,6 +152,7 @@ class ListBox(wx.Frame):
         else:
             btnSizer2.Add((-1, 27))
         
+        # Add buttons to button sizer
         btnSizer2.Add(create, 0, wx.TOP)
         btnSizer2.Add(add, 0, wx.TOP)
         btnSizer2.Add(show, 0, wx.TOP)
