@@ -956,6 +956,118 @@ def setFuncPreprocParams(c,func_preproc):
     func_preproc.inputs.inputspec.stop_idx = c.stopIdx
     return func_preproc
 
+def getFNIRTwarps(num_strat,c):
+    """
+    """
+    func_mni_warp = pe.Node(interface=fsl.ApplyWarp(),
+                            name='func_mni_fsl_warp_%d' % num_strat)
+    func_mni_warp.inputs.ref_file = c.template_brain_only_for_func    
+    functional_brain_mask_to_standard = pe.Node(interface=fsl.ApplyWarp(),
+                                                name='func_mni_fsl_warp_mask_%d' % num_strat)
+    functional_brain_mask_to_standard.inputs.interp = 'nn'
+    functional_brain_mask_to_standard.inputs.ref_file = c.template_skull_for_func
+    mean_functional_warp = pe.Node(interface=fsl.ApplyWarp(), \
+                name='mean_func_fsl_warp_%d' % num_strat)
+    mean_functional_warp.inputs.ref_file = c.template_brain_only_for_func 
+    return func_mni_warp,mean_functional_warp   
+            
+def fslApplyWarp(num_strat,strat_list,c,new_strat_list):
+    """
+    """
+    for strat in strat_list:            
+        nodes = getNodeList(strat)            
+        if 'anat_mni_fnirt_register' in nodes:
+            func_mni_warp,mean_functional_warp = getFNIRTwarps(num_strat,c)
+            try:
+                node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
+                workflow.connect(node, out_file,func_mni_warp, 'field_file')
+
+                node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
+                workflow.connect(node, out_file,func_mni_warp, 'premat')
+
+                node, out_file = strat.get_leaf_properties()
+                workflow.connect(node, out_file,func_mni_warp, 'in_file')    
+
+                node, out_file = strat.get_node_from_resource_pool('anatomical_to_mni_nonlinear_xfm',logger)
+                workflow.connect(node, out_file,functional_brain_mask_to_standard, 'field_file')
+                workflow.connect(node, out_file,mean_functional_warp, 'field_file')
+
+                node, out_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm',logger)
+                workflow.connect(node, out_file,functional_brain_mask_to_standard, 'premat') 
+                workflow.connect(node, out_file,mean_functional_warp, 'premat') 
+
+                node, out_file = strat.get_node_from_resource_pool('functional_brain_mask',logger)
+                workflow.connect(node, out_file,functional_brain_mask_to_standard, 'in_file')
+
+                node, out_file = strat.get_node_from_resource_pool('mean_functional',logger)
+                workflow.connect(node, out_file, mean_functional_warp, 'in_file')
+            except:
+                logConnectionError(\
+                    'Functional Timeseries Registration to MNI space (FSL)', \
+                    num_strat, strat.get_resource_pool(), '0015',logger)
+                raise    
+            strat.update_resource_pool(\
+                {'functional_mni':(func_mni_warp, 'out_file'),\
+                'functional_brain_mask_to_standard':\
+                (functional_brain_mask_to_standard, 'out_file'),\
+                'mean_functional_in_mni':(mean_functional_warp, 'out_file')},\
+                logger)
+            strat.append_name(func_mni_warp.name)
+            create_log_node(workflow,func_mni_warp, 'out_file', num_strat,log_dir)            
+            num_strat += 1           
+    strat_list += new_strat_list  
+    return num_strat,strat_list,new_strat_list
+    
+def runRegisterFuncToMNI(c,subject_id,sub_dict,workflow,workflow_bit_id,\
+                    workflow_counter,strat_list,logger,log_dir):
+    """
+    """
+    new_strat_list = []
+    num_strat = 0
+    if 1 in c.runRegisterFuncToMNI:
+        num_strat,strat_list,new_strat_list = fslApplyWarp(num_strat,\
+                            strat_list,c,new_strat_list)    
+        for strat in strat_list:            
+            nodes = getNodeList(strat)             
+            if ('ANTS' in c.regOption) and ('anat_mni_fnirt_register' not in nodes):
+                # FUNCTIONAL apply warp
+                fsl_to_itk_conversion('mean_functional', 'anatomical_brain', \
+                    'functional_mni',num_strat,workflow,log_dir,strat)
+                collect_transforms_func_mni('functional_mni',num_strat,workflow,log_dir,strat)
+
+                node, out_file = strat.get_leaf_properties()
+                ants_apply_warps_func_mni(node, out_file, \
+                        c.template_brain_only_for_func, 'Linear', 3, \
+                        'functional_mni',num_strat,workflow,log_dir,strat)
+
+                # FUNCTIONAL MASK apply warp
+                fsl_to_itk_conversion('functional_brain_mask', 'anatomical_brain', \
+                'functional_brain_mask_to_standard',num_strat,workflow,log_dir,strat)
+                collect_transforms_func_mni('functional_brain_mask_to_standard'\
+                                ,num_strat,workflow,log_dir,strat)
+
+                node, out_file = strat.get_node_from_resource_pool('func' \
+                        'tional_brain_mask',logger)
+                ants_apply_warps_func_mni(node, out_file, \
+                    c.template_brain_only_for_func, 'NearestNeighbor', 0, \
+                    'functional_brain_mask_to_standard',num_strat,workflow,log_dir,strat)
+
+                # FUNCTIONAL MEAN apply warp
+                fsl_to_itk_conversion('mean_functional', 'anatomical_brain', \
+                                        'mean_functional_in_mni',num_strat,\
+                                        workflow,log_dir,strat)
+                collect_transforms_func_mni('mean_functional_in_mni',num_strat,\
+                                workflow,log_dir,strat)
+
+                node, out_file = strat.get_node_from_resource_pool('mean' \
+                        '_functional',logger)
+                ants_apply_warps_func_mni(node, out_file, \
+                            c.template_brain_only_for_func, 'Linear', 0, \
+                            'mean_functional_in_mni',num_strat,workflow,log_dir,strat)
+                num_strat += 1
+    strat_list += new_strat_list
+    return strat_list
+
 def func2T1BBREG(c,subject_id,sub_dict,workflow,workflow_bit_id,\
                     workflow_counter,strat_list,logger,log_dir):
     """
