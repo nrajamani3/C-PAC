@@ -7,7 +7,7 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
 
-# Fimctopm to compute fisher z-score
+# Function to compute fisher z score
 def compute_fisher_z_score(correlation_file, timeseries_one_d):
 
     """
