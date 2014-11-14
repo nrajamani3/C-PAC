@@ -1,5 +1,5 @@
 # Import packages
-# import os
+import os
 import sys
 import re
 import commands
@@ -289,6 +289,7 @@ def vol_ctr(seg_nifti_file):
 
     # Return the volume segments dictionary
     return vol_dic
+>>>>>>> master
 
 
 def pick_wm_0(probability_maps):
