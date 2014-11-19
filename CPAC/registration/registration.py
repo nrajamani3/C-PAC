@@ -1003,7 +1003,7 @@ def create_wf_collect_transforms(map_node, name='create_wf_collect_transforms'):
 
     elif map_node == 1:
         collect_transforms = pe.MapNode(util.Merge(5),
-                name='collect_transforms_mapnode', iterfield=['in4'])
+                name='collect_transforms_mapnode', iterfield=['in5'])
 
     outputspec = pe.Node(util.IdentityInterface(
             fields=['transformation_series']), name='outputspec')
