@@ -1049,19 +1049,19 @@ def create_wf_collect_transforms(map_node, name='create_wf_collect_transforms'):
  
     # initial transformation from anatomical registration
     collect_transforms_wf.connect(inputspec, 'linear_initial',
-            collect_transforms, 'in1')
+            collect_transforms, 'in4')
 
     # rigid transformation from anatomical registration
     collect_transforms_wf.connect(inputspec, 'linear_rigid',
-            collect_transforms, 'in2')
+            collect_transforms, 'in3')
 
     # affine transformation from anatomical registration
     collect_transforms_wf.connect(inputspec, 'linear_affine',
-            collect_transforms, 'in3')
+            collect_transforms, 'in2')
 
     # Field file from anatomical nonlinear registration
     collect_transforms_wf.connect(inputspec, 'warp_file', collect_transforms,
-            'in4')
+            'in1')
 
     # Premat from Func->Anat linear reg and bbreg (if bbreg is enabled)
     collect_transforms_wf.connect(inputspec, 'fsl_to_itk_affine',
