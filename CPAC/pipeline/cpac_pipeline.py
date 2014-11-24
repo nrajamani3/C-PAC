@@ -552,29 +552,29 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     ants_reg_anat_mni.inputs.inputspec. \
                         winsorize_upper_quantile = 0.99
                     ants_reg_anat_mni.inputs.inputspec. \
-                        metric = ['MI','MI','CC']
-                    ants_reg_anat_mni.inputs.inputspec.metric_weight = [1,1,1]
+                        metric = ['MI','MI']#,'CC']
+                    ants_reg_anat_mni.inputs.inputspec.metric_weight = [1,1]#,1]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        radius_or_number_of_bins = [32,32,4]
+                        radius_or_number_of_bins = [32,32]#,4]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        sampling_strategy = ['Regular','Regular',None]
+                        sampling_strategy = ['Regular','Regular']#,None]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        sampling_percentage = [0.25,0.25,None]
+                        sampling_percentage = [0.25,0.25]#,None]
                     ants_reg_anat_mni.inputs.inputspec. \
                         number_of_iterations = [[1000,500,250,100], \
-                        [1000,500,250,100], [100,100,70,20]]
+                        [1000,500,250,100]]#, [100,100,70,20]]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        convergence_threshold = [1e-8,1e-8,1e-9]
+                        convergence_threshold = [1e-8,1e-8]#,1e-9]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        convergence_window_size = [10,10,15]
+                        convergence_window_size = [10,10]#,15]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        transforms = ['Rigid','Affine','SyN']
+                        transforms = ['Rigid','Affine']#,'SyN']
                     ants_reg_anat_mni.inputs.inputspec. \
-                        transform_parameters = [[0.1],[0.1],[0.1,3,0]]
+                        transform_parameters = [[0.1],[0.1],]#[0.1,3,0]]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        shrink_factors = [[8,4,2,1],[8,4,2,1],[6,4,2,1]]
+                        shrink_factors = [[8,4,2,1],[8,4,2,1]]#,[6,4,2,1]]
                     ants_reg_anat_mni.inputs.inputspec. \
-                        smoothing_sigmas = [[3,2,1,0],[3,2,1,0],[3,2,1,0]]
+                        smoothing_sigmas = [[3,2,1,0],[3,2,1,0]]#,[3,2,1,0]]
                 
 
                 except:
