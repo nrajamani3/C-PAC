@@ -7,7 +7,13 @@ def combine_inputs_into_list(input1, input2, input3):
 
 def seperate_warps_list(warp_list, selection):
 
-     return warp_list[selection]
+    for warp in warp_list:
+
+        if selection in warp:
+
+            selected_warp = warp
+     
+    return selected_warp
 
 
 def hardcoded_reg(anatomical_brain, reference_brain, anatomical_skull, reference_skull):

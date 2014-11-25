@@ -609,35 +609,35 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
             'selection'], output_names=['selected_warp'],
             function=seperate_warps_list), name='select_forward_initial')
 
-    select_forward_initial.inputs.selection = 0
+    select_forward_initial.inputs.selection = "Initial"
 
 
     select_forward_rigid = pe.Node(util.Function(input_names=['warp_list',
             'selection'], output_names=['selected_warp'],
             function=seperate_warps_list), name='select_forward_rigid')
 
-    select_forward_rigid.inputs.selection = 2
+    select_forward_rigid.inputs.selection = "Rigid"
 
 
     select_forward_affine = pe.Node(util.Function(input_names=['warp_list',
             'selection'], output_names=['selected_warp'],
             function=seperate_warps_list), name='select_forward_affine')
 
-    select_forward_affine.inputs.selection = 1
+    select_forward_affine.inputs.selection = "Affine"
 
 
     select_forward_warp = pe.Node(util.Function(input_names=['warp_list',
             'selection'], output_names=['selected_warp'],
             function=seperate_warps_list), name='select_forward_warp')
 
-    select_forward_warp.inputs.selection = 4
+    select_forward_warp.inputs.selection = "3Warp"
 
 
     select_inverse_warp = pe.Node(util.Function(input_names=['warp_list',
             'selection'], output_names=['selected_warp'],
             function=seperate_warps_list), name='select_inverse_warp')
 
-    select_inverse_warp.inputs.selection = 3
+    select_inverse_warp.inputs.selection = "Inverse"
 
 
     outputspec = pe.Node(util.IdentityInterface(fields=['ants_initial_xfm',
