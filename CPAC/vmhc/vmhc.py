@@ -437,10 +437,15 @@ def create_vmhc(use_ants=False, use_skull=False):
                          calculate_ants_xfm_vmhc, 'inputspec.reference_brain')
         else:
             # registration calculation stuff -- might go out the window
-            vmhc.connect(inputNode, 'reorient',
+            vmhc.connect(inputNode, 'brain',
                          calculate_ants_xfm_vmhc, 'inputspec.anatomical_brain')
-            vmhc.connect(inputNode, 'symmetric_skull',
+            vmhc.connect(inputNode, 'symmetric_brain',
                          calculate_ants_xfm_vmhc, 'inputspec.reference_brain')
+
+            vmhc.connect(inputNode, 'reorient',
+                         calculate_ants_xfm_vmhc, 'inputspec.anatomical_skull')
+            vmhc.connect(inputNode, 'symmetric_skull',
+                         calculate_ants_xfm_vmhc, 'inputspec.reference_skull')
      
 
         # functional apply warp stuff
