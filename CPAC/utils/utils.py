@@ -138,7 +138,6 @@ files_folders_wf = {
     'sca_tempreg_maps_zstat_files_smooth': 'sca_roi',
 }
 
-
 def get_zscore(input_name, wf_name = 'z_score'):
     
     """
