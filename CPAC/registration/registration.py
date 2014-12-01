@@ -900,8 +900,7 @@ def create_wf_apply_ants_warp(map_node, name='create_wf_apply_ants_warp'):
     return apply_ants_warp_wf
 
 
-
-def create_wf_c3d_fsl_to_itk(map_node, name='create_wf_c3d_fsl_to_itk'):
+def create_wf_c3d_fsl_to_itk(map_node, input_image_type=0, name='create_wf_c3d_fsl_to_itk'):
 
     """
     Converts an FSL-format output matrix to an ITK-format (ANTS) matrix
@@ -941,6 +940,7 @@ def create_wf_c3d_fsl_to_itk(map_node, name='create_wf_c3d_fsl_to_itk'):
     import nipype.interfaces.c3 as c3
     from nipype.interfaces.utility import Function
     from CPAC.registration.utils import change_itk_transform_type
+    from nipype.interfaces.afni import preprocess
 
     fsl_to_itk_conversion = pe.Workflow(name=name)
 
@@ -987,8 +987,26 @@ def create_wf_c3d_fsl_to_itk(map_node, name='create_wf_c3d_fsl_to_itk'):
     fsl_to_itk_conversion.connect(inputspec, 'reference_file', fsl_reg_2_itk,
             'reference_file')
 
-    fsl_to_itk_conversion.connect(inputspec, 'source_file', fsl_reg_2_itk,
-            'source_file')
+    # source_file input of the conversion must be a 3D file, so if the source
+    # file is 4D (input_image_type=3), average it into a 3D file first
+    if input_image_type == 0:
+
+        fsl_to_itk_conversion.connect(inputspec, 'source_file', fsl_reg_2_itk,
+                'source_file')
+
+    elif input_image_type == 3:
+
+        tstat_source = pe.Node(interface=preprocess.TStat(),
+                name='fsl_to_itk_tcat_source')
+        tstat_source.inputs.outputtype = 'NIFTI_GZ'
+        tstat_source.inputs.options = '-mean'
+
+        fsl_to_itk_conversion.connect(inputspec, 'source_file', tstat_source,
+                'in_file')
+
+        fsl_to_itk_conversion.connect(tstat_source, 'out_file', fsl_reg_2_itk,
+                'source_file')
+
 
     fsl_to_itk_conversion.connect(fsl_reg_2_itk, 'itk_transform',
             change_transform, 'input_affine_file')
@@ -1053,27 +1071,27 @@ def create_wf_collect_transforms(map_node, name='create_wf_collect_transforms'):
 
     elif map_node == 1:
         collect_transforms = pe.MapNode(util.Merge(5),
-                name='collect_transforms_mapnode', iterfield=['in4'])
+                name='collect_transforms_mapnode', iterfield=['in5'])
 
     outputspec = pe.Node(util.IdentityInterface(
             fields=['transformation_series']), name='outputspec')
 
- 
-    # initial transformation from anatomical registration
-    collect_transforms_wf.connect(inputspec, 'linear_initial',
-            collect_transforms, 'in4')
 
-    # rigid transformation from anatomical registration
-    collect_transforms_wf.connect(inputspec, 'linear_rigid',
-            collect_transforms, 'in3')
+    # Field file from anatomical nonlinear registration
+    collect_transforms_wf.connect(inputspec, 'warp_file', collect_transforms,
+            'in1')
 
     # affine transformation from anatomical registration
     collect_transforms_wf.connect(inputspec, 'linear_affine',
             collect_transforms, 'in2')
 
-    # Field file from anatomical nonlinear registration
-    collect_transforms_wf.connect(inputspec, 'warp_file', collect_transforms,
-            'in1')
+    # rigid transformation from anatomical registration
+    collect_transforms_wf.connect(inputspec, 'linear_rigid',
+            collect_transforms, 'in3')
+
+    # initial transformation from anatomical registration
+    collect_transforms_wf.connect(inputspec, 'linear_initial',
+            collect_transforms, 'in4')
 
     # Premat from Func->Anat linear reg and bbreg (if bbreg is enabled)
     collect_transforms_wf.connect(inputspec, 'fsl_to_itk_affine',
