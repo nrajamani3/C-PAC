@@ -14,7 +14,8 @@ from CPAC.registration import create_wf_calculate_ants_warp, \
                               create_wf_collect_transforms, \
                               create_wf_apply_ants_warp
 
-def create_vmhc(use_ants=False, use_skull=False):
+
+def create_vmhc(use_ants=False, use_skull=0):
 
     """
     Compute the map of brain functional homotopy, the high degree of synchrony in spontaneous activity between geometrically corresponding interhemispheric (i.e., homotopic) regions.
@@ -290,8 +291,8 @@ def create_vmhc(use_ants=False, use_skull=False):
 
         # ANTS warp image etc.
 
-        calculate_ants_xfm_vmhc = create_wf_calculate_ants_warp(name='calculate_ants_xfm_vmhc')
-
+        calculate_ants_xfm_vmhc = create_wf_calculate_ants_warp(name='calculate_ants_xfm_vmhc', mult_input=use_skull)
+        
         fsl_to_itk_vmhc = create_wf_c3d_fsl_to_itk(0, name='fsl_to_itk_vmhc')
 
         collect_transforms_vmhc = create_wf_collect_transforms(0, name='collect_transforms_vmhc')
@@ -429,7 +430,7 @@ def create_vmhc(use_ants=False, use_skull=False):
 
         # connections for ANTS stuff
 
-        if use_skull == False:
+        if use_skull == 0:
             # registration calculation stuff -- might go out the window
             vmhc.connect(inputNode, 'brain',
                          calculate_ants_xfm_vmhc, 'inputspec.anatomical_brain')
