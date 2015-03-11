@@ -595,8 +595,8 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
             'sampling_percentage', 'number_of_iterations', 
             'convergence_threshold', 'convergence_window_size', 'transforms',
             'transform_parameters', 'shrink_factors', 'smoothing_sigmas',
-            'write_composite_transform', 'anatomical_skull', 'reference_skull',
-            'wait']), name='inputspec')
+            'write_composite_transform', 'anatomical_skull',
+            'reference_skull']), name='inputspec')
 
 
     # use ANTS to warp the masked anatomical image to a template image
@@ -607,7 +607,7 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
     calculate_ants_warp.inputs.output_warped_image = True
     calculate_ants_warp.inputs.initial_moving_transform_com = 0
     '''
-    calculate_ants_warp = pe.Node(interface=util.Function(input_names=['anatomical_brain', 'reference_brain', 'anatomical_skull', 'reference_skull', 'wait'], output_names=['warp_list', 'warped_image'], function=hardcoded_reg), name='calc_ants_warp')
+    calculate_ants_warp = pe.Node(interface=util.Function(input_names=['anatomical_brain', 'reference_brain', 'anatomical_skull', 'reference_skull'], output_names=['warp_list', 'warped_image'], function=hardcoded_reg), name='calc_ants_warp')
 
     select_forward_initial = pe.Node(util.Function(input_names=['warp_list',
             'selection'], output_names=['selected_warp'],
@@ -646,7 +646,7 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
 
     outputspec = pe.Node(util.IdentityInterface(fields=['ants_initial_xfm',
             'ants_rigid_xfm', 'ants_affine_xfm', 'warp_field',
-            'inverse_warp_field', 'composite_transform', 'wait',
+            'inverse_warp_field', 'composite_transform',
             'normalized_output_brain']), name='outputspec')
 
 
@@ -676,8 +676,6 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
         calc_ants_warp_wf.connect(inputspec, 'reference_skull',
                 calculate_ants_warp, 'reference_skull')
 
-        calc_ants_warp_wf.connect(inputspec, 'wait',
-                calculate_ants_warp, 'wait')
 
         '''
         calc_ants_warp_wf.connect(inputspec, 'anatomical_brain',
@@ -719,8 +717,6 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
         calc_ants_warp_wf.connect(inputspec, 'reference_brain',
                 calculate_ants_warp, 'reference_skull')
 
-        calc_ants_warp_wf.connect(inputspec, 'wait',
-                calculate_ants_warp, 'wait')
 
         '''
         calc_ants_warp_wf.connect(inputspec, 'anatomical_brain',
@@ -819,8 +815,6 @@ def create_wf_calculate_ants_warp(name='create_wf_calculate_ants_warp', mult_inp
     calc_ants_warp_wf.connect(calculate_ants_warp, 'warped_image',
             outputspec, 'normalized_output_brain')
 
-    calc_ants_warp_wf.connect(inputspec, 'wait',
-            outputspec, 'wait')
 
 
     return calc_ants_warp_wf

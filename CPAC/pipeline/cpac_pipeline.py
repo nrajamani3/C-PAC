@@ -683,9 +683,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     # assign the FSL FNIRT config file specified in pipeline config.yml
                     fnirt_reg_anat_symm_mni.inputs.inputspec.fnirt_config = c.configFileTwomm
 
-                    node, out_file = strat.get_node_from_resource_pool('mni_normalized_anatomical')
-                    workflow.connect(node, out_file,
-                                     fnirt_reg_anat_symm_mni, 'inputspec.wait')
 
                 except:
                     logConnectionError('Symmetric Anatomical Registration (FSL)', num_strat, strat.get_resource_pool(), '0002')
@@ -706,8 +703,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                 strat.update_resource_pool({'anatomical_to_symmetric_mni_linear_xfm':(fnirt_reg_anat_symm_mni, 'outputspec.linear_xfm'),
                                             'anatomical_to_symmetric_mni_nonlinear_xfm':(fnirt_reg_anat_symm_mni, 'outputspec.nonlinear_xfm'),
                                             'symmetric_mni_to_anatomical_linear_xfm':(fnirt_reg_anat_symm_mni, 'outputspec.invlinear_xfm'),
-                                            'symmetric_mni_normalized_anatomical':(fnirt_reg_anat_symm_mni, 'outputspec.output_brain'),
-                                            'mni_normalized_anatomical':(ants_reg_anat_symm_mni, 'outputspec.wait')})
+                                            'symmetric_mni_normalized_anatomical':(fnirt_reg_anat_symm_mni, 'outputspec.output_brain')})
 
 
                 create_log_node(fnirt_reg_anat_symm_mni, 'outputspec.output_brain', num_strat)
@@ -821,9 +817,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     ants_reg_anat_symm_mni.inputs.inputspec. \
                         smoothing_sigmas = [[3,2,1,0],[3,2,1,0],[3,2,1,0]]
 
-                    node, out_file = strat.get_node_from_resource_pool('mni_normalized_anatomical')
-                    workflow.connect(node, out_file,
-                                     ants_reg_anat_symm_mni, 'inputspec.wait')
                 
 
                 except:
@@ -848,8 +841,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                             'anatomical_to_symmetric_mni_nonlinear_xfm':(ants_reg_anat_symm_mni, 'outputspec.warp_field'),
                                             'symmetric_mni_to_anatomical_nonlinear_xfm':(ants_reg_anat_symm_mni, 'outputspec.inverse_warp_field'),
                                             'anat_to_symmetric_mni_ants_composite_xfm':(ants_reg_anat_symm_mni, 'outputspec.composite_transform'),
-                                            'symmetric_mni_normalized_anatomical':(ants_reg_anat_symm_mni, 'outputspec.normalized_output_brain'),
-                                            'mni_normalized_anatomical':(ants_reg_anat_symm_mni, 'outputspec.wait')})
+                                            'symmetric_mni_normalized_anatomical':(ants_reg_anat_symm_mni, 'outputspec.normalized_output_brain')})
 
                 create_log_node(ants_reg_anat_symm_mni, 'outputspec.normalized_output_brain', num_strat)
           
