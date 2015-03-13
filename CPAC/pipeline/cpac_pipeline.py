@@ -2295,13 +2295,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                                  vmhc, 'inputspec.brain')
 
 
-                if 'func_mni_fsl_warp' in nodes:
-
-                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_symmetric_mni_nonlinear_xfm')
-                    workflow.connect(node, out_file,
-                                     vmhc, 'inputspec.fnirt_nonlinear_warp')
-
-                else:
+                if ('ANTS' in c.regOption) and \
+                    ('anat_symmetric_mni_fnirt_register' not in nodes):
 
                     node, out_file = strat.get_node_from_resource_pool('ants_symmetric_initial_xfm')
                     workflow.connect(node, out_file,
@@ -2318,6 +2313,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None, p_nam
                     node, out_file = strat.get_node_from_resource_pool('anatomical_to_symmetric_mni_nonlinear_xfm')
                     workflow.connect(node, out_file,
                                      vmhc, 'inputspec.ants_symm_warp_field')
+                                     
+                else:
+
+                    node, out_file = strat.get_node_from_resource_pool('anatomical_to_symmetric_mni_nonlinear_xfm')
+                    workflow.connect(node, out_file,
+                                     vmhc, 'inputspec.fnirt_nonlinear_warp')
 
 
             except:
