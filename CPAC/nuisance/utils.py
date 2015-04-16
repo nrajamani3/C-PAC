@@ -1,8 +1,13 @@
+# Import packages
 import numpy as np
 
 def calc_compcor_components(data, nComponents, wm_sigs, csf_sigs):
+    '''
+    '''
+
+    # Import packages
     import scipy.signal as signal
-    
+
     wmcsf_sigs = np.vstack((wm_sigs, csf_sigs))
 
     # filter out any voxels whose variance equals 0
@@ -12,15 +17,15 @@ def calc_compcor_components(data, nComponents, wm_sigs, csf_sigs):
     if wmcsf_sigs.shape.count(0):
         print 'No wm or csf signals left after removing those with zero variance'
         raise IndexError
-    
+
     print 'Detrending and centering data'
     Y = signal.detrend(wmcsf_sigs, axis=1, type='linear').T
     Yc = Y - np.tile(Y.mean(0), (Y.shape[0], 1))
     Yc = Yc / np.tile(np.array(Y.std(0)).reshape(1,Y.shape[1]), (Y.shape[0],1))
-    
+
     print 'Calculating SVD decomposition of Y*Y\''
     U, S, Vh = np.linalg.svd(Yc)
-    
+
     return U[:,:nComponents]
 
 def erode_mask(data):

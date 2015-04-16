@@ -9,8 +9,7 @@ CPAC/network_centrality package
 '''
 
 # Import module TestCases
-from test.unit.network_centrality.resting_state_centrality_test import \
-    CentralityWorkflowTestCase
+from .resting_state_centrality_test import CentralityWorkflowTestCase
 
 # Setup module environment
 __all__ = ['CentralityWorkflowTestCase']

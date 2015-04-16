@@ -34,34 +34,34 @@ def return_aws_keys(creds_path):
 
     # Init variables
     csv_reader = csv.reader(open(creds_path, 'r'))
-    
+
     # Grab csv rows
     row1 = csv_reader.next()[0]
     row2 = csv_reader.next()[0]
-    
+
     # And split out for keys
     aws_access_key_id = row1.split('=')[1]
     aws_secret_access_key = row2.split('=')[1]
 
     # Return keys
-    return aws_access_key_id,\
-           aws_secret_access_key,\
+    return aws_access_key_id, aws_secret_access_key
 
 
 # Function to return an AWS S3 bucket
-def return_bucket(creds_path, bucket_name):
+def return_bucket(bucket_name, creds_path=None):
     '''
     Method to a return a bucket object which can be used to interact
     with an AWS S3 bucket using credentials found in a local file.
 
     Parameters
     ----------
-    creds_path : string (filepath)
-        path to the csv file with 'Access Key Id' as the header and the
-        corresponding ASCII text for the key underneath; same with the
-        'Secret Access Key' string and ASCII text
     bucket_name : string
         string corresponding to the name of the bucket on S3
+    creds_path : string (optional), default=None
+        path to the csv file with 'Access Key Id' as the header and the
+        corresponding ASCII text for the key underneath; same with the
+        'Secret Access Key' string and ASCII text; if not specified, the
+        function will attempt to return a bucket with anonymous permissions
 
     Returns
     -------
@@ -74,13 +74,14 @@ def return_bucket(creds_path, bucket_name):
     import boto
     import boto.s3.connection
 
-    # Get AWS credentials
-    aws_access_key_id, aws_secret_access_key = return_aws_keys(creds_path)
+    # Get AWS credentials if creds_path is specified
+    if creds_path:
+        aws_access_key_id, aws_secret_access_key = return_aws_keys(creds_path)
+        s3_conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key)
+    # Otherwise, connect as anonymous
+    else:
+        s3_conn = boto.connect_s3(anon=True)
 
-    # Init connection
-    cf = boto.s3.connection.OrdinaryCallingFormat()
-    s3_conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key,
-                              calling_format=cf)
     # And fetch the bucket with the name argument
     bucket = s3_conn.get_bucket(bucket_name)
 

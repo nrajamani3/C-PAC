@@ -10,7 +10,7 @@ CPAC/pipeline/cpac_pipeline.py
 
 # Import packages
 import unittest
-from test import RESOURCE_DIR
+from ...test_variables import RESOURCE_DIR
 
 # Test case for the run function
 class CentralityWorkflowTestCase(unittest.TestCase):

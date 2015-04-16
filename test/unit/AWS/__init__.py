@@ -9,7 +9,7 @@ CPAC/AWS package
 '''
 
 # Import module TestCases
-from test.unit.AWS.fetch_creds_test import FetchCredsTestCase
+from .fetch_creds_test import FetchCredsTestCase
 
 
 # Setup module environment

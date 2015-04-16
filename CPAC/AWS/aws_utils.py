@@ -8,106 +8,142 @@ This module contains functions which assist in interacting with AWS
 services, including uploading/downloading data and file checking.
 '''
 
-# Build and download a subject list
-def build_download_sublist(bucket, bucket_prefix, local_prefix, sub_list):
+# Build a subject list from S3 bucket keys
+def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template,
+                     download_dir, output_dir, sublist_name, **kwargs):
     '''
-    Function to build and download a subject list from S3
-    
+    Function to build a C-PAC subject list from S3 bucket keys
+
     Parameters
     ----------
-    bucket : boto.s3.bucket.Bucket instance
-        an instance of the boto S3 bucket class to download from
-    bucket_prefix : string
-        the bucket prefix where all of the file keys are located
-    local_prefix : string
-        the local disk prefix where all of the files should be downloaded to
-    sub_list : list (dict)
-        the C-PAC subject list that has inputs in local_prefix
-    
+    bucket_name : string
+        string of the bucket name
+    anat_fp_template : string
+        anatomical filepath pattern with site and subject-level
+        directories replaced with a %s wildcard;
+        any session folder or filename variation should be captured
+        with the * wildcard
+    func_fp_template : string
+        functional filepath pattern with site and subject-level
+        directories replaced with a %s wildcard;
+        any session folder or filename variation should be captured
+        with the * wildcard
+    output_dir : string
+        filepath to a local directory where the subject list yaml file
+        will be saved to
+    sublist_name : string
+        name of the subject list
+    scan_params_file : string (optional), default=None
+        filepath to a scan parameters file containing scan acquisition
+        information
+    subs_to_include : list (optional), default=None
+        a list of strings of subject identifiers to only include;
+        these names should match the subject-level folders names
+    subs_to_exclude : list (optional), defualt=None
+        a list of strings of subject identifiers to only exclude;
+        these names should match the subject-level folders names
+    sites_to_include : list (optional), default=None
+        a list of strings of site identifiers to only include;
+        these names should match the site-level folders names
+
     Returns
     -------
     None
         this function does not return a value, it downloads the subjects from
         the C-PAC subject list to disk from S3
     '''
-    
+
     # Import packages
-    import os
-    
+    import fnmatch
+    from CPAC.AWS import fetch_creds
+
     # Init variables
-    local_list = []
-    for sub_dict in sub_list:
-        local_list.append(sub_dict['anat'])
-        local_list.extend([v for v in sub_dict['rest'].values()])
+    bucket = fetch_creds.return_bucket(bucket_name)
+    anat_s3_files = []
+    func_s3_files = []
+    anat_prefix = anat_fp_template.split('%s')[0]
+    func_prefix = func_fp_template.split('%s')[0]
 
-    # Substitute the prefixes to build S3 list to download from
-    s3_list = [l.replace(local_prefix, bucket_prefix) for l in local_list]
+    # Make sure anat and func prefixes match
+    if anat_prefix != func_prefix:
+        err_msg = 'Anatomical and functional data must sit in the same '
+                  'base folder.\nAnatomical base: %s\nFunctional base: %s' \
+                  % (anat_prefix, func_prefix)
+        raise Exception(err_msg)
 
-    # Check already-existing files and remove from download lists
-    local_rm = []
-    s3_rm = []
-    # Build remove-lists
-    for i in range(len(local_list)):
-        l = local_list[i]
-        s = s3_list[i]
-        if os.path.exists(l):
-            local_rm.append(l)
-            s3_rm.append(s)
-    # Go through remove lists and remove files
-    for l, s in zip(local_rm, s3_rm):
-        local_list.remove(l)
-        s3_list.remove(s)
+    # Collect S3 filepaths
+    s3_fpaths = collect_s3_filepaths(bucket, anat_prefix)
 
-    # Download the data to the local prefix
-    s3_download(bucket, s3_list, local_prefix, bucket_prefix=bucket_prefix)
-    
-    # Check to see they all downloaded successfully
-    for l in local_list:
-        l_path = os.path.abspath(l)
-        if not os.path.exists(l_path):
-            raise IOError('S3 files were not all downloaded.\n'\
-                          'Could not find: %s' % l_path)
+    # Filter out anything that doesn't match template pattern
+    anat_pattern = anat_fp_template.replace('%s', '*')
+    func_pattern = func_fp_template.replace('%s', '*')
+
+    anat_files = [fpath for fpath in s3_fpaths \
+                  if fnmatch.fnmatch(fpath, anat_pattern)]
+    func_files = [fpath for fpath in s3_fpaths \
+                  if fnmatch.fnmatch(fpath, func_pattern)]
 
 
-# Collect all files in directory as the source list
-def collect_subject_files(prefix_star, sub_id):
+
+
+# Collect filepaths from S3 bucket
+def collect_s3_filepaths(bucket, bucket_prefix):
     '''
     Function to collect all of the files in a directory into a list of
     full paths
-    
+
     Parameters
     ----------
-    prefix_star : string
-        filepath to the folder, in which, all of the sub-files are
-        collected; this filepath should have a wildcard character of
-        '*' so that glob can collect the files via the pattern given
-    sub_id : string
-        the subject id to look for in the output folder
-    
+    bucket : boto.s3.bucket.Bucket
+        the S3 bucket to collect filepaths from
+    bucket_prefix : string
+        prefix to the the location where all of the keys are stored in
+        the S3 bucket
+
     Returns
     -------
-    src_list : list [str]
-        a list of filepaths (as strings)
+    file_paths : list
+        a list of filepaths, each filepath is the full S3 keyname
     '''
 
     # Import packages
-    import glob
-    import os
 
     # Init variables
-    bases = glob.glob(prefix_star)
-    src_list = []
-    
-    # For each pipeline
-    for base in bases:
-        # Iterate through directory
-        for root, dirs, files in os.walk(base):
-            # If it's in the subject's folder and there are files
-            if sub_id in root and files:
-                src_list.extend([os.path.join(root, f) for f in files])
+    file_paths = []
+
+    # Print status
+    print 'Building list of filepaths...\nbucket: %s\nprefix: %s' \
+            % (bucket.name, bucket_prefix)
+
+    # Build the list
+    for b_key in bucket.list(prefix=bucket_prefix):
+        bkey_name = str(b_key.name)
+        file_paths.append(bkey_name)
+
+    # Print finished
+    print 'Done!'
 
     # Return the list
-    return src_list
+    return file_paths
+
+
+# Download the subjects
+def download_subject_data(subject_list, download_dir):
+    '''
+    Function to download the subject input files from a C-PAC subject
+    list to a directory
+
+    Parameters
+    ----------
+    subject_list : list
+        a list of dictionaries, each of which corresponds to a subject
+        data bundle comprising of their various input data filepaths
+    download_dir : string
+        filepath to a directory to save the subject input data to
+
+    Returns
+    -------
+    '''
 
 
 # Get the MD5 sums of files on S3
@@ -395,3 +431,24 @@ def s3_upload(bucket, src_list, dst_list, make_public=False, overwrite=False):
 
     # Print when finished
     print 'Done!'
+
+
+# Print status of file progression in loop
+def print_loop_status(itr, full_len):
+    '''
+    Function to print the current percentage completed of a loop
+    Parameters
+    ----------
+    itr : integer
+        the current iteration of the loop
+    full_len : integer
+        the full length of the loop
+    Returns
+    -------
+    None
+        the function prints the loop status, but doesn't return a value
+    '''
+
+    # Print the percentage complete
+    per = 100*(float(itr)/full_len)
+    print '%d/%d\n%f%% complete' % (itr, full_len, per)
