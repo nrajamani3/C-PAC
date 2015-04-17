@@ -9,10 +9,10 @@ services, including uploading/downloading data and file checking.
 '''
 
 # Build a subject list from S3 bucket keys
-def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template,
-                     download_dir, output_dir, sublist_name, **kwargs):
+def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template):
     '''
     Function to build a C-PAC subject list from S3 bucket keys
+                     download_dir, output_dir, sublist_name, **kwargs):
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template,
     subs_to_include : list (optional), default=None
         a list of strings of subject identifiers to only include;
         these names should match the subject-level folders names
-    subs_to_exclude : list (optional), defualt=None
+    subs_to_exclude : list (optional), default=None
         a list of strings of subject identifiers to only exclude;
         these names should match the subject-level folders names
     sites_to_include : list (optional), default=None
@@ -55,24 +55,40 @@ def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template,
 
     # Import packages
     import fnmatch
+    import os
     from CPAC.AWS import fetch_creds
 
     # Init variables
+    subject_list = []
     bucket = fetch_creds.return_bucket(bucket_name)
-    anat_s3_files = []
-    func_s3_files = []
     anat_prefix = anat_fp_template.split('%s')[0]
     func_prefix = func_fp_template.split('%s')[0]
 
     # Make sure anat and func prefixes match
-    if anat_prefix != func_prefix:
-        err_msg = 'Anatomical and functional data must sit in the same '
+    if anat_prefix == func_prefix:
+        bucket_prefix = anat_prefix
+    else:
+        err_msg = 'Anatomical and functional data must sit in the same ' \
                   'base folder.\nAnatomical base: %s\nFunctional base: %s' \
                   % (anat_prefix, func_prefix)
         raise Exception(err_msg)
 
+    # Also check that files are nifti only
+    if not (anat_fp_template.endswith('.nii.gz') or \
+            anat_fp_template.endswith('.nii')):
+        err_msg = 'Template does not look for nifti files. ' \
+                  'Convert data to nifti and provide new template.\n' \
+                  'Anat template: %s' % anat_fp_template
+        raise Exception(err_msg)
+    elif not (func_fp_template.endswith('.nii.gz') or \
+              func_fp_template.endswith('.nii')):
+        err_msg = 'Template does not look for nifti files. ' \
+                  'Convert data to nifti and provide new template.\n' \
+                  'Func template: %s' % func_fp_template
+        raise Exception(err_msg)
+
     # Collect S3 filepaths
-    s3_fpaths = collect_s3_filepaths(bucket, anat_prefix)
+    s3_fpaths = collect_s3_filepaths(bucket, bucket_prefix)
 
     # Filter out anything that doesn't match template pattern
     anat_pattern = anat_fp_template.replace('%s', '*')
@@ -83,7 +99,144 @@ def build_s3_sublist(bucket_name, anat_fp_template, func_fp_template,
     func_files = [fpath for fpath in s3_fpaths \
                   if fnmatch.fnmatch(fpath, func_pattern)]
 
+    # Make sure files were found
+    if len(anat_files) == 0 or len(func_files) == 0:
+        err_msg = 'Unable to find needed files matching file pattern.\n' \
+                  'Number of anat files: %s\nNumber of func files: %d' \
+                  % (len(anat_files), len(func_files))
+        raise Exception(err_msg)
 
+    # Get site, subject, session indices and make sure anat and func match
+    site_idx, subject_idx, session_idx = \
+            return_template_indices(anat_fp_template, func_fp_template)
+
+    # Now iterate through anatomical and pull matching functional
+    print 'Building subject list from found files...'
+    for anat_file in anat_files:
+        af_list = anat_file.split('/')
+        # Get site from anat, and insert into func pattern
+        site = af_list[site_idx]
+        func_pattern = func_fp_template.replace('%s', site, 1)
+        # Get subject_id from anat, and insert into func pattern
+        subject = af_list[subject_idx]
+        func_pattern = func_pattern.replace('%s', subject, 1)
+        # If sessions found, set up func pattern
+        if session_idx != subject_idx:
+            # Grab session from list and insert into pattern
+            session = af_list[session_idx]
+            fpattern_list = func_pattern.split('/')
+            fpattern_list[session_idx] = session
+            func_pattern = '/'.join(fpattern_list)
+            # And populate unique_id
+            unique_id = session
+        # Otherwise, no sessions directories, use site as unique id
+        else:
+            unique_id = site
+
+        # Subject scans dict
+        subject_dict = {'anat' : '', 'rest' : {},
+                       'subject_id' : '', 'unique_id' : ''}
+        subject_dict ['anat'] = anat_file
+        subject_dict['subject_id'] = subject
+        subject_dict['unique_id'] = unique_id
+
+        # Pull out all matching functional data and insert into subject dict
+        matching_funcs = [func for func in func_files \
+                          if fnmatch.fnmatch(func, func_pattern)]
+        for func_file in matching_funcs:
+            func_list = func_file.split('/')
+            func_key = '_'.join(func_list[session_idx+1:]).split('.')[0]
+            subject_dict['rest'][func_key] = func_file
+
+        # Finally, append subject dict to overall subject list
+        subject_list.append(subject_dict)
+
+    # Return the subject list
+    return subject_list
+
+
+# Get site, subject, session indices of filepath templates
+def return_template_indices(anat_fp_template, func_fp_template):
+    '''
+    Function that will return the index of the site, subject,
+    and session-level directories using the '/' path delimiter
+
+    fp_template format: /base/%s/%s/../file.nii.gz
+
+    The first '%s' corresponds to the site-level directory, the second
+    '%s' corresponds to the subject-level diretory; any intermediary
+    folders after the subject-level directory that contain both
+    anatomical and functional data will be considered a session
+    directory
+
+    Parameters
+    ----------
+    anat_fp_template : string
+        filepath template of the input data to collect; this must be of
+        the form /base/%s/%s/../anat_file.nii.gz
+    func_fp_template : string
+        filepath template of the input data to collect; this must be of
+        the form /base/%s/%s/../func_file.nii.gz
+
+    Returns
+    -------
+    site_idx : integer
+        the site-level directory index
+    subject_idx : integer
+        the subject-level directory index
+    session_idx : integer
+        the session-level directory index; if there are no session
+        session folders found, this will be the same as subject_idx
+    '''
+
+    # Init variables
+    anat_fp_list = anat_fp_template.split('/')
+    func_fp_list = func_fp_template.split('/')
+
+    # Grab site index and check they are the same
+    anat_site_idx = anat_fp_list.index('%s')
+    func_site_idx = func_fp_list.index('%s')
+
+    if anat_site_idx == func_site_idx:
+        site_idx = anat_site_idx
+    else:
+        err_msg = 'Anatomical and functional data must be within the same ' \
+                  'site folders. Re-organize data or check templates.\n' \
+                  'Anat template: %s\nFunc template: %s' \
+                  % (anat_fp_template, func_fp_template)
+        raise Exception(err_msg)
+
+    # Grab subject index and check they are the same
+    anat_sub_idx = anat_fp_list[site_idx+1:].index('%s')
+    func_sub_idx = func_fp_list[site_idx+1:].index('%s')
+
+    anat_sub_idx = site_idx + 1 + anat_sub_idx
+    func_sub_idx = site_idx + 1 + func_sub_idx
+
+    if anat_sub_idx == func_sub_idx:
+        subject_idx = anat_sub_idx
+    else:
+        err_msg = 'Anatomical and functional data must be within the same ' \
+                  'subject folders. Re-organize data or check templates.\n' \
+                  'Anat template: %s\nFunc template: %s' \
+                  % (anat_fp_template, func_fp_template)
+        raise Exception(err_msg)
+
+    # Grab session index, if it exists
+    anat_tail_dirs = anat_fp_list[subject_idx+1:]
+    func_tail_dirs = func_fp_list[subject_idx+1:]
+    # Go through both directory tails and see how long dirs match
+    # The last match between the two is the session folder
+    session_idx = subject_idx
+    for anat_dirname in anat_tail_dirs:
+        func_dirname = func_tail_dirs[session_idx-subject_idx]
+        if anat_dirname == func_dirname:
+            session_idx += 1
+        else:
+            break
+
+    # Return the indices
+    return site_idx, subject_idx, session_idx
 
 
 # Collect filepaths from S3 bucket
