@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -7,11 +8,8 @@
     
     <title>Amplitude of Low Frequency Fluctuations (ALFF) and fractional ALFF (f/ALFF) &mdash; C-PAC 0.3.9 Alpha documentation</title>
     
-    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="_static/bootstrap-3.2.0/css/bootstrap.min.css" type="text/css" />
-    <link rel="stylesheet" href="_static/bootstrap-3.2.0/css/bootstrap-theme.min.css" type="text/css" />
-    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -25,32 +23,30 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="_static/js/jquery-1.11.0.min.js"></script>
-    <script type="text/javascript" src="_static/js/jquery-fix.js"></script>
-    <script type="text/javascript" src="_static/bootstrap-3.2.0/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
-    <link rel="top" title="C-PAC 0.3.9 Alpha documentation" href="index.html" />
-    <link rel="up" title="Outputs and Measures" href="derivs.html" />
-    <link rel="next" title="Voxel-Mirrored Homotopic Connectivity (VMHC)" href="vmhc.html" />
-    <link rel="prev" title="Seed-based Correlation Analysis (SCA)" href="sca.html" />
-<meta charset='utf-8'>
-<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
-<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
-<meta name="apple-mobile-web-app-capable" content="yes">
-
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="C-PAC 0.3.9 Alpha documentation" href="index.html" /> 
   </head>
-  <body role="document">
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="index.html">C-PAC 0.3.9 Alpha documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
 
-<div class="container">
-  <div class="row">
-    <div class="col-md-12">
-      
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
   <div class="section" id="amplitude-of-low-frequency-fluctuations-alff-and-fractional-alff-f-alff">
 <h1>Amplitude of Low Frequency Fluctuations (ALFF) and fractional ALFF (f/ALFF)<a class="headerlink" href="#amplitude-of-low-frequency-fluctuations-alff-and-fractional-alff-f-alff" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="introduction-background">
 <h2>Introduction &amp; Background<a class="headerlink" href="#introduction-background" title="Permalink to this headline">¶</a></h2>
-<p>Slow fluctuations in activity are a fundamental feature of the resting brain, and their presence is key to determining correlated activity between brain regions and defining resting state networks. The relative magnitude of these fluctuations can differ between brain regions and between subjects, and thus may act as a marker of individual differences or dysfunction. <strong>Amplitude of Low Frequency Fluctuations</strong> <a class="reference external" href="http://www.ncbi.nlm.nih.gov/pubmed/16919409&quot;">(ALFF; Zang et al., 2007)</a> and <strong>fractional Amplitude of Low Frequency Fluctuations</strong> <a class="reference external" href="http://http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3902859/&quot;">(f/ALFF; Zou et al., 2008)</a> are related measures that quantify the amplitude of these low frequency oscillations (LFOs).</p>
+<p>Slow fluctuations in activity are a fundamental feature of the resting brain, and their presence is key to determining correlated activity between brain regions and defining resting state networks. The relative magnitude of these fluctuations can differ between brain regions and between subjects, and thus may act as a marker of individual differences or dysfunction. <strong>Amplitude of Low Frequency Fluctuations</strong> <a class="reference external" href="http://www.ncbi.nlm.nih.gov/pubmed/16919409">(ALFF; Zang et al., 2007)</a> and <strong>fractional Amplitude of Low Frequency Fluctuations</strong> <a class="reference external" href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3902859/">(f/ALFF; Zou et al., 2008)</a> are related measures that quantify the amplitude of these low frequency oscillations (LFOs).</p>
 <p>ALFF is defined as the total power within the frequency range between 0.01 and 0.1 Hz, and thus indexes the strength or intensity of LFO. f/ALFF is defined as the power within the low-frequency range (0.01-0.1 Hz) divided by the total power in the entire detectable frequency range, and represents the relative contribution of specific LFO to the whole frequency range (Zuo et al., 2010).</p>
 </div>
 <div class="section" id="computation-and-analysis-considerations">
@@ -104,21 +100,56 @@ Psychol. Bull. 86, 420–428.</p>
 </div>
 
 
-    </div>
-      
-  </div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/cpac_logo.jpg" alt="Logo"/>
+            </a></p>
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing C-PAC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="use.html">Using C-PAC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cloud.html">Running C-PAC in the Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preproc.html">Data Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="files.html">Preconfigured Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark.html">C-PAC Benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="help.html">Troubleshooting and Help</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rnotes.html">Release Notes</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
 </div>
-<footer class="footer">
-  <div class="container">
-    <p class="pull-right">
-      <a href="#">Back to top</a>
-      
-    </p>
-    <p>
-        &copy; Copyright 2015, C-PAC Team.<br/>
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.3.1.<br/>
-    </p>
-  </div>
-</footer>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="index.html">C-PAC 0.3.9 Alpha documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, C-PAC Team.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
   </body>
 </html>
