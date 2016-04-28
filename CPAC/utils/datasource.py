@@ -1,6 +1,5 @@
 # CPAC/utils/datasource.py
 #
-#
 
 '''
 This module contains classes and functions used to interface with data
@@ -10,6 +9,17 @@ access
 # Import packages
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
+
+
+def return_subdict_values(sub_dict):
+    '''
+    Function to return various attributes from a subject dictionary
+    '''
+
+    if sub_dict['unique_id']:
+        subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
+    else:
+        subject_id = sub_dict['subject_id']
 
 
 def create_func_datasource(rest_dict, wf_name='func_datasource'):
@@ -59,9 +69,30 @@ def get_rest(scan, rest_dict):
     return rest_dict[scan]
 
 
-# Check if passed in file is on S3
 def check_for_s3(file_path, creds_path, dl_dir=None, img_type='anat'):
     '''
+    Function to check if a filepath is on S3 or not; if it is, download
+    it and return the local downloaded file path
+
+    Parameters
+    ----------
+    file_path : string
+        filepath of the input to download (must start with 's3://')
+    creds_path : string
+        local filepath to the credentials used to access private files
+        stored in S3
+    dl_dir : string (optional); default=None
+        local directory to download s3 file to, if not specified, the
+        file will be downloaded to the current directory
+    img_type : string (optional); default='anat'
+        type of image; acceptable arguments are 'anat' or 'func'; this
+        parameter indicates the file type so that its dimensionality
+        can be checked prior to downloading
+
+    Returns
+    -------
+    local_path : string
+        local filepath to the input image file
     '''
 
     # Import packages
@@ -139,12 +170,16 @@ def check_for_s3(file_path, creds_path, dl_dir=None, img_type='anat'):
     return local_path
 
 
-# Anatomical datasource
 def create_anat_datasource(wf_name='anat_datasource'):
+    '''
+    Gather anatomical images
+    '''
 
+    # Import packages
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
 
+    # Init workflow
     wf = pe.Workflow(name=wf_name)
 
     inputnode = pe.Node(util.IdentityInterface(

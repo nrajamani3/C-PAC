@@ -122,16 +122,16 @@ class strategy:
 
 
 # Create and prepare C-PAC pipeline workflow
-def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
+def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                   p_name=None, plugin='MultiProc', plugin_args=None):
-
     '''
     Function to prepare and, optionally, run the C-PAC workflow
 
     Parameters
     ----------
-    sub_dict : dictionary
-        subject dictionary with anatomical and functional image paths
+    sub_list : list
+        a list of subject dictionaries with anatomical and functional image
+        paths and o
     c : Configuration object
         CPAC pipelin configuration dictionary object
     strategies : obj
@@ -170,14 +170,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     sub_mem_gb, num_cores_per_sub, num_ants_cores = \
         check_config_resources(c)
 
-    if plugin_args:
-        plugin_args['memory_gb'] = sub_mem_gb
-        plugin_args['n_procs'] = num_cores_per_sub
-    else:
-        plugin_args = {'memory_gb': sub_mem_gb, 'n_procs' : num_cores_per_sub}
-
     # perhaps in future allow user to set threads maximum
-    # this is for centrality mostly    
+    # this is for centrality mostly
     # import mkl
     numThreads = '1'
 
@@ -222,14 +216,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     logger.info(cores_msg)
 
 
-    qc_montage_id_a = {}
-    qc_montage_id_s = {}
-    qc_plot_id = {}
-    qc_hist_id = {}
-    if sub_dict['unique_id']:
-        subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
-    else:
-        subject_id = sub_dict['subject_id']
+
         
     log_dir = os.path.join(c.logDirectory, subject_id)
 
@@ -302,7 +289,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     workflow preliminary setup
     '''
 
-    wfname = 'resting_preproc_' + str(subject_id)
+    wfname = 'resting_preproc'
     workflow = pe.Workflow(name=wfname)
     workflow.base_dir = c.workingDirectory
     workflow.config['execution'] = {'hash_method': 'timestamp', 'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
@@ -379,11 +366,17 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     Initialize Anatomical Input Data Flow
     '''
 
+    # Init strategy
     num_strat = 0
-
     strat_initial = strategy()
+    debundle_node = pe.Node(util.IdentityInterface(fields=['subject_id',
+                                                           ]),
+                            name='debundler')
+    subject_ids = []
+    for sub_dict in sub_list:
 
-    #bundle_node = pe.Node(util.Function(input_names=))
+        subject_ids.append(subject_id)
+    debundle_node.iterables = []
 
     # Extract credentials path if it exists
     try:
@@ -449,7 +442,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         num_strat += 1
 
     strat_list += new_strat_list
-
 
 
     '''
@@ -742,14 +734,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
                 create_log_node(fnirt_reg_anat_symm_mni, 'outputspec.output_brain', num_strat)
-            
-            
+
                 num_strat += 1
-                
+
         strat_list += new_strat_list
 
 
-        
         new_strat_list = []
             
         for strat in strat_list:
@@ -809,7 +799,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         ants_reg_anat_symm_mni.inputs.inputspec.reference_skull = \
                             c.template_symmetric_skull
 
-
                     else:
 
                         # get the skullstripped anatomical from resource pool
@@ -859,7 +848,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                     #workflow.connect(node, out_file,
                     #                 ants_reg_anat_symm_mni, 'inputspec.wait')
 
-
                 except:
                     logConnectionError('Symmetric Anatomical Registration (ANTS)', num_strat, strat.get_resource_pool(), '0003')
                     raise
@@ -881,7 +869,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 num_strat += 1
             
     strat_list += new_strat_list
-
 
 
     '''
@@ -942,7 +929,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                                         c.whiteMatterThreshold)
                 seg_preproc.get_node('gm_threshold').iterables = ('gm_threshold',
                                         c.grayMatterThreshold)
-
 
             except:
                 logConnectionError('Segmentation Preprocessing', num_strat, strat.get_resource_pool(), '0004')
@@ -3427,7 +3413,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         'outputspec.itk_transform', collect_transforms,
                         'inputspec.fsl_to_itk_affine')
 
-
                 # output file to be converted
                 node, out_file = strat. \
                         get_node_from_resource_pool(output_resource)
@@ -3438,8 +3423,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 workflow.connect(collect_transforms,
                         'outputspec.transformation_series', apply_ants_warp,
                         'inputspec.transforms')
-                        
-
 
             except:
                 logConnectionError('%s to MNI (ANTS)' % (output_name),
@@ -3452,91 +3435,65 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             
             num_strat += 1
 
-
         else:
-
             # FSL WARP APPLICATION
             if map_node == 0:
-            
                 apply_fsl_warp = pe.Node(interface=fsl.ApplyWarp(),
                         name='%s_to_standard_%d' % (output_name, num_strat))
-                          
-
             elif map_node == 1:
-            
                 apply_fsl_warp = pe.MapNode(interface=fsl.ApplyWarp(),
                         name='%s_to_standard_%d' % (output_name, num_strat), \
                         iterfield=['in_file'])
-                        
 
             apply_fsl_warp.inputs.ref_file = c.template_skull_for_func
 
-
             try:
-
                 # output file to be warped
                 node, out_file = strat. \
                         get_node_from_resource_pool(output_resource)
                 workflow.connect(node, out_file, apply_fsl_warp, 'in_file')
-
                 # linear affine from func->anat linear FLIRT registration
                 node, out_file = strat.get_node_from_resource_pool('func' \
                         'tional_to_anat_linear_xfm')
                 workflow.connect(node, out_file, apply_fsl_warp, 'premat')
-
                 # nonlinear warp from anatomical->template FNIRT registration
                 node, out_file = strat.get_node_from_resource_pool('anat' \
                         'omical_to_mni_nonlinear_xfm')
                 workflow.connect(node, out_file, apply_fsl_warp, 'field_file')
-
-
             except:
                 logConnectionError('%s to MNI (FSL)' % (output_name), \
                         num_strat, strat.get_resource_pool(), '0021')
                 raise Exception
-                
 
             strat.update_resource_pool({'%s_to_standard' % (output_name): \
                     (apply_fsl_warp, 'out_file')})
             strat.append_name(apply_fsl_warp.name)
-            
+
             num_strat += 1
 
-
-    '''
-    OUTPUT TO SMOOTH
-    '''
-
     def output_smooth(output_name, output_resource, strat, num_strat, map_node=0):
- 
+        '''
+        OUTPUT TO SMOOTH
+        '''
         output_to_standard_smooth = None
-
         if map_node == 0:
             output_smooth = pe.Node(interface=fsl.MultiImageMaths(),
                     name='%s_smooth_%d' % (output_name, num_strat))
-
 
         elif map_node == 1:
             output_smooth = pe.MapNode(interface=fsl.MultiImageMaths(),
                     name='%s_smooth_%d' % (output_name, num_strat), \
                     iterfield=['in_file'])
 
-
         try:
-
             node, out_file = strat. \
                     get_node_from_resource_pool(output_resource)
-
             workflow.connect(node, out_file, output_smooth, 'in_file')
-
             workflow.connect(inputnode_fwhm, ('fwhm', set_gauss), 
                     output_smooth, 'op_string')
-
             node, out_file = strat. \
                     get_node_from_resource_pool('functional_brain_mask')
             workflow.connect(node, out_file, output_smooth, 'operand_files')
-
-
         except:
             logConnectionError('%s smooth' % output_name, num_strat, \
                     strat.get_resource_pool(), '0027')
@@ -3546,14 +3503,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         strat.update_resource_pool({'%s_smooth' % (output_name): \
                 (output_smooth, 'out_file')})
 
-
         if 1 in c.runRegisterFuncToMNI:
-
             if map_node == 0:
                 output_to_standard_smooth = pe.Node(interface= \
                         fsl.MultiImageMaths(), name='%s_to_standard_' \
                         'smooth_%d' % (output_name, num_strat))
-
 
             elif map_node == 1:
                 output_to_standard_smooth = pe.MapNode(interface= \
@@ -3561,40 +3515,28 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         'smooth_%d' % (output_name, num_strat), \
                         iterfield=['in_file'])
 
-
             try:
-
                 node, out_file = strat.get_node_from_resource_pool('%s_to_' \
                         'standard' % output_name)
-                
                 workflow.connect(node, out_file, output_to_standard_smooth,
                         'in_file')
-                
                 workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),
                         output_to_standard_smooth, 'op_string')
-
                 node, out_file = strat.get_node_from_resource_pool('func' \
                         'tional_brain_mask_to_standard')
                 workflow.connect(node, out_file, output_to_standard_smooth,
                         'operand_files')
-
-
             except:
                 logConnectionError('%s smooth in MNI' % output_name, \
                         num_strat, strat.get_resource_pool(), '0028')
                 raise Exception
-
 
             strat.append_name(output_to_standard_smooth.name)
             strat.update_resource_pool({'%s_to_standard_smooth' % \
                     (output_name):(output_to_standard_smooth, 'out_file')})
             create_log_node(output_to_standard_smooth, 'out_file', num_strat)
 
-            
         num_strat += 1
-
-
-
 
     '''
     z-score standardization functions
@@ -4246,6 +4188,12 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
     if 1 in c.generateQualityControlImages:
+
+        # Init variables for qc dicts
+        qc_montage_id_a = {}
+        qc_montage_id_s = {}
+        qc_plot_id = {}
+        qc_hist_id = {}
 
         #register color palettes
         register_pallete(os.path.realpath(
@@ -5734,8 +5682,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 strategy_tag_helper_symlinks['_target_angle_deg'] = 1
             else:
                 strategy_tag_helper_symlinks['_target_angle_deg'] = 0
-    
-    
+
             if any('nuisance'in name for name in strat.get_name()):
                 strategy_tag_helper_symlinks['nuisance'] = 1
             else:
@@ -5758,18 +5705,14 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         print name, ' --- ', 2 ** workflow_bit_id[name]
                         hash_val += 2 ** workflow_bit_id[name]
 
-    
             if p_name == None or p_name == 'None':
-                
                 if forkPointsDict[strat]:
                     pipeline_id = c.pipelineName + forkPointsDict[strat]
                 else:
                     pipeline_id = c.pipelineName
                     #if running multiple pipelines with gui, need to change this in future
                     p_name = None
-
             else:
-
                 if forkPointsDict[strat]:
                     pipeline_id = c.pipelineName + forkPointsDict[strat]
                 else:
@@ -5812,7 +5755,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                     ds.inputs.base_directory = c.outputDirectory
                 ds.inputs.creds_path = creds_path
                 ds.inputs.encrypt_bucket_keys = encrypt_data
-                ds.inputs.container = os.path.join('pipeline_%s' % pipeline_id, subject_id)
+                ds.inputs.container = os.path.join('pipeline_%s' % pipeline_id)
                 ds.inputs.regexp_substitutions = [(r"/_sca_roi(.)*[/]", '/'),
                                                   (r"/_smooth_centrality_(\d)+[/]", '/'),
                                                   (r"/_z_score(\d)+[/]", "/"),
@@ -5831,28 +5774,25 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                                         name='process_outputs_%d' % sink_idx)
 
                 link_node.inputs.strategies = strategies
+                workflow.connect()
                 link_node.inputs.subject_id = subject_id
                 link_node.inputs.pipeline_id = 'pipeline_%s' % (pipeline_id)
                 link_node.inputs.helper = dict(strategy_tag_helper_symlinks)
-
 
                 if 1 in c.runSymbolicLinks:
                     link_node.inputs.create_sym_links = True
                 else:
                     link_node.inputs.create_sym_links = False
 
-    
                 workflow.connect(ds, 'out_file', link_node, 'in_file')
 
                 sink_idx += 1
                 logger.info('sink index: %s' % sink_idx)
 
-
             d_name = os.path.join(c.logDirectory, ds.inputs.container)
             if not os.path.exists(d_name):
                 os.makedirs(d_name)
-            
-    
+
             try:
                 G = nx.DiGraph()
                 strat_name = strat.get_name()
@@ -5863,20 +5803,15 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             except:
                 logStandardWarning('Datasink', 'Cannot Create the strategy and pipeline graph, dot or/and pygraphviz is not installed')
                 pass
-    
-    
+
             logger.info('%s*' % d_name)
             num_strat += 1
-            
             pipes.append(pipeline_id)
-    
-    
+
         # creates the HTML files used to represent the logging-based status
         create_log_template(pip_ids, wf_names, scan_ids, subject_id, log_dir)
-    
 
         logger.info('\n\n' + ('Strategy forks: %s' % pipes) + '\n\n')
-
 
         pipeline_start_date = strftime("%Y-%m-%d")
         pipeline_start_datetime = strftime("%Y-%m-%d %H:%M:%S")
@@ -5888,33 +5823,25 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         subject_info['resource_pool'] = []
 
         for strat in strat_list:
-
             strat_label = 'strat_%d' % strat_no
-
             subject_info[strat_label] = strat.get_name()
-
             subject_info['resource_pool'].append(strat.get_resource_pool())
-
             strat_no += 1
 
-
         subject_info['status'] = 'Running'
-
         '''
         subject_info_pickle = open(os.getcwd() + '/subject_info.p', 'wb')
-
         pickle.dump(subject_info, subject_info_pickle)
-
         subject_info_pickle.close()
         '''
-
         #TODO:set memory and num_threads of critical nodes if running 
         # MultiProcPlugin
+
 
         # Create callback logger
         import logging as cb_logging
         cb_log_filename = os.path.join(log_dir,
-                                       'callback_%s.log' % sub_dict['subject_id'])
+                                       'callback_%s.log' % subject_id)
 
         try:
             if not os.path.exists(os.path.dirname(cb_log_filename)):
@@ -5929,6 +5856,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         handler = cb_logging.FileHandler(cb_log_filename)
         cb_logger.addHandler(handler)
 
+        if plugin_args:
+            plugin_args['memory_gb'] = sub_mem_gb
+            plugin_args['n_procs'] = num_cores_per_sub
+        else:
+            plugin_args = {'memory_gb': sub_mem_gb, 'n_procs' : num_cores_per_sub}
         # Add status callback function that writes in callback log
         try:
             from nipype.pipeline.plugins.callback_log import log_nodes_cb
@@ -5941,7 +5873,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                       'nipype repo at https:/github.com/fcp-indi/nipype.\n'\
                       'Error: %s' %(os.path.dirname(nipype.__file__), exc)
             logger.error(err_msg)
-            #raise Exception(err_msg)
+                #raise Exception(err_msg)
 
         # Actually run the pipeline now, for the current subject
         workflow.run(plugin=plugin, plugin_args=plugin_args)
@@ -6138,15 +6070,14 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             except:
                 logStandardWarning('Datasink', ('Couldn\'t remove subjects %s working directory' % wfname))
                 pass
-        
+
         endString = ("End of subject workflow %s \n\n" % wfname) + "CPAC run complete:\n" + ("pipeline configuration- %s \n" % c.pipelineName) + \
         ("subject workflow- %s \n\n" % wfname) + ("Elapsed run time (minutes): %s \n\n" % ((time.time() - pipeline_start_time)/60)) + \
         ("Timing information saved in %s/cpac_individual_timing_%s.csv \n" % (c.logDirectory, c.pipelineName)) + \
         ("System time of start:      %s \n" % pipeline_start_datetime) + ("System time of completion: %s" % strftime("%Y-%m-%d %H:%M:%S"))
-    
         logger.info(endString)
-    
 
+    # Return the workflow
     return workflow
 
 
