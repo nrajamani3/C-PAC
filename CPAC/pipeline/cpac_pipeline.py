@@ -292,7 +292,8 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     wfname = 'resting_preproc'
     workflow = pe.Workflow(name=wfname)
     workflow.base_dir = c.workingDirectory
-    workflow.config['execution'] = {'hash_method': 'timestamp', 'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
+    workflow.config['execution'] = {'hash_method': 'timestamp',
+                                    'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
     config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
     logging.update_logging(config)
 
@@ -369,34 +370,33 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     # Init strategy
     num_strat = 0
     strat_initial = strategy()
-    debundle_node = pe.Node(util.IdentityInterface(fields=['subject_id',
-                                                           ]),
+    debundle_node = pe.Node(util.Function(input_names=['subject_id',
+                                                       'subid_dict'],
+                                          output_names=['subject_id',
+                                                        'input_creds_path',
+                                                        'anat_path',
+                                                        'rest_dict'],
+                                          function=return_subdict_values),
                             name='debundler')
-    subject_ids = []
+    subid_dict = {}
     for sub_dict in sub_list:
-
-        subject_ids.append(subject_id)
-    debundle_node.iterables = []
-
-    # Extract credentials path if it exists
-    try:
-        creds_path = sub_dict['creds_path']
-        if creds_path and 'none' not in creds_path.lower():
-            if os.path.exists(creds_path):
-                input_creds_path = os.path.abspath(creds_path)
-            else:
-                err_msg = 'Credentials path: "%s" for subject "%s" was not '\
-                          'found. Check this path and try again.' % (creds_path, subject_id)
-                raise Exception(err_msg)
+        if sub_dict['unique_id']:
+            subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
         else:
-            input_creds_path = None
-    except KeyError:
-        input_creds_path = None
+            subject_id = sub_dict['subject_id']
+        subid_dict[subject_id] = sub_dict
 
-    flow = create_anat_datasource()
-    flow.inputs.inputnode.subject = subject_id
-    flow.inputs.inputnode.anat = sub_dict['anat']
-    flow.inputs.inputnode.creds_path = input_creds_path
+    debundle_node.iterables = ('subject_id', subid_dict.keys())
+    debundle_node.inputs.subid_dict = subid_dict
+
+    flow = create_anat_datasource('anat_datasource')
+
+    workflow.connect('debundler', 'subject_id',
+                     'anat_datasource.inputnode', 'subject_id')
+    workflow.connect('debundler', 'input_creds_path',
+                     'anat_datasource.inputnode', 'creds_path')
+    workflow.connect('debundler', 'anat_path',
+                     'anat_datasource.inputnode', 'anat')
 
     anat_flow = flow.clone('anat_gather_%d' % num_strat)
 
@@ -1466,7 +1466,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             num_strat += 1
 
     strat_list += new_strat_list
-
 
 
     '''

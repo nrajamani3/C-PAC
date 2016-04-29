@@ -11,15 +11,78 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
 
-def return_subdict_values(sub_dict):
+def return_subdict_values(subject_id, subid_dict):
     '''
     Function to return various attributes from a subject dictionary
+
+    Parameters
+    ----------
+    subject_id : string
+        unique subject identifier key to extract subject-specific dictionary
+        from subid_dict
+    subid_dict : dictionary
+        a dictionary where the keys are subject id strings and values
+        are subject-specific dictionaries
+
+    Returns
+    -------
+    subject_id : string
+        unique subject identifier key
+    input_creds_path : string
+        filepath to the local location of the S3 bucket credentials to
+        download input images
+    anat_path : string
+        filepath to anatomical image
+    rest_dict : dictionary
+        dictionary where keys are 'rest_1', 'rest_2', etc.. and the
+        values are the filepaths for each of the corresponding
+        functional images
     '''
 
-    if sub_dict['unique_id']:
-        subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
-    else:
-        subject_id = sub_dict['subject_id']
+    # Import packages
+    import os
+
+    # Get subject dictionary
+    try:
+        sub_dict = subid_dict[subject_id]
+    except KeyError as exc:
+        err_msg = 'Subject ID: %s not found in subject list!\nError: %s' \
+                  % (subject_id, exc)
+        raise Exception(err_msg)
+
+    # Extract credentials path if it exists
+    try:
+        creds_path = sub_dict['creds_path']
+        if creds_path and 'none' not in creds_path.lower():
+            if os.path.exists(creds_path):
+                input_creds_path = os.path.abspath(creds_path)
+            else:
+                err_msg = 'Credentials path: "%s" for subject "%s" was not '\
+                          'found. Check this path and try again.' % (creds_path, subject_id)
+                raise Exception(err_msg)
+        else:
+            input_creds_path = None
+    except KeyError:
+        input_creds_path = None
+
+    # Anatomical filepath
+    try:
+        anat_path = sub_dict['anat']
+    except KeyError as exc:
+        err_msg = 'Anatomical image not present in subject dictionary!'\
+                  '\nError: %s' % exc
+        raise Exception(err_msg)
+
+    # Functional filepaths dict
+    try:
+        rest_dict = sub_dict['rest']
+    except KeyError as exc:
+        err_msg = 'Functional data not found in subject dictionary!\nError: %s' \
+                  % (exc)
+        raise Exception(err_msg)
+
+    # Return subject-specific info
+    return subject_id, input_creds_path, anat_path, rest_dict
 
 
 def create_func_datasource(rest_dict, wf_name='func_datasource'):
