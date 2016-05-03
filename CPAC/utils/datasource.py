@@ -11,7 +11,45 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 
 
-def return_subdict_values(subject_id, subid_dict):
+def create_anat_datasource(wf_name='anat_datasource'):
+    '''
+    Gather anatomical images
+    '''
+
+    # Import packages
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as util
+
+    # Init workflow
+    wf = pe.Workflow(name=wf_name)
+
+    inputnode = pe.Node(util.IdentityInterface(
+                                fields=['subject', 'anat', 'creds_path'],
+                                mandatory_inputs=True),
+                        name='inputnode')
+
+    check_s3_node = pe.Node(util.Function(input_names=['file_path', 'creds_path',
+                                                       'img_type'],
+                                          output_names=['local_path'],
+                                          function=check_for_s3),
+                            name='check_for_s3')
+
+    wf.connect(inputnode, 'anat', check_s3_node, 'file_path')
+    wf.connect(inputnode, 'creds_path', check_s3_node, 'creds_path')
+    check_s3_node.inputs.img_type = 'anat'
+
+    outputnode = pe.Node(util.IdentityInterface(fields=['subject',
+                                                        'anat']),
+                         name='outputspec')
+
+    wf.connect(inputnode, 'subject', outputnode, 'subject')
+    wf.connect(check_s3_node, 'local_path', outputnode, 'anat')
+
+    # Return the workflow
+    return wf
+
+
+def return_subdict_values(subject_id, subid_dict, log_base_dir):
     '''
     Function to return various attributes from a subject dictionary
 
@@ -23,6 +61,8 @@ def return_subdict_values(subject_id, subid_dict):
     subid_dict : dictionary
         a dictionary where the keys are subject id strings and values
         are subject-specific dictionaries
+    log_base_dir : string
+        filepath to the base log directory
 
     Returns
     -------
@@ -81,8 +121,13 @@ def return_subdict_values(subject_id, subid_dict):
                   % (exc)
         raise Exception(err_msg)
 
+    # Log directory for subject
+    sub_log_dir = os.path.join(log_base_dir, subject_id)
+    if not os.path.exists(sub_log_dir):
+        os.makedirs(sub_log_dir)
+
     # Return subject-specific info
-    return subject_id, input_creds_path, anat_path, rest_dict
+    return subject_id, input_creds_path, anat_path, rest_dict, sub_log_dir
 
 
 def create_func_datasource(rest_dict, wf_name='func_datasource'):
@@ -231,44 +276,6 @@ def check_for_s3(file_path, creds_path, dl_dir=None, img_type='anat'):
 
     # Return the local path
     return local_path
-
-
-def create_anat_datasource(wf_name='anat_datasource'):
-    '''
-    Gather anatomical images
-    '''
-
-    # Import packages
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util
-
-    # Init workflow
-    wf = pe.Workflow(name=wf_name)
-
-    inputnode = pe.Node(util.IdentityInterface(
-                                fields=['subject', 'anat', 'creds_path'],
-                                mandatory_inputs=True),
-                        name='inputnode')
-
-    check_s3_node = pe.Node(util.Function(input_names=['file_path', 'creds_path',
-                                                       'img_type'],
-                                          output_names=['local_path'],
-                                          function=check_for_s3),
-                            name='check_for_s3')
-
-    wf.connect(inputnode, 'anat', check_s3_node, 'file_path')
-    wf.connect(inputnode, 'creds_path', check_s3_node, 'creds_path')
-    check_s3_node.inputs.img_type = 'anat'
-
-    outputnode = pe.Node(util.IdentityInterface(fields=['subject',
-                                                        'anat']),
-                         name='outputspec')
-
-    wf.connect(inputnode, 'subject', outputnode, 'subject')
-    wf.connect(check_s3_node, 'local_path', outputnode, 'anat')
-
-    # Return the workflow
-    return wf
 
 
 def create_roi_mask_dataflow(masks, wf_name='datasource_roi_mask'):

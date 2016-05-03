@@ -215,13 +215,10 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
     logger.info(cores_msg)
 
+#     log_dir = os.path.join(c.logDirectory, subject_id)
 
-
-        
-    log_dir = os.path.join(c.logDirectory, subject_id)
-
-    if not os.path.exists(log_dir):
-        os.makedirs(os.path.join(log_dir))
+#     if not os.path.exists(log_dir):
+#         os.makedirs(os.path.join(log_dir))
 
     # temp
     already_skullstripped = c.already_skullstripped[0]
@@ -234,7 +231,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     subject_info['subject_id'] = subject_id
     subject_info['start_time'] = pipeline_start_time
     subject_info['strategies'] = strategies
-
 
     '''
     input filepaths check and tool setup check
@@ -285,18 +281,39 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
         check_ants = False
     check_system_deps(check_ants)
 
-    '''
-    workflow preliminary setup
-    '''
-
+    # Init cpac pipeline workflow
     wfname = 'resting_preproc'
     workflow = pe.Workflow(name=wfname)
     workflow.base_dir = c.workingDirectory
     workflow.config['execution'] = {'hash_method': 'timestamp',
                                     'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
-    config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+    config.update_config({'logging': {'log_directory': c.logDirectory,
+                                      'log_to_file': True}})
     logging.update_logging(config)
 
+    # Init debundler node
+    debundle_node = pe.Node(util.Function(input_names=['subject_id',
+                                                       'subid_dict',
+                                                       'log_base_dir'],
+                                          output_names=['subject_id',
+                                                        'input_creds_path',
+                                                        'anat_path',
+                                                        'rest_dict',
+                                                        'sub_log_dir'],
+                                          function=return_subdict_values),
+                            name='debundler')
+
+    # Create subject dictionary with subject_id as keys
+    subid_dict = {}
+    for sub_dict in sub_list:
+        if sub_dict['unique_id']:
+            subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
+        else:
+            subject_id = sub_dict['subject_id']
+        subid_dict[subject_id] = sub_dict
+    # Set up debundle node as iterable
+    debundle_node.iterables = ('subject_id', subid_dict.keys())
+    debundle_node.inputs.subid_dict = subid_dict
 
     if c.reGenerateOutputs is True:
 
@@ -311,25 +328,32 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
         logger.info(cmd)
         commands.getoutput(cmd)
 
-
     def create_log_node(wflow, output, indx, scan_id=None):
-        #call logging workflow
+        '''
+        Create a logging workflow for keeping record of another
+        workflow's progress
+        '''
 
+        # If logging a workflow
         if wflow: 
-            log_wf = create_log(wf_name = 'log_%s' %wflow.name)
+            log_wf = create_log(wf_name='log_%s' % wflow.name)
             log_wf.inputs.inputspec.workflow = wflow.name
             log_wf.inputs.inputspec.index = indx
-            log_wf.inputs.inputspec.log_dir = log_dir
             workflow.connect(wflow, output, log_wf, 'inputspec.inputs')
+            workflow.connect(debundle_node, 'sub_log_dir',
+                             log_wf, 'inputspec.log_dir')
+        # Otherwise, log scan
         else:
-            log_wf = create_log(wf_name = 'log_done_%s'%scan_id, scan_id= scan_id)
-            log_wf.base_dir = log_dir
+            log_wf = create_log(wf_name='log_done_%s' % scan_id,
+                                scan_id=scan_id)
             log_wf.inputs.inputspec.workflow = 'DONE'
             log_wf.inputs.inputspec.index = indx
-            log_wf.inputs.inputspec.log_dir = log_dir
-            log_wf.inputs.inputspec.inputs = log_dir
+            workflow.connect(debundle_node, 'sub_log_dir',
+                             log_wf, 'inputspec.log_dir')
+            workflow.connect(debundle_node, 'sub_log_dir',
+                             log_wf, 'inputspec.inputs')
             return log_wf
-        
+
     def logStandardError(sectionName, errLine, errNum):
         
         logger.info("\n\n" + 'ERROR: %s - %s' % (sectionName, errLine) + "\n\n" + \
@@ -370,24 +394,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     # Init strategy
     num_strat = 0
     strat_initial = strategy()
-    debundle_node = pe.Node(util.Function(input_names=['subject_id',
-                                                       'subid_dict'],
-                                          output_names=['subject_id',
-                                                        'input_creds_path',
-                                                        'anat_path',
-                                                        'rest_dict'],
-                                          function=return_subdict_values),
-                            name='debundler')
-    subid_dict = {}
-    for sub_dict in sub_list:
-        if sub_dict['unique_id']:
-            subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
-        else:
-            subject_id = sub_dict['subject_id']
-        subid_dict[subject_id] = sub_dict
-
-    debundle_node.iterables = ('subject_id', subid_dict.keys())
-    debundle_node.inputs.subid_dict = subid_dict
 
     flow = create_anat_datasource('anat_datasource')
 
@@ -5836,7 +5842,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
         #TODO:set memory and num_threads of critical nodes if running 
         # MultiProcPlugin
 
-
         # Create callback logger
         import logging as cb_logging
         cb_log_filename = os.path.join(log_dir,
@@ -5879,9 +5884,13 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
         # Dump subject info pickle file to subject log dir
         subject_info['status'] = 'Completed'
-        subject_info_pickle = open(os.path.join(log_dir, 'subject_info_%s.p' % subject_id), 'wb')
-        pickle.dump(subject_info, subject_info_pickle)
-        subject_info_pickle.close()
+        with open(os.path.join(log_dir, 'subject_info_%s.pkl', 'wb')) as sub_pkl:
+            pickle.dump(subject_info, sub_pkl)
+#         subject_info_pickle = open(os.path.join(log_dir,
+#                                                 'subject_info_%s.pkl' % subject_id),
+#                                    'wb')
+#         pickle.dump(subject_info, subject_info_pickle)
+#         subject_info_pickle.close()
 
         '''
         # Actually run the pipeline now

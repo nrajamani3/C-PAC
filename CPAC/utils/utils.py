@@ -1749,25 +1749,21 @@ def write_to_log(workflow, log_dir, index, inputs, scan_id ):
     return out_file
 
 
-def create_log(wf_name = "log", scan_id=None):
-    
+def create_log(wf_name="log", scan_id=None):
     """
     Workflow to create log 
-    
     """
-    
+
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
-    
+
     wf = pe.Workflow(name=wf_name)
-    
+
     inputNode = pe.Node(util.IdentityInterface(fields=['workflow',
                                                        'log_dir',
                                                        'index',
-                                                       'inputs'
-                                                    ]),
+                                                       'inputs']),
                         name='inputspec')
-
 
     outputNode = pe.Node(util.IdentityInterface(fields=['out_file']),
                         name='outputspec')
@@ -1797,7 +1793,34 @@ def create_log(wf_name = "log", scan_id=None):
                outputNode, 'out_file')
     
     return wf
-    
+
+
+def create_log_node(wflow, output, indx, debundle_node, pipeline, scan_id=None):
+    '''
+    Create a logging workflow for keeping record of another
+    workflow's progress
+    '''
+
+    # If logging a workflow
+    if wflow: 
+        log_wf = create_log(wf_name='log_%s' % wflow.name)
+        log_wf.inputs.inputspec.workflow = wflow.name
+        log_wf.inputs.inputspec.index = indx
+        workflow.connect(wflow, output, log_wf, 'inputspec.inputs')
+        workflow.connect(debundle_node, 'sub_log_dir',
+                         log_wf, 'inputspec.log_dir')
+    # Otherwise, log scan
+    else:
+        log_wf = create_log(wf_name='log_done_%s' % scan_id,
+                            scan_id=scan_id)
+        log_wf.inputs.inputspec.workflow = 'DONE'
+        log_wf.inputs.inputspec.index = indx
+        workflow.connect(debundle_node, 'sub_log_dir',
+                         log_wf, 'inputspec.log_dir')
+        workflow.connect(debundle_node, 'sub_log_dir',
+                         log_wf, 'inputspec.inputs')
+        return log_wf
+
 
 def create_log_template(pip_ids, wf_list, scan_ids, subject_id, log_dir):
    
