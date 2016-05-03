@@ -69,7 +69,8 @@ from CPAC.utils.utils import extract_one_d, set_gauss, \
                              get_tr, extract_txt, create_log, \
                              create_log_template, extract_output_mean, \
                              create_output_mean_csv, get_zscore, \
-                             get_fisher_zscore, dbg_file_lineno
+                             get_fisher_zscore, dbg_file_lineno,\
+    create_write_subject_info
 from CPAC.vmhc.vmhc import create_vmhc
 from CPAC.reho.reho import create_reho
 from CPAC.alff.alff import create_alff
@@ -122,7 +123,7 @@ class strategy:
 
 
 # Create and prepare C-PAC pipeline workflow
-def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
+def prep_workflow(sub_list, bundle_num, c, strategies, run, pipeline_timing_info=None,
                   p_name=None, plugin='MultiProc', plugin_args=None):
     '''
     Function to prepare and, optionally, run the C-PAC workflow
@@ -131,7 +132,9 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     ----------
     sub_list : list
         a list of subject dictionaries with anatomical and functional image
-        paths and o
+        paths
+    bundle_num : int
+        the bundle number that the workflow will encompass
     c : Configuration object
         CPAC pipelin configuration dictionary object
     strategies : obj
@@ -174,7 +177,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     # this is for centrality mostly
     # import mkl
     numThreads = '1'
-
     os.environ['OMP_NUM_THREADS'] = '1'#str(num_cores_per_sub)
     os.environ['MKL_NUM_THREADS'] = '1'#str(num_cores_per_sub)
     os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = str(num_ants_cores)
@@ -215,22 +217,12 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
     logger.info(cores_msg)
 
-#     log_dir = os.path.join(c.logDirectory, subject_id)
-
-#     if not os.path.exists(log_dir):
-#         os.makedirs(os.path.join(log_dir))
-
     # temp
     already_skullstripped = c.already_skullstripped[0]
     if already_skullstripped == 2:
         already_skullstripped = 0
     elif already_skullstripped == 3:
         already_skullstripped = 1
-
-    subject_info = {}
-    subject_info['subject_id'] = subject_id
-    subject_info['start_time'] = pipeline_start_time
-    subject_info['strategies'] = strategies
 
     '''
     input filepaths check and tool setup check
@@ -291,6 +283,18 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                                       'log_to_file': True}})
     logging.update_logging(config)
 
+    # Create subject dictionary with subject_id as keys, entry per rest scan
+    subid_dict = {}
+    for sub_dict in sub_list:
+        for scan_name, rest_path in sub_dict['rest'].items():
+            subject_id = sub_dict['subject_id'] + '_' + scan_name
+            if sub_dict['unique_id']:
+                subject_id = subject_id + '_' + sub_dict['unique_id']
+            # Overwrite rest dict with only the one scan path
+            sub_dict['rest'] = rest_path
+            sub_dict['rest_key'] = scan_name
+            subid_dict[subject_id] = sub_dict
+
     # Init debundler node
     debundle_node = pe.Node(util.Function(input_names=['subject_id',
                                                        'subid_dict',
@@ -298,25 +302,17 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                                           output_names=['subject_id',
                                                         'input_creds_path',
                                                         'anat_path',
-                                                        'rest_dict',
-                                                        'sub_log_dir'],
+                                                        'rest_key',
+                                                        'rest_path',
+                                                        'sub_log_dir',
+                                                        'scan_params'],
                                           function=return_subdict_values),
                             name='debundler')
-
-    # Create subject dictionary with subject_id as keys
-    subid_dict = {}
-    for sub_dict in sub_list:
-        if sub_dict['unique_id']:
-            subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
-        else:
-            subject_id = sub_dict['subject_id']
-        subid_dict[subject_id] = sub_dict
     # Set up debundle node as iterable
     debundle_node.iterables = ('subject_id', subid_dict.keys())
     debundle_node.inputs.subid_dict = subid_dict
 
     if c.reGenerateOutputs is True:
-
         import commands
         cmd = "find %s -name \'*sink*\' -exec rm -rf {} \\;" % os.path.join(c.workingDirectory, wfname)
         logger.info(cmd)
@@ -397,14 +393,15 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
     flow = create_anat_datasource('anat_datasource')
 
-    workflow.connect('debundler', 'subject_id',
-                     'anat_datasource.inputnode', 'subject_id')
-    workflow.connect('debundler', 'input_creds_path',
-                     'anat_datasource.inputnode', 'creds_path')
-    workflow.connect('debundler', 'anat_path',
-                     'anat_datasource.inputnode', 'anat')
-
     anat_flow = flow.clone('anat_gather_%d' % num_strat)
+
+    # Connect debundle node to anat workflow
+    workflow.connect(debundle_node, 'subject_id',
+                     anat_flow, 'inputnode.subject')
+    workflow.connect(debundle_node, 'input_creds_path',
+                     anat_flow, 'inputnode.creds_path')
+    workflow.connect(debundle_node, 'anat_path',
+                     anat_flow, 'inputnode.anat')
 
     strat_initial.set_leaf_properties(anat_flow, 'outputspec.anat')
 
@@ -430,7 +427,8 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             workflow.connect(node, out_file, anat_preproc, 'inputspec.anat')
 
         except:
-            logConnectionError('Anatomical Preprocessing No valid Previous for strat', num_strat, strat.get_resource_pool(), '0001')
+            logConnectionError('Anatomical Preprocessing No valid Previous for strat',
+                               num_strat, strat.get_resource_pool(), '0001')
             num_strat += 1
             continue
 
@@ -817,7 +815,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                         ants_reg_anat_symm_mni.inputs.inputspec. \
                             reference_brain = c.template_symmetric_brain_only
 
-
                     ants_reg_anat_symm_mni.inputs.inputspec.dimension = 3
                     ants_reg_anat_symm_mni.inputs.inputspec. \
                         use_histogram_matching = True
@@ -871,11 +868,10 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                                             #'mni_normalized_anatomical':(ants_reg_anat_symm_mni, 'outputspec.wait')})
 
                 create_log_node(ants_reg_anat_symm_mni, 'outputspec.normalized_output_brain', num_strat)
-          
-                num_strat += 1
-            
-    strat_list += new_strat_list
 
+                num_strat += 1
+
+    strat_list += new_strat_list
 
     '''
     Inserting Segmentation Preprocessing
@@ -917,7 +913,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                     node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
                     workflow.connect(node, out_file,
                                      seg_preproc, 'inputspec.standard2highres_mat')
-
 
                 seg_preproc.inputs.inputspec.PRIOR_CSF = c.PRIORS_CSF
                 seg_preproc.inputs.inputspec.PRIOR_GRAY = c.PRIORS_GRAY
@@ -963,8 +958,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
     strat_list += new_strat_list
 
-
-
     '''
     Inserting Functional Data workflow
     '''
@@ -972,113 +965,86 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     num_strat = 0
 
     for strat in strat_list:
-        # create a new node, Remember to change its name!
-        # Flow = create_func_datasource(sub_dict['rest'])
-        # Flow.inputs.inputnode.subject = subject_id
         try: 
-            funcFlow = create_func_datasource(sub_dict['rest'], 'func_gather_%d' % num_strat)
-            funcFlow.inputs.inputnode.subject = subject_id
-            funcFlow.inputs.inputnode.creds_path = input_creds_path
-        except Exception as xxx:
-            logger.info( "Error create_func_datasource failed."+\
-                    " (%s:%d)" % dbg_file_lineno() )
+            funcFlow = create_func_datasource('func_gather_%d' % num_strat)
+            workflow.connect(debundle_node, 'input_creds_path',
+                             funcFlow, 'inputspec.creds_path')
+            workflow.connect(debundle_node, 'rest_path',
+                             funcFlow, 'inputspec.rest_scan')
+            workflow.connect(debundle_node, 'subject_id',
+                             funcFlow, 'inputspec.subject')
+        except Exception as exc:
+            fname, line_num = dbg_file_lineno()
+            logger.info('Error create_func_datasource failed. Error: %s\n'\
+                        '(%s:%d)' % (exc, fname, line_num))
             raise
-
 
         """
         Add in nodes to get parameters from configuration file
         """
         try:
             # a node which checks if scan _parameters are present for each scan
-            scan_params = pe.Node(util.Function(input_names=['subject',
-                                                                'scan',
-                                                                'subject_map',
-                                                                'start_indx',
-                                                                'stop_indx',
-                                                                'tr',
-                                                                'tpattern'],
-                                                output_names=['tr',
-                                                                'tpattern',
-                                                                'ref_slice',
-                                                                'start_indx',
-                                                                'stop_indx'],
-                                                function=get_scan_params),
-                                    name='scan_params_%d' % num_strat)
-        except Exception as xxx:
-            logger.info( "Error creating scan_params node."+\
-                    " (%s:%d)" % dbg_file_lineno() )
+            scan_params_node = pe.Node(util.Function(input_names=['subject',
+                                                                  'scan',
+                                                                  'scan_params',
+                                                                  'start_indx',
+                                                                  'stop_indx',
+                                                                  'tr',
+                                                                  'tpattern'],
+                                                     output_names=['tr',
+                                                                   'tpattern',
+                                                                   'ref_slice',
+                                                                   'start_indx',
+                                                                   'stop_indx'],
+                                                     function=get_scan_params),
+                                       name='scan_params_%d' % num_strat)
+        except Exception as exc:
+            fname, line_num = dbg_file_lineno()
+            logger.info('Error create_func_datasource failed. Error: %s\n'\
+                        '(%s:%d)' % (exc, fname, line_num))
             raise
-
 
         if "Selected Functional Volume" in c.func_reg_input:
-               
-            try:
-                get_func_volume = pe.Node(interface=preprocess.Calc(),
-                    name = 'get_func_volume_%d' % num_strat)
-         
-                get_func_volume.inputs.expr = 'a'
-                get_func_volume.inputs.single_idx = c.func_reg_input_volume
-                get_func_volume.inputs.outputtype = 'NIFTI_GZ' 
- 
-            except Exception as xxx:
-                logger.info( "Error creating get_func_volume node."+\
-                        " (%s:%d)" % dbg_file_lineno() )
-                raise
-
-            try:
-                workflow.connect(funcFlow, 'outputspec.rest',
-                    get_func_volume, 'in_file_a')
-
-            except Exception as xxx:
-                logger.info( "Error connecting get_func_volume node."+\
-                        " (%s:%d)" % dbg_file_lineno() )
-                raise
-
+            get_func_volume = pe.Node(interface=preprocess.Calc(),
+                                      name='get_func_volume_%d' % num_strat)
+            get_func_volume.inputs.expr = 'a'
+            get_func_volume.inputs.single_idx = c.func_reg_input_volume
+            get_func_volume.inputs.outputtype = 'NIFTI_GZ' 
+            workflow.connect(funcFlow, 'outputspec.rest',
+                             get_func_volume, 'in_file_a')
 
         # wire in the scan parameter workflow
-        try:
-            workflow.connect(funcFlow, 'outputspec.subject',
-                                scan_params, 'subject')
-        except Exception as xxx:
-            logger.info( "Error connecting scan_params 'subject' input."+\
-                    " (%s:%d)" % dbg_file_lineno() )
-            raise
-
-
-        try:
-            workflow.connect(funcFlow, 'outputspec.scan',
-                                scan_params, 'scan')
-        except Exception as xxx:
-            logger.info( "Error connecting scan_params 'scan' input."+\
-                    " (%s:%d)" % dbg_file_lineno() )
-            raise
+        workflow.connect(funcFlow, 'outputspec.subject',
+                         scan_params_node, 'subject')
+        workflow.connect(funcFlow, 'outputspec.scan',
+                         scan_params_node, 'scan')
+        workflow.connect(debundle_node, 'scan_params',
+                         scan_params_node, 'scan_params')
 
         # connect in constants
-        scan_params.inputs.subject_map = sub_dict
-        scan_params.inputs.start_indx = c.startIdx
-        scan_params.inputs.stop_indx = c.stopIdx
-        scan_params.inputs.tr = c.TR
-        scan_params.inputs.tpattern = c.slice_timing_pattern[0]
-    
+        scan_params_node.inputs.start_indx = c.startIdx
+        scan_params_node.inputs.stop_indx = c.stopIdx
+        scan_params_node.inputs.tr = c.TR
+        scan_params_node.inputs.tpattern = c.slice_timing_pattern[0]
+
         # node to convert TR between seconds and milliseconds
         try:
             convert_tr = pe.Node(util.Function(input_names=['tr'],
-                                                output_names=['tr'],
-                                                function=get_tr),
-                                name='convert_tr_%d' % num_strat)
+                                               output_names=['tr'],
+                                               function=get_tr),
+                                 name='convert_tr_%d' % num_strat)
         except Exception as xxx:
             logger.info( "Error creating convert_tr node."+\
                     " (%s:%d)" % dbg_file_lineno() )
             raise
-    
-        try:    
-            workflow.connect(scan_params, 'tr',
-                                convert_tr, 'tr')
+
+        try:
+            workflow.connect(scan_params_node, 'tr',
+                             convert_tr, 'tr')
         except Exception as xxx:
             logger.info( "Error connecting convert_tr 'tr' input."+\
                     " (%s:%d)" % dbg_file_lineno() )
             raise
-    
 
         strat.set_leaf_properties(funcFlow, 'outputspec.rest')
         strat.update_resource_pool({'raw_functional' : (funcFlow, 'outputspec.rest')})
@@ -1089,7 +1055,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
         num_strat += 1
 
 
-
     """
     Truncate scan length based on configuration information
     """
@@ -1098,7 +1063,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
     for strat in strat_list:
         try:
-            trunc_wf=create_wf_edit_func( wf_name = "edit_func_%d"%(num_strat))
+            trunc_wf = create_wf_edit_func(wf_name='edit_func_%d' % num_strat)
         except Exception as xxx:
             logger.info( "Error create_wf_edit_func failed."+\
                     " (%s:%d)" %(dbg_file_lineno()))
@@ -1123,7 +1088,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
 
         # connect the other input parameters
         try: 
-            workflow.connect(scan_params, 'start_indx',
+            workflow.connect(scan_params_node, 'start_indx',
                                 trunc_wf, 'inputspec.start_idx')
         except Exception as xxx:
             logger.info( "Error connecting input 'start_indx' to trunc_wf."+\
@@ -1131,14 +1096,13 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             raise
 
         try:
-            workflow.connect(scan_params, 'stop_indx',
+            workflow.connect(scan_params_node, 'stop_indx',
                                 trunc_wf, 'inputspec.stop_idx')
         except Exception as xxx:
             logger.info( "Error connecting input 'stop_idx' to trunc_wf."+\
                     " (%s:%d)" % dbg_file_lineno() )
             raise
 
-   
         # replace the leaf node with the output from the recently added workflow 
         strat.set_leaf_properties(trunc_wf, 'outputspec.edited_func')
         num_strat = num_strat+1
@@ -1190,7 +1154,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             logger.info( "TR %s" %c.TR)
             if c.TR:
                 try:
-                    workflow.connect(scan_params, 'tr',
+                    workflow.connect(scan_params_node, 'tr',
                         func_slice_timing_correction, 'tr')
                 except Exception as xxx:
                     logger.info( "Error connecting input 'tr' to func_slice_timing_correction afni node."+\
@@ -1206,7 +1170,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                 if not "Use NIFTI Header" in c.slice_timing_pattern[0]:
                     try:
                         logger.info( "connecting slice timing pattern %s"%c.slice_timing_pattern[0])
-                        workflow.connect(scan_params, 'tpattern',
+                        workflow.connect(scan_params_node, 'tpattern',
                             func_slice_timing_correction, 'tpattern')
                         logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern[0])
                     except Exception as xxx:
@@ -1236,8 +1200,6 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     
         logger.info( " finished connecting slice timing pattern")
 
-
-
     """
     Inserting Functional Image Preprocessing
     Workflow
@@ -1251,9 +1213,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     workflow_bit_id['func_preproc'] = workflow_counter
     
     for strat in strat_list:
-    
         if '3dAutoMask' in c.functionalMasking:
-    
             try:
                 func_preproc = create_func_preproc(use_bet=False, wf_name='func_preproc_automask_%d' % num_strat)
             except Exception as xxx:
@@ -1278,7 +1238,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                 logConnectionError('Functional Preprocessing', num_strat, strat.get_resource_pool(), '0005_automask')
                 num_strat += 1
                 raise
-    
+
             if 'BET' in c.functionalMasking:
                 # we are forking so create a new node
                 tmp = strategy()
@@ -1288,11 +1248,11 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                 tmp.name = list(strat.name)
                 strat = tmp
                 new_strat_list.append(strat)
-    
+
             strat.append_name(func_preproc.name)
-    
+
             strat.set_leaf_properties(func_preproc, 'outputspec.preprocessed')
-    
+
             # add stuff to resource pool if we need it
             strat.update_resource_pool({'mean_functional':(func_preproc, 'outputspec.example_func')})
             strat.update_resource_pool({'functional_preprocessed_mask':(func_preproc, 'outputspec.preprocessed_mask')})
@@ -1302,21 +1262,19 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             strat.update_resource_pool({'functional_brain_mask':(func_preproc, 'outputspec.mask')})
             strat.update_resource_pool({'motion_correct':(func_preproc, 'outputspec.motion_correct')})
             strat.update_resource_pool({'coordinate_transformation':(func_preproc, 'outputspec.oned_matrix_save')})
-    
+
             create_log_node(func_preproc, 'outputspec.preprocessed', num_strat)
             num_strat += 1
-    
+
     strat_list += new_strat_list
-    
+
     new_strat_list = []
-                
-    
+
     for strat in strat_list:
                 
         nodes = getNodeList(strat)
                 
         if ('BET' in c.functionalMasking) and ('func_preproc_automask' not in nodes):
-    
             func_preproc = create_func_preproc( use_bet=True, \
                                                   wf_name='func_preproc_bet_%d' % num_strat)
             node = None
@@ -1324,16 +1282,14 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             try:
                 node, out_file = strat.get_leaf_properties()
                 workflow.connect(node, out_file, func_preproc, 'inputspec.func')
-    
             except Exception as xxx:
                 logConnectionError('Functional Preprocessing', num_strat, strat.get_resource_pool(), '0005_bet')
                 num_strat += 1
                 raise
-    
+
             strat.append_name(func_preproc.name)
-    
             strat.set_leaf_properties(func_preproc, 'outputspec.preprocessed')
-    
+
             # add stuff to resource pool if we need it
             strat.update_resource_pool({'mean_functional':(func_preproc, 'outputspec.example_func')})
             strat.update_resource_pool({'functional_preprocessed_mask':(func_preproc, 'outputspec.preprocessed_mask')})
@@ -1343,13 +1299,11 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             strat.update_resource_pool({'functional_brain_mask':(func_preproc, 'outputspec.mask')})
             strat.update_resource_pool({'motion_correct':(func_preproc, 'outputspec.motion_correct')})
             strat.update_resource_pool({'coordinate_transformation':(func_preproc, 'outputspec.oned_matrix_save')})
-    
+
             create_log_node(func_preproc, 'outputspec.preprocessed', num_strat)
             num_strat += 1
     
     strat_list += new_strat_list
-    
-
 
     '''
     Inserting Friston's 24 parameter Workflow
@@ -1358,7 +1312,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     that depend on. The effect should be seen when regressing out nuisance signals and motion
     is used as one of the regressors
     '''
-        
+
     new_strat_list = []
     num_strat = 0
    
@@ -1366,19 +1320,14 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
     if 1 in c.runFristonModel:
         workflow_bit_id['fristons_parameter_model'] = workflow_counter
         for strat in strat_list:
-
             fristons_model = fristons_twenty_four(wf_name='fristons_parameter_model_%d' % num_strat)
-    
             try:
-    
                 node, out_file = strat.get_node_from_resource_pool('movement_parameters')
                 workflow.connect(node, out_file,
                                   fristons_model, 'inputspec.movement_file')
-    
             except Exception as xxx:
                 logConnectionError('Friston\'s Parameter Model', num_strat, strat.get_resource_pool(), '0006')
                 raise
-    
             if 0 in c.runFristonModel:
                 tmp = strategy()
                 tmp.resource_pool = dict(strat.resource_pool)
@@ -1387,17 +1336,13 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                 tmp.name = list(strat.name)
                 strat = tmp
                 new_strat_list.append(strat)
+
             strat.append_name(fristons_model.name)
-    
             strat.update_resource_pool({'movement_parameters':(fristons_model, 'outputspec.movement_file')})
-        
             create_log_node(fristons_model, 'outputspec.movement_file', num_strat)
-                
             num_strat += 1
-                
+
     strat_list += new_strat_list
-
-
 
     '''
     Func -> T1 Registration (Initial Linear reg)
@@ -1437,15 +1382,12 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                     workflow.connect(node, out_file,
                                      func_to_anat, 'inputspec.func')
 
-
                 # Input skull-stripped anatomical (anat.nii.gz)
                 node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
                 workflow.connect(node, out_file,
                                  func_to_anat, 'inputspec.anat')
 
-   
-
-            except:               
+            except:
                 logConnectionError('Register Functional to Anatomical (pre BBReg)', num_strat, strat.get_resource_pool(), '0007')
                 raise
 
@@ -5779,8 +5721,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                                         name='process_outputs_%d' % sink_idx)
 
                 link_node.inputs.strategies = strategies
-                workflow.connect()
-                link_node.inputs.subject_id = subject_id
+                workflow.connect(debundle_node, 'subject_id', link_node, 'subject_id')
                 link_node.inputs.pipeline_id = 'pipeline_%s' % (pipeline_id)
                 link_node.inputs.helper = dict(strategy_tag_helper_symlinks)
 
@@ -5814,7 +5755,7 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             pipes.append(pipeline_id)
 
         # creates the HTML files used to represent the logging-based status
-        create_log_template(pip_ids, wf_names, scan_ids, subject_id, log_dir)
+        #create_log_template(pip_ids, wf_names, scan_ids, subject_id, log_dir)
 
         logger.info('\n\n' + ('Strategy forks: %s' % pipes) + '\n\n')
 
@@ -5822,35 +5763,17 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
         pipeline_start_datetime = strftime("%Y-%m-%d %H:%M:%S")
         pipeline_starttime_string = pipeline_start_datetime.replace(' ','_')
         pipeline_starttime_string = pipeline_starttime_string.replace(':','-')
-        
-        strat_no = 0
-       
-        subject_info['resource_pool'] = []
 
-        for strat in strat_list:
-            strat_label = 'strat_%d' % strat_no
-            subject_info[strat_label] = strat.get_name()
-            subject_info['resource_pool'].append(strat.get_resource_pool())
-            strat_no += 1
-
-        subject_info['status'] = 'Running'
-        '''
-        subject_info_pickle = open(os.getcwd() + '/subject_info.p', 'wb')
-        pickle.dump(subject_info, subject_info_pickle)
-        subject_info_pickle.close()
-        '''
         #TODO:set memory and num_threads of critical nodes if running 
         # MultiProcPlugin
 
         # Create callback logger
         import logging as cb_logging
-        cb_log_filename = os.path.join(log_dir,
-                                       'callback_%s.log' % subject_id)
-
+        cb_log_filename = os.path.join(c.logDirectory,
+                                       'callback_bundle_%s.log' % bundle_num)
         try:
             if not os.path.exists(os.path.dirname(cb_log_filename)):
                 os.makedirs(os.path.dirname(cb_log_filename))
-                
         except IOError:
             pass
 
@@ -5877,63 +5800,28 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
                       'nipype repo at https:/github.com/fcp-indi/nipype.\n'\
                       'Error: %s' %(os.path.dirname(nipype.__file__), exc)
             logger.error(err_msg)
-                #raise Exception(err_msg)
 
-        # Actually run the pipeline now, for the current subject
+        # Create and write out subject info pickle
+        write_sub_info_node = pe.Node(util.Function(input_names=['subject_id',
+                                                                 'pipeline_start',
+                                                                 'strategies',
+                                                                 'strat_list',
+                                                                 'sub_log_dir'],
+                                                    output_names=['out_path'],
+                                                    function=create_write_subject_info),
+                                      name='write_sub_info')
+        # Connect set inputs and connect to pipeline
+        write_sub_info_node.inputs.pipeline_start = pipeline_start_time
+        write_sub_info_node.inputs.strategies = strategies
+        write_sub_info_node.inputs.strat_list = strat_list
+        workflow.connect(debundle_node, 'subject_id',
+                         write_sub_info_node, 'subject_id')
+        workflow.connect(debundle_node, 'sub_log_dir',
+                         write_sub_info_node, 'sub_log_dir')
+
+        # Actually run the pipeline now
         workflow.run(plugin=plugin, plugin_args=plugin_args)
 
-        # Dump subject info pickle file to subject log dir
-        subject_info['status'] = 'Completed'
-        with open(os.path.join(log_dir, 'subject_info_%s.pkl', 'wb')) as sub_pkl:
-            pickle.dump(subject_info, sub_pkl)
-#         subject_info_pickle = open(os.path.join(log_dir,
-#                                                 'subject_info_%s.pkl' % subject_id),
-#                                    'wb')
-#         pickle.dump(subject_info, subject_info_pickle)
-#         subject_info_pickle.close()
-
-        '''
-        # Actually run the pipeline now
-        try:
-
-            workflow.run(plugin='MultiProc', plugin_args={'n_procs': c.numCoresPerSubject})
-            
-        except:
-            
-            crashString = "\n\n" + "ERROR: CPAC run stopped prematurely with an error - see above.\n" + ("pipeline configuration- %s \n" % c.pipelineName) + \
-            ("subject workflow- %s \n\n" % wfname) + ("Elapsed run time before crash (minutes): %s \n\n" % ((time.time() - pipeline_start_time)/60)) + \
-            ("Timing information saved in %s/cpac_timing_%s_%s.txt \n" % (c.outputDirectory, c.pipelineName, pipeline_starttime_string)) + \
-            ("System time of start:      %s \n" % pipeline_start_datetime) + ("System time of crash: %s" % strftime("%Y-%m-%d %H:%M:%S")) + "\n\n"
-            
-            logger.info(crashString)
-                 
-            print >>timing, "ERROR: CPAC run stopped prematurely with an error."
-            print >>timing, "Pipeline configuration: %s" % c.pipelineName
-            print >>timing, "Subject workflow: %s" % wfname
-            print >>timing, "\n" + "Elapsed run time before crash (minutes): ", ((time.time() - pipeline_start_time)/60)
-            print >>timing, "System time of crash: ", strftime("%Y-%m-%d %H:%M:%S")
-            print >>timing, "\n\n"
-    
-            timing.close()
-            
-            raise Exception
-        '''    
-
-    
-        '''
-        try:
-    
-            workflow.run(plugin='MultiProc', plugin_args={'n_procs': c.numCoresPerSubject})
-    
-        except Exception as e:
-    
-            print "Error: CPAC Pipeline has failed."
-            print ""
-            print e
-            print type(e)
-            ###raise Exception
-        '''
-    
         # subject_dir = os.path.join(c.outputDirectory, 'pipeline_' + pipeline_id, subject_id)
         # create_output_mean_csv(subject_dir)
 
@@ -5947,10 +5835,23 @@ def prep_workflow(sub_list, c, strategies, run, pipeline_timing_info=None,
             for pip_id in pip_ids:
                 # Define pipeline-level logging for QC
                 pipeline_out_base = os.path.join(c.logDirectory, 'pipeline_%s' % pip_id)
-                qc_output_folder = os.path.join(pipeline_out_base, subject_id, 'qc_files_here')
-                # Generate the QC pages
-                generateQCPages(qc_output_folder, qc_montage_id_a,
-                                qc_montage_id_s, qc_plot_id, qc_hist_id)
+                qc_pages_node = pe.Node(util.Function(input_names=['subject_id',
+                                                                   'qc_montage_id_a',
+                                                                   'qc_montage_id_s',
+                                                                   'qc_plot_id',
+                                                                   'qc_hist_id'],
+                                                      output_names=[],
+                                                      function=generateQCPages),
+                                        name='qc_pages')
+
+                qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_a
+                qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_s
+                qc_pages_node.inputs.qc_montage_id_a = qc_plot_id
+                qc_pages_node.inputs.qc_montage_id_a = qc_hist_id
+                qc_pages_node.inputs.base_dir = pipeline_out_base
+                workflow.connect(debundle_node, 'subject_id',
+                                 qc_pages_node, 'subject_id')
+
                 # Automatically generate QC index page
                 create_all_qc.run(pipeline_out_base)
 
@@ -6140,7 +6041,8 @@ def run(config, subject_list_file, indx, strategies, p_name=None, \
 
     try:
         # Build and run the pipeline
-        prep_workflow(sub_dict, c, pickle.load(open(strategies, 'r')), 1, p_name, plugin=plugin, plugin_args=plugin_args)
+        prep_workflow([sub_dict], indx, c, pickle.load(open(strategies, 'r')), 1,
+                      p_name, plugin=plugin, plugin_args=plugin_args)
     except Exception as e:
         print 'Could not complete cpac run for subject: %s!' % sub_id
         print 'Error: %s' % e

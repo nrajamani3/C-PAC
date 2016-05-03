@@ -49,6 +49,49 @@ def create_anat_datasource(wf_name='anat_datasource'):
     return wf
 
 
+def create_func_datasource(wf_name='func_datasource'):
+    '''
+    '''
+
+    # Import packages
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as util
+
+    # Init workflow
+    wf = pe.Workflow(name=wf_name)
+
+    # Inputnode
+    input_node = pe.Node(util.IdentityInterface(fields=['subject',
+                                                        'rest_key'
+                                                        'rest_path',
+                                                        'creds_path'],
+                                               mandatory_inputs=True),
+                        name='inputspec')
+
+    # Check for S3 and scan dims
+    check_s3_node = pe.Node(util.Function(input_names=['file_path',
+                                                       'creds_path',
+                                                       'img_type'],
+                                          output_names=['local_path'],
+                                          function=check_for_s3),
+                            name='check_for_s3')
+    check_s3_node.inputs.img_type = 'func'
+    wf.connect(input_node, 'rest_scan', check_s3_node, 'file_path')
+    wf.connect(input_node, 'creds_path', check_s3_node, 'creds_path')
+
+    # Output spec
+    output_node = pe.Node(util.IdentityInterface(fields=['subject',
+                                                         'rest',
+                                                         'scan' ]),
+                         name='outputspec')
+    wf.connect(input_node, 'subject', output_node, 'subject')
+    wf.connect(check_s3_node, 'local_path', output_node, 'rest')
+    wf.connect(input_node, 'rest_key', output_node, 'scan')
+
+    # Return the workflow
+    return wf
+
+
 def return_subdict_values(subject_id, subid_dict, log_base_dir):
     '''
     Function to return various attributes from a subject dictionary
@@ -73,10 +116,14 @@ def return_subdict_values(subject_id, subid_dict, log_base_dir):
         download input images
     anat_path : string
         filepath to anatomical image
-    rest_dict : dictionary
-        dictionary where keys are 'rest_1', 'rest_2', etc.. and the
-        values are the filepaths for each of the corresponding
-        functional images
+    rest_key : string
+        name of scan for functional image
+    rest_path : string
+        filepath to functional image
+    sub_log_dir : string
+        directory to subject's log files
+    scan_params : dict
+        dictionary if it exists, otherwise it is None
     '''
 
     # Import packages
@@ -113,13 +160,20 @@ def return_subdict_values(subject_id, subid_dict, log_base_dir):
                   '\nError: %s' % exc
         raise Exception(err_msg)
 
-    # Functional filepaths dict
+    # Functional filepath
     try:
-        rest_dict = sub_dict['rest']
+        rest_path = sub_dict['rest']
+        rest_key = sub_dict['rest_key']
     except KeyError as exc:
         err_msg = 'Functional data not found in subject dictionary!\nError: %s' \
                   % (exc)
         raise Exception(err_msg)
+
+    # Scan parameters
+    if sub_dict.has_key('scan_parameters'):
+        scan_params = sub_dict['scan_parameters']
+    else:
+        scan_params = None
 
     # Log directory for subject
     sub_log_dir = os.path.join(log_base_dir, subject_id)
@@ -127,54 +181,8 @@ def return_subdict_values(subject_id, subid_dict, log_base_dir):
         os.makedirs(sub_log_dir)
 
     # Return subject-specific info
-    return subject_id, input_creds_path, anat_path, rest_dict, sub_log_dir
-
-
-def create_func_datasource(rest_dict, wf_name='func_datasource'):
-
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util
-
-    wf = pe.Workflow(name=wf_name)
-
-
-    inputnode = pe.Node(util.IdentityInterface(
-                                fields=['subject', 'scan', 'creds_path'],
-                                mandatory_inputs=True),
-                        name='inputnode')
-    inputnode.iterables = [('scan', rest_dict.keys())]
-
-    selectrest = pe.Node(util.Function(input_names=['scan', 'rest_dict'],
-                                       output_names=['rest'],
-                        function=get_rest),
-                         name='selectrest')
-    selectrest.inputs.rest_dict = rest_dict
-
-    check_s3_node = pe.Node(util.Function(input_names=['file_path', 'creds_path',
-                                                       'img_type'],
-                                          output_names=['local_path'],
-                                          function=check_for_s3),
-                            name='check_for_s3')
-    wf.connect(selectrest, 'rest', check_s3_node, 'file_path')
-    wf.connect(inputnode, 'creds_path', check_s3_node, 'creds_path')
-    check_s3_node.inputs.img_type = 'func'
-
-    outputnode = pe.Node(util.IdentityInterface(fields=['subject',
-                                                     'rest',
-                                                     'scan' ]),
-                         name='outputspec')
-
-    wf.connect(inputnode, 'scan', selectrest, 'scan')
-
-    wf.connect(inputnode, 'subject', outputnode, 'subject')
-    wf.connect(check_s3_node, 'local_path', outputnode, 'rest')
-    wf.connect(inputnode, 'scan', outputnode, 'scan')
-
-    return wf
-
-
-def get_rest(scan, rest_dict):
-    return rest_dict[scan]
+    return subject_id, input_creds_path, anat_path,\
+           rest_key, rest_path, sub_log_dir, scan_params
 
 
 def check_for_s3(file_path, creds_path, dl_dir=None, img_type='anat'):

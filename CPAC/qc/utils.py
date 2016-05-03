@@ -1140,65 +1140,64 @@ def make_qc_pages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist
 
 
 
-def generateQCPages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id):
-
-    """
-    parafile = open('QC_input_para.txt', 'w')
-    parafile.write(qc_path)
-    parafile.write('qc_montage_id_a: ')
-    for key, value in qc_montage_id_a.iteritems()
-        parafile.write(key)
-        parafile.write(value)
-    parafile.write('qc_montage_id_s: ')
-    for key, value in qc_montage_id_s.iteritems()
-        parafile.write(key)
-        parafile.write(value)
-    parafile.write('qc_plot_id: ')
-    for key, value in qc_plot_id.iteritems()
-        parafile.write(key)
-        parafile.write(value)
-    parafile.write('qc_hist_id: ')
-    for key, value in qc_hist_id.iteritems()
-        parafile.write(key)
-        parafile.write(value)
-    parafile.close()
-    """
-
-    """
+def generateQCPages(base_dir, subject_id, qc_montage_id_a, qc_montage_id_s,
+                    qc_plot_id, qc_hist_id):
+    '''
     Calls make_qc_page and organizes qc path files
 
     Parameters
     ----------
-
-    qc_path : string
-        path to qc_files_here directory
-
+    base_dir : string
+        base directory to store qc files
+    subject_id : string
+        subject id used for qc_path
     qc_montage_id_a : dictionary
         dictionary of axial montages key : id no
         value is list of png types 
-
     qc_montage_id_s : dictionary
           dictionary of sagittal montages key : id no
           value is list of png types 
-
     qc_plot_id : dictionary
           dictionary of plot pngs key : id no
           value is list of png types
-
     qc_hist_id : dictionary
           dictionary of histogram pngs key : id no
           value is list of png types
 
-
     Returns
     -------
-
     None
+    '''
 
-    """
+#     """
+#     parafile = open('QC_input_para.txt', 'w')
+#     parafile.write(qc_path)
+#     parafile.write('qc_montage_id_a: ')
+#     for key, value in qc_montage_id_a.iteritems()
+#         parafile.write(key)
+#         parafile.write(value)
+#     parafile.write('qc_montage_id_s: ')
+#     for key, value in qc_montage_id_s.iteritems()
+#         parafile.write(key)
+#         parafile.write(value)
+#     parafile.write('qc_plot_id: ')
+#     for key, value in qc_plot_id.iteritems()
+#         parafile.write(key)
+#         parafile.write(value)
+#     parafile.write('qc_hist_id: ')
+#     for key, value in qc_hist_id.iteritems()
+#         parafile.write(key)
+#         parafile.write(value)
+#     parafile.close()
+#     """
+
+    # Import packages
     import os
     from CPAC.qc.utils import first_pass_organizing_files, second_pass_organizing_files
     from CPAC.qc.utils import make_qc_pages
+
+    # Init variables
+    qc_path = os.path.join(base_dir, subject_id, 'qc_files_here')
 
     #os.system('rm -rf %s/*.html')
 
@@ -1209,7 +1208,6 @@ def generateQCPages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hi
 
     #generate pages from qc files
     make_qc_pages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id)
-
 
 
 def make_edge(file_):

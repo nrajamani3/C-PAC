@@ -1474,9 +1474,9 @@ def select_model_files(model, ftest, model_name):
 
 
 
-def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpattern):
+def get_scan_params(subject, scan, scan_params, start_indx, stop_indx, tr, tpattern):
 
-    """
+    '''
     Method to extract slice timing correction parameters
     and scan parameters.
     
@@ -1486,8 +1486,8 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
         subject id
     scan : a string
         scan id
-    subject_map : a dictionary
-        subject map containing all subject information
+    scan_params : a dictionary or None
+        subject map containing all scan parameters if not None
     start_indx : an integer
         starting volume index
     stop_indx : an integer
@@ -1505,17 +1505,17 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
         starting TR or starting volume index
     last_tr : an integer
         ending TR or ending volume index
-    """
+    '''
 
     import os
     import warnings
 
     def check(val, throw_exception):
 
-        if isinstance(subject_map['scan_parameters'][val], dict):
-            ret_val = subject_map['scan_parameters'][val][scan]
+        if isinstance(scan_params[val], dict):
+            ret_val = scan_params[val][scan]
         else:
-            ret_val = subject_map['scan_parameters'][val]
+            ret_val = scan_params[val]
 
         if ret_val == 'None':
             if throw_exception:
@@ -1538,7 +1538,7 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
     first_tr=''
     last_tr=''
 
-    if 'scan_parameters' in subject_map.keys():
+    if scan_params is not None:#'scan_parameters' in subject_map.keys():
         # get details from the configuration
         TR = float(check('tr', False))
         pattern = str(check('acquisition', False))
@@ -1795,49 +1795,58 @@ def create_log(wf_name="log", scan_id=None):
     return wf
 
 
-def create_log_node(wflow, output, indx, debundle_node, pipeline, scan_id=None):
+def create_write_subject_info(subject_id, pipeline_start, strategies,
+                              strat_list, sub_log_dir):
     '''
-    Create a logging workflow for keeping record of another
-    workflow's progress
     '''
 
-    # If logging a workflow
-    if wflow: 
-        log_wf = create_log(wf_name='log_%s' % wflow.name)
-        log_wf.inputs.inputspec.workflow = wflow.name
-        log_wf.inputs.inputspec.index = indx
-        workflow.connect(wflow, output, log_wf, 'inputspec.inputs')
-        workflow.connect(debundle_node, 'sub_log_dir',
-                         log_wf, 'inputspec.log_dir')
-    # Otherwise, log scan
-    else:
-        log_wf = create_log(wf_name='log_done_%s' % scan_id,
-                            scan_id=scan_id)
-        log_wf.inputs.inputspec.workflow = 'DONE'
-        log_wf.inputs.inputspec.index = indx
-        workflow.connect(debundle_node, 'sub_log_dir',
-                         log_wf, 'inputspec.log_dir')
-        workflow.connect(debundle_node, 'sub_log_dir',
-                         log_wf, 'inputspec.inputs')
-        return log_wf
+    # Import packages
+    import os
+    import pickle
+
+    # Init variables
+    subject_info = {}
+    out_path = os.path.join(sub_log_dir, 'subject_info_%s.pkl', 'wb')
+
+    # Populate dict
+    subject_info['subject_id'] = subject_id
+    subject_info['start_time'] = pipeline_start
+    subject_info['strategies'] = strategies
+    subject_info['resource_pool'] = []
+    # Populate strategies and resource pools
+    for strat_num, strat in enumerate(strat_list):
+        strat_label = 'strat_%d' % strat_num
+        subject_info[strat_label] = strat.get_name()
+        subject_info['resource_pool'].append(strat.get_resource_pool())
+    # Set status to running
+    subject_info['status'] = 'Running'
+
+    # Write pickle file
+    with open(out_path) as sub_pkl:
+        pickle.dump(subject_info, sub_pkl)
+
+    # Return pickle path
+    return out_path
 
 
 def create_log_template(pip_ids, wf_list, scan_ids, subject_id, log_dir):
-   
+    '''
+    '''
+
+    # Import packages
     import datetime, os
     from os import path as op
     from jinja2 import Template
     import pkg_resources as p
     import CPAC
-    import itertools    
-    
+    import itertools
+
+    # Init variables
     now = datetime.datetime.now()
-    
     chain = itertools.chain(*wf_list)
     wf_keys = list(chain)
     wf_keys = list(set(wf_keys))
-    
-    
+
     tvars = {}
     tvars['subject_id']  = subject_id
     tvars['scans']       = scan_ids
@@ -1847,12 +1856,11 @@ def create_log_template(pip_ids, wf_list, scan_ids, subject_id, log_dir):
     tvars['pipeline_indices'] = range(len(tvars['pipelines']))
     tvars['resources'] = os.path.join(CPAC.__path__[0], 'resources')
     tvars['gui_resources'] = os.path.join(CPAC.__path__[0], 'GUI', 'resources')
-    
-    
+
     reportdir = op.join(log_dir, "reports")
     if not op.exists(reportdir):
         os.mkdir(reportdir)
-    
+
     for scan in scan_ids:
         jsfile   = op.join(reportdir, "%s.js" % scan)
         open(jsfile, 'w').close()
@@ -1887,8 +1895,7 @@ def create_log_template(pip_ids, wf_list, scan_ids, subject_id, log_dir):
     html        = open(htmlfile, 'w')
     html.write(text)
     html.close()
-    
-    
+
     return
 
 

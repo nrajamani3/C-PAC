@@ -514,7 +514,7 @@ def run(config_file, subject_list_file, p_name=None, plugin=None, plugin_args=No
                       "directory: %s\n\nMake sure you have permissions " \
                       "to write to this directory.\n\n" % c.workingDirectory
                 raise Exception(err)
-                
+
         pid = open(os.path.join(c.workingDirectory, 'pid.txt'), 'w')
         # Init job queue
         jobQueue = []
