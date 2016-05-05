@@ -69,12 +69,12 @@ from CPAC.utils.utils import extract_one_d, set_gauss, \
                              get_tr, extract_txt, create_log, \
                              create_log_template, extract_output_mean, \
                              create_output_mean_csv, get_zscore, \
-                             get_fisher_zscore, dbg_file_lineno,\
-    create_write_subject_info
+                             get_fisher_zscore, dbg_file_lineno
 from CPAC.vmhc.vmhc import create_vmhc
 from CPAC.reho.reho import create_reho
 from CPAC.alff.alff import create_alff
 from CPAC.sca.sca import create_sca, create_temporal_reg
+from CPAC.pipeline.cpac_runner import build_strategies
 
 # Init variables
 logger = logging.getLogger('workflow')
@@ -125,8 +125,7 @@ class Strategy(object):
 
 
 # Create and prepare C-PAC pipeline workflow
-def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None,
-                  p_name=None):
+def prep_workflow(sub_dict, c, pipeline_timing_info=None, p_name=None):
     '''
     Function to prepare and, optionally, run the C-PAC workflow
 
@@ -135,13 +134,8 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     sub_list : list
         a list of subject dictionaries with anatomical and functional image
         paths
-    bundle_num : int
-        the bundle number that the workflow will encompass
     c : Configuration object
         CPAC pipelin configuration dictionary object
-    strategies : obj
-        strategies object describing what strategies to run the pipeline
-        through
     pipeline_timing_info : list (optional); default=None
         list of pipeline info for reporting timing information
     p_name : string (optional); default=None
@@ -168,10 +162,14 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     sub_mem_gb, num_cores_per_sub, num_ants_cores = \
         check_config_resources(c)
 
+    # Init strategies
+    strategies = build_strategies(c)
+
     # perhaps in future allow user to set threads maximum
-    # this is for centrality mostly
+    # this is for centrality mostly    
     # import mkl
     numThreads = '1'
+
     os.environ['OMP_NUM_THREADS'] = '1'#str(num_cores_per_sub)
     os.environ['MKL_NUM_THREADS'] = '1'#str(num_cores_per_sub)
     os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = str(num_ants_cores)
@@ -211,6 +209,17 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                 '\'.\n\n'
 
     logger.info(cores_msg)
+
+    # Subject id and log directory
+    if sub_dict['unique_id']:
+        subject_id = sub_dict['subject_id'] + "_" + sub_dict['unique_id']
+    else:
+        subject_id = sub_dict['subject_id']
+        
+    log_dir = os.path.join(c.logDirectory, subject_id)
+
+    if not os.path.exists(log_dir):
+        os.makedirs(os.path.join(log_dir))
 
     # temp
     already_skullstripped = c.already_skullstripped[0]
@@ -269,43 +278,15 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     check_system_deps(check_ants)
 
     # Init cpac pipeline workflow
-    wfname = 'resting_preproc'
+    wfname = 'resting_preproc_' + str(subject_id)
     workflow = pe.Workflow(name=wfname)
     workflow.base_dir = c.workingDirectory
     workflow.config['execution'] = {'hash_method': 'timestamp',
                                     'crashdump_dir': os.path.abspath(c.crashLogDirectory)}
-    config.update_config({'logging': {'log_directory': c.logDirectory,
+    config.update_config({'logging': {'log_directory': log_dir,
                                       'log_to_file': True}})
     logging.update_logging(config)
 
-    # Create subject dictionary with subject_id as keys, entry per rest scan
-    subid_dict = {}
-    for sub_dict in sub_list:
-        for scan_name, rest_path in sub_dict['rest'].items():
-            subject_id = sub_dict['subject_id'] + '_' + scan_name
-            if sub_dict['unique_id']:
-                subject_id = subject_id + '_' + sub_dict['unique_id']
-            # Overwrite rest dict with only the one scan path
-            sub_dict['rest'] = rest_path
-            sub_dict['rest_key'] = scan_name
-            subid_dict[subject_id] = sub_dict
-
-    # Init debundler node
-    debundle_node = pe.Node(util.Function(input_names=['subject_id',
-                                                       'subid_dict',
-                                                       'log_base_dir'],
-                                          output_names=['subject_id',
-                                                        'input_creds_path',
-                                                        'anat_path',
-                                                        'rest_key',
-                                                        'rest_path',
-                                                        'sub_log_dir',
-                                                        'scan_params'],
-                                          function=return_subdict_values),
-                            name='debundler')
-    # Set up debundle node as iterable
-    debundle_node.iterables = ('subject_id', subid_dict.keys())
-    debundle_node.inputs.subid_dict = subid_dict
 
     if c.reGenerateOutputs is True:
         import commands
@@ -330,19 +311,18 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
             log_wf = create_log(wf_name='log_%s' % wflow.name)
             log_wf.inputs.inputspec.workflow = wflow.name
             log_wf.inputs.inputspec.index = indx
+            log_wf.inputs.inputspec.log_dir = log_dir
             workflow.connect(wflow, output, log_wf, 'inputspec.inputs')
-            workflow.connect(debundle_node, 'sub_log_dir',
-                             log_wf, 'inputspec.log_dir')
+
         # Otherwise, log scan
         else:
             log_wf = create_log(wf_name='log_done_%s' % scan_id,
                                 scan_id=scan_id)
+            log_wf.base_dir = log_dir
             log_wf.inputs.inputspec.workflow = 'DONE'
             log_wf.inputs.inputspec.index = indx
-            workflow.connect(debundle_node, 'sub_log_dir',
-                             log_wf, 'inputspec.log_dir')
-            workflow.connect(debundle_node, 'sub_log_dir',
-                             log_wf, 'inputspec.inputs')
+            log_wf.inputs.inputspec.log_dir = log_dir
+            log_wf.inputs.inputspec.inputs = log_dir
             return log_wf
 
     def logStandardError(sectionName, errLine, errNum):
@@ -386,17 +366,27 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     num_strat = 0
     strat_initial = Strategy()
 
-    flow = create_anat_datasource('anat_datasource')
+    # Extract credentials path if it exists
+    try:
+        creds_path = sub_dict['creds_path']
+        if creds_path and 'none' not in creds_path.lower():
+            if os.path.exists(creds_path):
+                input_creds_path = os.path.abspath(creds_path)
+            else:
+                err_msg = 'Credentials path: "%s" for subject "%s" was not '\
+                          'found. Check this path and try again.' % (creds_path, subject_id)
+                raise Exception(err_msg)
+        else:
+            input_creds_path = None
+    except KeyError:
+        input_creds_path = None
+
+    flow = create_anat_datasource()
+    flow.inputs.inputnode.subject = subject_id
+    flow.inputs.inputnode.anat = sub_dict['anat']
+    flow.inputs.inputnode.creds_path = input_creds_path
 
     anat_flow = flow.clone('anat_gather_%d' % num_strat)
-
-    # Connect debundle node to anat workflow
-    workflow.connect(debundle_node, 'subject_id',
-                     anat_flow, 'inputnode.subject')
-    workflow.connect(debundle_node, 'input_creds_path',
-                     anat_flow, 'inputnode.creds_path')
-    workflow.connect(debundle_node, 'anat_path',
-                     anat_flow, 'inputnode.anat')
 
     strat_initial.set_leaf_properties(anat_flow, 'outputspec.anat')
 
@@ -738,7 +728,6 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
 
         strat_list += new_strat_list
 
-
         new_strat_list = []
             
         for strat in strat_list:
@@ -961,17 +950,12 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
 
     for strat in strat_list:
         try: 
-            funcFlow = create_func_datasource('func_gather_%d' % num_strat)
-            workflow.connect(debundle_node, 'input_creds_path',
-                             funcFlow, 'inputspec.creds_path')
-            workflow.connect(debundle_node, 'rest_path',
-                             funcFlow, 'inputspec.rest_scan')
-            workflow.connect(debundle_node, 'subject_id',
-                             funcFlow, 'inputspec.subject')
-        except Exception as exc:
-            fname, line_num = dbg_file_lineno()
-            logger.info('Error create_func_datasource failed. Error: %s\n'\
-                        '(%s:%d)' % (exc, fname, line_num))
+            funcFlow = create_func_datasource(sub_dict['rest'], 'func_gather_%d' % num_strat)
+            funcFlow.inputs.inputspec.subject = subject_id
+            funcFlow.inputs.inputspec.creds_path = input_creds_path
+        except Exception as xxx:
+            logger.info( "Error create_func_datasource failed."+\
+                    " (%s:%d)" % dbg_file_lineno() )
             raise
 
         """
@@ -979,63 +963,89 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
         """
         try:
             # a node which checks if scan _parameters are present for each scan
-            scan_params_node = pe.Node(util.Function(input_names=['subject',
-                                                                  'scan',
-                                                                  'scan_params',
-                                                                  'start_indx',
-                                                                  'stop_indx',
-                                                                  'tr',
-                                                                  'tpattern'],
-                                                     output_names=['tr',
-                                                                   'tpattern',
-                                                                   'ref_slice',
-                                                                   'start_indx',
-                                                                   'stop_indx'],
-                                                     function=get_scan_params),
-                                       name='scan_params_%d' % num_strat)
-        except Exception as exc:
-            fname, line_num = dbg_file_lineno()
-            logger.info('Error create_func_datasource failed. Error: %s\n'\
-                        '(%s:%d)' % (exc, fname, line_num))
+            scan_params = pe.Node(util.Function(input_names=['subject',
+                                                             'scan',
+                                                             'subject_map',
+                                                             'start_indx',
+                                                             'stop_indx',
+                                                             'tr',
+                                                             'tpattern'],
+                                                output_names=['tr',
+                                                             'tpattern',
+                                                             'ref_slice',
+                                                             'start_indx',
+                                                             'stop_indx'],
+                                                function=get_scan_params),
+                                  name='scan_params_%d' % num_strat)
+        except Exception as xxx:
+            logger.info( "Error creating scan_params node."+\
+                    " (%s:%d)" % dbg_file_lineno() )
             raise
 
         if "Selected Functional Volume" in c.func_reg_input:
-            get_func_volume = pe.Node(interface=preprocess.Calc(),
-                                      name='get_func_volume_%d' % num_strat)
-            get_func_volume.inputs.expr = 'a'
-            get_func_volume.inputs.single_idx = c.func_reg_input_volume
-            get_func_volume.inputs.outputtype = 'NIFTI_GZ' 
-            workflow.connect(funcFlow, 'outputspec.rest',
-                             get_func_volume, 'in_file_a')
+               
+            try:
+                get_func_volume = pe.Node(interface=preprocess.Calc(),
+                    name = 'get_func_volume_%d' % num_strat)
+         
+                get_func_volume.inputs.expr = 'a'
+                get_func_volume.inputs.single_idx = c.func_reg_input_volume
+                get_func_volume.inputs.outputtype = 'NIFTI_GZ' 
+ 
+            except Exception as xxx:
+                logger.info( "Error creating get_func_volume node."+\
+                        " (%s:%d)" % dbg_file_lineno() )
+                raise
+
+            try:
+                workflow.connect(funcFlow, 'outputspec.rest',
+                    get_func_volume, 'in_file_a')
+
+            except Exception as xxx:
+                logger.info( "Error connecting get_func_volume node."+\
+                        " (%s:%d)" % dbg_file_lineno() )
+                raise
+
 
         # wire in the scan parameter workflow
-        workflow.connect(funcFlow, 'outputspec.subject',
-                         scan_params_node, 'subject')
-        workflow.connect(funcFlow, 'outputspec.scan',
-                         scan_params_node, 'scan')
-        workflow.connect(debundle_node, 'scan_params',
-                         scan_params_node, 'scan_params')
+        try:
+            workflow.connect(funcFlow, 'outputspec.subject',
+                                scan_params, 'subject')
+        except Exception as xxx:
+            logger.info( "Error connecting scan_params 'subject' input."+\
+                    " (%s:%d)" % dbg_file_lineno() )
+            raise
+
+
+        try:
+            workflow.connect(funcFlow, 'outputspec.scan',
+                                scan_params, 'scan')
+        except Exception as xxx:
+            logger.info( "Error connecting scan_params 'scan' input."+\
+                    " (%s:%d)" % dbg_file_lineno() )
+            raise
 
         # connect in constants
-        scan_params_node.inputs.start_indx = c.startIdx
-        scan_params_node.inputs.stop_indx = c.stopIdx
-        scan_params_node.inputs.tr = c.TR
-        scan_params_node.inputs.tpattern = c.slice_timing_pattern[0]
-
+        scan_params.inputs.subject_map = sub_dict
+        scan_params.inputs.start_indx = c.startIdx
+        scan_params.inputs.stop_indx = c.stopIdx
+        scan_params.inputs.tr = c.TR
+        scan_params.inputs.tpattern = c.slice_timing_pattern[0]
+    
         # node to convert TR between seconds and milliseconds
         try:
             convert_tr = pe.Node(util.Function(input_names=['tr'],
-                                               output_names=['tr'],
-                                               function=get_tr),
-                                 name='convert_tr_%d' % num_strat)
+                                                output_names=['tr'],
+                                                function=get_tr),
+                                name='convert_tr_%d' % num_strat)
         except Exception as xxx:
             logger.info( "Error creating convert_tr node."+\
                     " (%s:%d)" % dbg_file_lineno() )
             raise
-
-        try:
-            workflow.connect(scan_params_node, 'tr',
-                             convert_tr, 'tr')
+    
+        try:    
+            workflow.connect(scan_params, 'tr',
+                                convert_tr, 'tr')
         except Exception as xxx:
             logger.info( "Error connecting convert_tr 'tr' input."+\
                     " (%s:%d)" % dbg_file_lineno() )
@@ -1083,7 +1093,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
 
         # connect the other input parameters
         try: 
-            workflow.connect(scan_params_node, 'start_indx',
+            workflow.connect(scan_params, 'start_indx',
                                 trunc_wf, 'inputspec.start_idx')
         except Exception as xxx:
             logger.info( "Error connecting input 'start_indx' to trunc_wf."+\
@@ -1091,7 +1101,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
             raise
 
         try:
-            workflow.connect(scan_params_node, 'stop_indx',
+            workflow.connect(scan_params, 'stop_indx',
                                 trunc_wf, 'inputspec.stop_idx')
         except Exception as xxx:
             logger.info( "Error connecting input 'stop_idx' to trunc_wf."+\
@@ -1149,7 +1159,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
             logger.info( "TR %s" %c.TR)
             if c.TR:
                 try:
-                    workflow.connect(scan_params_node, 'tr',
+                    workflow.connect(scan_params, 'tr',
                         func_slice_timing_correction, 'tr')
                 except Exception as xxx:
                     logger.info( "Error connecting input 'tr' to func_slice_timing_correction afni node."+\
@@ -1165,7 +1175,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                 if not "Use NIFTI Header" in c.slice_timing_pattern[0]:
                     try:
                         logger.info( "connecting slice timing pattern %s"%c.slice_timing_pattern[0])
-                        workflow.connect(scan_params_node, 'tpattern',
+                        workflow.connect(scan_params, 'tpattern',
                             func_slice_timing_correction, 'tpattern')
                         logger.info( "connected slice timing pattern %s"%c.slice_timing_pattern[0])
                     except Exception as xxx:
@@ -5494,7 +5504,6 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                 renamedNode = renamedNode[:-1]
                 lastNodeChar = renamedNode[len(renamedNode)-1]
 
-               
             renamedNodesList.append(renamedNode)
            
         renamedStrats.append(renamedNodesList)
@@ -5679,7 +5688,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                 ds.inputs.base_directory = c.outputDirectory
             ds.inputs.creds_path = creds_path
             ds.inputs.encrypt_bucket_keys = encrypt_data
-            ds.inputs.container = os.path.join('pipeline_%s' % pipeline_id)
+            ds.inputs.container = os.path.join('pipeline_%s' % pipeline_id, subject_id)
             ds.inputs.regexp_substitutions = [(r"/_sca_roi(.)*[/]", '/'),
                                               (r"/_smooth_centrality_(\d)+[/]", '/'),
                                               (r"/_z_score(\d)+[/]", "/"),
@@ -5698,7 +5707,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                                     name='process_outputs_%d' % sink_idx)
 
             link_node.inputs.strategies = strategies
-            workflow.connect(debundle_node, 'subject_id', link_node, 'subject_id')
+            link_node.inputs.subject_id = subject_id
             link_node.inputs.pipeline_id = 'pipeline_%s' % (pipeline_id)
             link_node.inputs.helper = dict(strategy_tag_helper_symlinks)
 
@@ -5732,7 +5741,7 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
         pipes.append(pipeline_id)
 
     # creates the HTML files used to represent the logging-based status
-    #create_log_template(pip_ids, wf_names, scan_ids, subject_id, log_dir)
+    create_log_template(pip_ids, wf_names, scan_ids, subject_id, log_dir)
 
     logger.info('\n\n' + ('Strategy forks: %s' % pipes) + '\n\n')
 
@@ -5740,6 +5749,23 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     pipeline_start_datetime = strftime("%Y-%m-%d %H:%M:%S")
     pipeline_starttime_string = pipeline_start_datetime.replace(' ','_')
     pipeline_starttime_string = pipeline_starttime_string.replace(':','-')
+
+    subject_info = {}
+    subject_info['subject_id'] = subject_id
+    subject_info['start_time'] = pipeline_start_time
+    subject_info['strategies'] = strategies
+    subject_info['resource_pool'] = []
+
+    for num, strat in enumerate(strat_list):
+        strat_label = 'strat_%d' % num
+        subject_info[strat_label] = strat.get_name()
+        subject_info['resource_pool'].append(strat.get_resource_pool())
+
+    subject_info['status'] = 'Running'
+    subject_info_pickle = os.path.join(log_dir, 'subject_info_%s.p' % subject_id)
+    # Write pickle file
+    with open(subject_info_pickle, 'wb') as sub_pkl:
+        pickle.dump(subject_info, sub_pkl)
 
     # Dummy end of pipeline - merge leaf nodes
     leaf_nodes = {}
@@ -5755,27 +5781,9 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                                              output_names=['merged']),
                                name='merge_leafs')
     merge_leafs_node.inputs.function_str = merge_func_str
-    for num, leaf_node, leaf_out in enumerate(leaf_nodes.items()):
+    for num, (leaf_node, leaf_out) in enumerate(leaf_nodes.items()):
         arg = arg_name[num]
         workflow.connect(leaf_node, leaf_out, merge_leafs_node, arg)
-
-    # Create and write out subject info pickle
-    write_sub_info_node = pe.Node(util.Function(input_names=['subject_id',
-                                                             'pipeline_start',
-                                                             'strategies',
-                                                             'strat_list',
-                                                             'sub_log_dir'],
-                                                output_names=['out_path'],
-                                                function=create_write_subject_info),
-                                  name='write_sub_info')
-    # Connect set inputs and connect to pipeline
-    write_sub_info_node.inputs.pipeline_start = pipeline_start_time
-    write_sub_info_node.inputs.strategies = strategies
-    write_sub_info_node.inputs.strat_list = strat_list
-    workflow.connect(debundle_node, 'subject_id',
-                     write_sub_info_node, 'subject_id')
-    workflow.connect(debundle_node, 'sub_log_dir',
-                     write_sub_info_node, 'sub_log_dir')
 
     # Connect in upload logs if S3 output enabled
     logs_to_s3_node = pe.Node(util.Function(input_names=['output_dir',
@@ -5789,24 +5797,17 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
     logs_to_s3_node.inputs.output_dir = c.outputDirectory
     logs_to_s3_node.inputs.creds_path = creds_path
     logs_to_s3_node.inputs.encrypt_data = encrypt_data
-    workflow.connect(debundle_node, 'sub_log_dir',
-                     logs_to_s3_node, 'sub_log_dir')
+    logs_to_s3_node.inputs.sub_log_dir = log_dir
     workflow.connect(merge_leafs_node, 'merged', logs_to_s3_node, 'leafs_dep')
-
-    # Connect in the done logs workflows
-    for count, scanID in enumerate(pip_ids):
-        for scan in scan_ids:
-            done_log = create_log_node(None, None, count, scan)
-            workflow.connect(merge_leafs_node, 'merged',
-                             done_log, 'inputspec.leaf_deps')
 
     # If QC is enabled
     if 1 in c.generateQualityControlImages:
         # For each pipeline ID, generate the QC pages
-        for pip_id in pip_ids:
+        for pip_num, pip_id in enumerate(pip_ids):
             # Define pipeline-level logging for QC
             pipeline_out_base = os.path.join(c.logDirectory, 'pipeline_%s' % pip_id)
-            qc_pages_node = pe.Node(util.Function(input_names=['subject_id',
+            qc_pages_node = pe.Node(util.Function(input_names=['base_dir',
+                                                               'subject_id',
                                                                'qc_montage_id_a',
                                                                'qc_montage_id_s',
                                                                'qc_plot_id',
@@ -5814,15 +5815,14 @@ def prep_workflow(sub_list, bundle_num, c, strategies, pipeline_timing_info=None
                                                                'leafs_dep'],
                                                   output_names=[],
                                                   function=generateQCPages),
-                                    name='qc_pages')
+                                    name='qc_pages_%d' % pip_num)
 
             qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_a
             qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_s
             qc_pages_node.inputs.qc_montage_id_a = qc_plot_id
             qc_pages_node.inputs.qc_montage_id_a = qc_hist_id
             qc_pages_node.inputs.base_dir = pipeline_out_base
-            workflow.connect(debundle_node, 'subject_id',
-                             qc_pages_node, 'subject_id')
+            qc_pages_node.inputs.subject_id = subject_id
             workflow.connect(merge_leafs_node, 'merged',
                              qc_pages_node, 'leafs_dep')
 

@@ -741,7 +741,6 @@ def create_paths_and_links(pipeline_id, relevant_strategies, path, subject_id, c
     # relevant_strategies is a list of lists, where each list contains all of
     # the nuisance correction selections per strategy
     for strategy in relevant_strategies:
-
         base_path, remainder_path = path.split(subject_id, 1)
 
         sym_path = path.split(pipeline_id)[0]
@@ -756,7 +755,6 @@ def create_paths_and_links(pipeline_id, relevant_strategies, path, subject_id, c
         # create the sym-link directory paths
         sym_path = os.path.join(sym_path, 'sym_links')
         sym_path = os.path.join(sym_path, pipeline_id)
-
 
         if create_sym_links == True:
 
@@ -810,7 +808,6 @@ def create_paths_and_links(pipeline_id, relevant_strategies, path, subject_id, c
             print str(strategy), " not in labels_dict"
             raise
 
-
         # this removes unused corrections from the strategy_identifier string,
         # keeping in mind that corrections with a 0 appended to the end of the
         # name denotes they were not included
@@ -834,6 +831,7 @@ def create_paths_and_links(pipeline_id, relevant_strategies, path, subject_id, c
         # output of 'functional_preprocessed_mask' is matched with the label
         # 'func'
         file_name, wf, remainder_path = get_workflow(remainder_path)
+
         session = get_session(remainder_path)
 
         new_session_path = os.path.join(new_sub_path, session)
@@ -845,8 +843,6 @@ def create_paths_and_links(pipeline_id, relevant_strategies, path, subject_id, c
         # example: {path to output folder}/sym_links/{pipeline id}/
         #              {correction selections}/{subject id}/{scan id}/
         #                  {workflow label, such as alff}
-
-
 
         # now bring into use the tier 2 iterables for recursive directory
         # structure
@@ -1315,12 +1311,9 @@ def process_outputs(in_file, strategies, subject_id, pipeline_id, helper, create
         for strategy in strategies:
 
             strategy.append(pipeline_id)
-
-        relevant_strategies = get_strategies_for_path(path, strategies)
-        
-        cleaned_strategies = clean_strategy(relevant_strategies, helper)
-        
-        create_paths_and_links(pipeline_id, cleaned_strategies, path, subject_id, create_sym_links)
+            relevant_strategies = get_strategies_for_path(path, strategies)
+            cleaned_strategies = clean_strategy(relevant_strategies, helper)
+            create_paths_and_links(pipeline_id, cleaned_strategies, path, subject_id, create_sym_links)
 
 
 
@@ -1474,7 +1467,7 @@ def select_model_files(model, ftest, model_name):
 
 
 
-def get_scan_params(subject, scan, scan_params, start_indx, stop_indx, tr, tpattern):
+def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpattern):
 
     '''
     Method to extract slice timing correction parameters
@@ -1486,8 +1479,8 @@ def get_scan_params(subject, scan, scan_params, start_indx, stop_indx, tr, tpatt
         subject id
     scan : a string
         scan id
-    scan_params : a dictionary or None
-        subject map containing all scan parameters if not None
+    subject_map : a dictionary
+        subject map containing all subject information
     start_indx : an integer
         starting volume index
     stop_indx : an integer
@@ -1512,10 +1505,10 @@ def get_scan_params(subject, scan, scan_params, start_indx, stop_indx, tr, tpatt
 
     def check(val, throw_exception):
 
-        if isinstance(scan_params[val], dict):
-            ret_val = scan_params[val][scan]
+        if isinstance(subject_map['scan_parameters'][val], dict):
+            ret_val = subject_map['scan_parameters'][val][scan]
         else:
-            ret_val = scan_params[val]
+            ret_val = subject_map['scan_parameters'][val]
 
         if ret_val == 'None':
             if throw_exception:
@@ -1538,7 +1531,7 @@ def get_scan_params(subject, scan, scan_params, start_indx, stop_indx, tr, tpatt
     first_tr=''
     last_tr=''
 
-    if scan_params is not None:#'scan_parameters' in subject_map.keys():
+    if 'scan_parameters' in subject_map.keys():
         # get details from the configuration
         TR = float(check('tr', False))
         pattern = str(check('acquisition', False))
@@ -1654,7 +1647,7 @@ def check_tr(tr, in_file):
 
 
 
-def write_to_log(workflow, log_dir, index, inputs, scan_id, leaf_deps):
+def write_to_log(workflow, log_dir, index, inputs, scan_id, leaf_deps=None):
     """
     Method to write into log file the status of the workflow run.
     """
@@ -1795,40 +1788,6 @@ def create_log(wf_name="log", scan_id=None):
                outputNode, 'out_file')
     
     return wf
-
-
-def create_write_subject_info(subject_id, pipeline_start, strategies,
-                              strat_list, sub_log_dir):
-    '''
-    '''
-
-    # Import packages
-    import os
-    import pickle
-
-    # Init variables
-    subject_info = {}
-    out_path = os.path.join(sub_log_dir, 'subject_info_%s.pkl', 'wb')
-
-    # Populate dict
-    subject_info['subject_id'] = subject_id
-    subject_info['start_time'] = pipeline_start
-    subject_info['strategies'] = strategies
-    subject_info['resource_pool'] = []
-    # Populate strategies and resource pools
-    for strat_num, strat in enumerate(strat_list):
-        strat_label = 'strat_%d' % strat_num
-        subject_info[strat_label] = strat.get_name()
-        subject_info['resource_pool'].append(strat.get_resource_pool())
-    # Set status to running
-    subject_info['status'] = 'Running'
-
-    # Write pickle file
-    with open(out_path) as sub_pkl:
-        pickle.dump(subject_info, sub_pkl)
-
-    # Return pickle path
-    return out_path
 
 
 def create_log_template(pip_ids, wf_list, scan_ids, subject_id, log_dir):

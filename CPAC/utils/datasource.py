@@ -49,7 +49,7 @@ def create_anat_datasource(wf_name='anat_datasource'):
     return wf
 
 
-def create_func_datasource(wf_name='func_datasource'):
+def create_func_datasource(rest_dict, wf_name='func_datasource'):
     '''
     '''
 
@@ -62,11 +62,18 @@ def create_func_datasource(wf_name='func_datasource'):
 
     # Inputnode
     input_node = pe.Node(util.IdentityInterface(fields=['subject',
-                                                        'rest_key'
-                                                        'rest_path',
+                                                        'scan',
                                                         'creds_path'],
                                                mandatory_inputs=True),
                         name='inputspec')
+    input_node.iterables = [('scan', rest_dict.keys())]
+
+    selectrest = pe.Node(util.Function(input_names=['scan', 'rest_dict'],
+                                       output_names=['rest'],
+                        function=get_rest),
+                         name='selectrest')
+    selectrest.inputs.rest_dict = rest_dict
+    wf.connect(input_node, 'scan', selectrest, 'scan')
 
     # Check for S3 and scan dims
     check_s3_node = pe.Node(util.Function(input_names=['file_path',
@@ -75,9 +82,10 @@ def create_func_datasource(wf_name='func_datasource'):
                                           output_names=['local_path'],
                                           function=check_for_s3),
                             name='check_for_s3')
-    check_s3_node.inputs.img_type = 'func'
-    wf.connect(input_node, 'rest_scan', check_s3_node, 'file_path')
+    wf.connect(selectrest, 'rest', check_s3_node, 'file_path')
     wf.connect(input_node, 'creds_path', check_s3_node, 'creds_path')
+
+    check_s3_node.inputs.img_type = 'func'
 
     # Output spec
     output_node = pe.Node(util.IdentityInterface(fields=['subject',
@@ -86,10 +94,14 @@ def create_func_datasource(wf_name='func_datasource'):
                          name='outputspec')
     wf.connect(input_node, 'subject', output_node, 'subject')
     wf.connect(check_s3_node, 'local_path', output_node, 'rest')
-    wf.connect(input_node, 'rest_key', output_node, 'scan')
+    wf.connect(input_node, 'scan', output_node, 'scan')
 
     # Return the workflow
     return wf
+
+
+def get_rest(scan, rest_dict):
+    return rest_dict[scan]
 
 
 def return_subdict_values(subject_id, subid_dict, log_base_dir):
