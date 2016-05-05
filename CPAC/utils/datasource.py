@@ -286,6 +286,68 @@ def check_for_s3(file_path, creds_path, dl_dir=None, img_type='anat'):
     return local_path
 
 
+def upload_logs_to_s3(output_dir, sub_log_dir, creds_path, encrypt_data,
+                      leafs_dep):
+    '''
+    Function to upload the logs to S3 if the output directory is in S3;
+
+    Parameters
+    ----------
+    output_dir : string
+        output directory; can be a local or S3 filepath directory
+    sub_log_dir : string
+        filepath directory to the base of the subject logs
+    creds_path : string
+        filepath to the credentials for the output bucket if uploading
+        to S3
+    encrypt_data : boolean
+        flag indicating if data should be encrypted or not
+    leafs_dep : dummy var
+        dummy variable to ensure that this function is executed at end
+        of the cpac pipeline (dependency enforcing)
+
+    Returns
+    -------
+    None
+    '''
+
+    # Import packages
+    import os
+    from indi_aws import fetch_creds, aws_utils
+    from nipype import logging
+
+    # Init variables
+    s3_str = 's3://'
+    logger = logging.getLogger('workflow')
+
+    # Upload logs to s3 if s3_str in output directory
+    if output_dir.lower().startswith(s3_str):
+        try:
+            # Store logs in s3 output director/logs/...
+            s3_log_dir = output_dir + '/logs/' + \
+                         os.path.basename(sub_log_dir)
+            bucket_name = output_dir.split('/')[2]
+            bucket = fetch_creds.return_bucket(creds_path, bucket_name)
+            # Collect local log files
+            local_log_files = []
+            for root, dirs, files in os.walk(sub_log_dir):
+                local_log_files.extend([os.path.join(root, fil) \
+                                        for fil in files]) 
+            # Form destination keys
+            s3_log_files = [loc.replace(sub_log_dir, s3_log_dir) \
+                            for loc in local_log_files]
+            # Upload logs
+            aws_utils.s3_upload(bucket, (local_log_files, s3_log_files),
+                                encrypt=encrypt_data)
+            # Delete local log files
+            for log_f in local_log_files:
+                os.remove(log_f)
+        except Exception as exc:
+            err_msg = 'Unable to upload CPAC log files in: %s.\nError: %s' \
+                      % (sub_log_dir, exc)
+            logger.error(err_msg)
+
+
 def create_roi_mask_dataflow(masks, wf_name='datasource_roi_mask'):
 
 

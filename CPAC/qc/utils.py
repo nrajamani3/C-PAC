@@ -1091,57 +1091,47 @@ def make_page(file_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id):
 
     
 def make_qc_pages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id):
-
-
-    """
+    '''
     Calls make page
 
     Parameters
     ----------
-
     qc_path : string
         path to qc_files_here directory
-
     qc_montage_id_a : dictionary
         dictionary of axial montages key : id no
         value is list of png types 
-
     qc_montage_id_s : dictionary
           dictionary of sagittal montages key : id no
           value is list of png types 
-
     qc_plot_id : dictionary
           dictionary of plot pngs key : id no
           value is list of png types
-
     qc_hist_id : dictionary
           dictionary of histogram pngs key : id no
           value is list of png types
 
-
     Returns
     -------
-
     None
+    '''
 
-    """
+    # Import packages
     import os
     from CPAC.qc.utils import make_page
 
     qc_files = os.listdir(qc_path)
 
     for file_ in qc_files:
-
         if not (file_.endswith('.txt')):
             continue
         #actually make the html page for the file_
-        make_page(os.path.join(qc_path, file_), qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id)
-
-
+        make_page(os.path.join(qc_path, file_), qc_montage_id_a, qc_montage_id_s,
+                  qc_plot_id, qc_hist_id)
 
 
 def generateQCPages(base_dir, subject_id, qc_montage_id_a, qc_montage_id_s,
-                    qc_plot_id, qc_hist_id):
+                    qc_plot_id, qc_hist_id, leafs_dep):
     '''
     Calls make_qc_page and organizes qc path files
 
@@ -1163,6 +1153,9 @@ def generateQCPages(base_dir, subject_id, qc_montage_id_a, qc_montage_id_s,
     qc_hist_id : dictionary
           dictionary of histogram pngs key : id no
           value is list of png types
+    leafs_dep : dummy var
+        dummy variable to ensure that this function is executed at end
+        of the cpac pipeline (dependency enforcing)
 
     Returns
     -------
@@ -1195,6 +1188,7 @@ def generateQCPages(base_dir, subject_id, qc_montage_id_a, qc_montage_id_s,
     import os
     from CPAC.qc.utils import first_pass_organizing_files, second_pass_organizing_files
     from CPAC.qc.utils import make_qc_pages
+    from CPAC.utils import create_all_qc
 
     # Init variables
     qc_path = os.path.join(base_dir, subject_id, 'qc_files_here')
@@ -1208,26 +1202,23 @@ def generateQCPages(base_dir, subject_id, qc_montage_id_a, qc_montage_id_s,
 
     #generate pages from qc files
     make_qc_pages(qc_path, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id)
+    create_all_qc.run(base_dir)
 
 
 def make_edge(file_):
-
-    """
+    '''
     Make edge file from a scan image
 
     Parameters
     ----------
-
-    file_ :    string
+    file_ : string
         path to the scan
 
     Returns
     -------
-
     new_fname : string
         path to edge file
-
-    """
+    '''
 
     import commands
     import os
@@ -1249,31 +1240,25 @@ def make_edge(file_):
 
 
 def gen_func_anat_xfm(func_, ref_, xfm_, interp_):
-
-    """
+    '''
     Transform functional file (std dev) into anatomical space
 
     Parameters
     ----------
-
     func_ : string
         functional scan
-
     ref_ : string
         path to reference file
-
     xfm_ : string
         path to transformation mat file
-
     interp_ : string
         interpolation measure string
 
     Returns
     -------
-
     new_fname : string
         path to the transformed scan
-    """
+    '''
 
     import os
     import commands

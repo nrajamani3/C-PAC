@@ -1654,7 +1654,7 @@ def check_tr(tr, in_file):
 
 
 
-def write_to_log(workflow, log_dir, index, inputs, scan_id ):
+def write_to_log(workflow, log_dir, index, inputs, scan_id, leaf_deps):
     """
     Method to write into log file the status of the workflow run.
     """
@@ -1762,22 +1762,21 @@ def create_log(wf_name="log", scan_id=None):
     inputNode = pe.Node(util.IdentityInterface(fields=['workflow',
                                                        'log_dir',
                                                        'index',
-                                                       'inputs']),
+                                                       'inputs',
+                                                       'leaf_deps']),
                         name='inputspec')
 
-    outputNode = pe.Node(util.IdentityInterface(fields=['out_file']),
-                        name='outputspec')
+    write_log = pe.Node(util.Function(input_names=['workflow',
+                                                   'log_dir',
+                                                   'index',
+                                                   'inputs',
+                                                   'scan_id',
+                                                   'leaf_deps'],
+                                      output_names=['out_file'],
+                                      function=write_to_log),
+                        name='write_log')
 
-    write_log = pe.Node(util.Function(input_names=[ 'workflow',
-                                                    'log_dir',
-                                                    'index',
-                                                    'inputs',
-                                                    'scan_id'],
-                                               output_names=['out_file'],
-                                               function=write_to_log),
-                                 name='write_log')
-
-
+    write_log.inputs.scan_id = scan_id
     wf.connect(inputNode, 'workflow',
                write_log, 'workflow')
     wf.connect(inputNode, 'log_dir',
@@ -1786,8 +1785,11 @@ def create_log(wf_name="log", scan_id=None):
                write_log, 'index')
     wf.connect(inputNode, 'inputs',
                write_log, 'inputs')
-    
-    write_log.inputs.scan_id = scan_id
+    wf.connect(inputNode, 'leaf_deps',
+               write_log, 'leaf_deps')
+
+    outputNode = pe.Node(util.IdentityInterface(fields=['out_file']),
+                        name='outputspec')
 
     wf.connect(write_log, 'out_file',
                outputNode, 'out_file')
