@@ -131,9 +131,8 @@ def prep_workflow(sub_dict, c, pipeline_timing_info=None, p_name=None):
 
     Parameters
     ----------
-    sub_list : list
-        a list of subject dictionaries with anatomical and functional image
-        paths
+    sub_dict : dictionary
+        subject dictionary with anatomical and functional image paths
     c : Configuration object
         CPAC pipelin configuration dictionary object
     pipeline_timing_info : list (optional); default=None

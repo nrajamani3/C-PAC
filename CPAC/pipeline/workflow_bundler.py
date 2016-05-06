@@ -26,32 +26,29 @@ from nipype.pipeline.plugins.multiproc \
 logger = logging.getLogger('workflow')
 
 
-def create_cpac_arg_list(sublist_filepath, config_filepath,
-                         plugin='MultiProc', plugin_args=None):
+def create_cpac_arg_list(sublist_filepath, config_filepath):
     '''
-    Function to create a list of arguments to feed to the 
+    Function to create a list of arguments to feed to prep_workflow
     '''
 
     # Import packages
     import yaml
-    from multiprocessing import cpu_count
-    from nipype.pipeline.plugins.multiproc import get_system_total_memory_gb
-    from CPAC.pipeline.cpac_runner import build_strategies
+    from CPAC.utils.configuration import Configuration
 
     # Init variables
-    arg_list = []
+    args_list = []
     sublist = yaml.load(open(sublist_filepath, 'r'))
-    pipeline_config = yaml.load(open(config_filepath, 'r'))
-    strategies = build_strategies(pipeline_config)
-
-    # Plugin args
-    if plugin_args is None:
-        plugin_args = {'n_procs' : cpu_count(),
-                       'memory_gb' : get_system_total_memory_gb()}
+    with open(config_filepath, 'r') as cfg:
+        pipeline_config = yaml.load(cfg)
+        config = Configuration(pipeline_config)
 
     # Create args list
     for sub_dict in sublist:
-        
+        args = ((sub_dict, config),)
+        args_list.append(args)
+
+    # Return args list
+    return args_list
 
 
 class BundlerMetaPlugin(DistributedPluginBase):
@@ -78,14 +75,20 @@ class BundlerMetaPlugin(DistributedPluginBase):
     """
 
     def __init__(self, plugin_args=None):
+        '''
+        Init method
+        '''
+
         # Init variables and instance attributes
         super(BundlerMetaPlugin, self).__init__(plugin_args=plugin_args)
         self._taskresult = {}
         self._taskid = 0
         non_daemon = True
         self.plugin_args = plugin_args
-        self.processors = cpu_count()
-        self.memory_gb = get_system_total_memory_gb()*0.9 # 90% of system memory
+        total_cores = cpu_count()
+        total_memory_gb = get_system_total_memory_gb()
+        self.processors = total_cores
+        self.memory_gb = total_memory_gb*0.9 # 90% of system memory
 
         # Check plugin args
         if not self.plugin_args or not (plugin_args.has_key('function_handle') \
@@ -95,14 +98,28 @@ class BundlerMetaPlugin(DistributedPluginBase):
             raise Exception(err_msg)
 
         # Get plugin arguments
-        function_handle = plugin_args['function_handle']
-        args_list = plugin_args['args_list']
+        self.function_handle = plugin_args['function_handle']
+        self.pending_wfs = plugin_args['args_list']
         if 'non_daemon' in self.plugin_args:
             non_daemon = plugin_args['non_daemon']
         if 'n_procs' in self.plugin_args:
-            self.processors = self.plugin_args['n_procs']
+            if self.plugin_args['n_procs'] <= cpu_count():
+                self.processors = self.plugin_args['n_procs']
+            else:
+                msg = 'plugin_args["n_procs"]: %d is greater than the '\
+                      'available system cores: %d\nSetting processors '\
+                      'limit to: %d' % (self.plugin_args['n_procs'],
+                                        total_cores, total_cores)
+                logger.info(msg)
         if 'memory_gb' in self.plugin_args:
-            self.memory_gb = self.plugin_args['memory_gb']
+            if self.plugin_args['memory_gb'] <= total_memory_gb:
+                self.memory_gb = self.plugin_args['memory_gb']
+            else:
+                msg = 'plugin_args["memory_gb"]: %.3f is greater than the '\
+                      'available system memory: %.3f\nSetting memory '\
+                      'limit to: %.3f' % (self.plugin_args['memory_gb'],
+                                         total_memory_gb, total_memory_gb)
+                logger.info(msg)
 
         # Instantiate different thread pools for non-daemon processes
         if non_daemon:
@@ -111,12 +128,140 @@ class BundlerMetaPlugin(DistributedPluginBase):
         else:
             self.pool = Pool(processes=self.processors)
 
-        # Build list of workflows
-        wflow_list = []
-        for args, kwargs in args_list:
-            wflow = function_handle(*args, **kwargs)
-            wflow_list.append(wflow)
+    def run(self):
+        '''
+        Run workflows
+        '''
 
+        # Import packages
+        import copy
+        import time
+        import numpy as np
+
+        # Init workflow queue
+        self.running_wfs = []
+        self.available_procs = self.processors
+        self.available_memory_gb = self.memory_gb
+
+        # While there are workflows running or pending
+        while not (self.running_wfs.is_empty() or self.pending_wfs.is_empty()):
+
+            # First clean out runners that are finished
+            for runner in self.running_wfs:
+                if np.alltrue(runner.proc_done):
+                    self.running_wfs.remove(runner)
+
+            # If there is available resources and pending workflows
+            # add workflow to running queue
+            if self.available_memory_gb > 0 and self.available_procs > 0 and \
+               not self.pending_wfs.is_empty():
+                args, kwargs = self.args_list.pop()
+                wflow = self.function_handle(*args, **kwargs)
+                runner, execgraph = wflow._prep()
+                runner._config = wflow.config
+                runner._generate_dependency_list(execgraph)
+                self.running_wfs.append(runner)
+
+            # Build a list of (runner, id) tuples of available nodes from
+            # running_wf queue
+            available_nodes = []
+            for runner in self.running_wfs:
+                # Check to see if a job is available
+                jobids = np.flatnonzero((runner.proc_done == False) & \
+                                        (runner.depidx.sum(axis=0) == 0).__array__())
+                id_tuples = [(runner, jid) for jid in jobids]
+                available_nodes.extend(id_tuples)
+    
+            # Sort jobs ready to run first by memory and then by number of threads
+            # The most resource consuming jobs run first (x[0] - runner, x[1] - jobid)
+            available_nodes.sort(key=lambda x: \
+                                 (x[0].procs[x[1]]._interface.estimated_memory_gb,
+                                  x[0].procs[x[1]]._interface.num_threads),
+                                 reverse=True)
+
+            for runner, jobid in available_nodes:
+                # If there are available resources
+                node = runner.procs[jobid]
+                node_threads_est = node._interface.num_threads
+                node_mem_gb_est = node._interface.estimated_memory_gb
+                # Check to make sure node estimated resources aren't greater
+                # than what we have
+                if node_threads_est > self.processors or \
+                   node_mem_gb_est > self.estimated_memory_gb:
+                    err_msg = 'Estimated node resources:\nnum_threads: %d, '\
+                              'estimated_memory_gb: %.3f are greater than '\
+                              'available:\nnum_threads: %d, estimated_memory_gb: %.3f' \
+                              % (node_threads_est, node_mem_gb_est,
+                                 self.processors, self.memory_gb)
+                    raise Exception(err_msg)
+                if node_threads_est <= self.available_procs and \
+                   node_mem_gb_est <= self.available_memory_gb:
+                    logger.info('Executing: %s ID: %d' %(node._id, jobid))
+                    if isinstance(node, MapNode):
+                        try:
+                            num_subnodes = node.num_subnodes()
+                        except Exception:
+                            etype, eval, etr = sys.exc_info()
+                            traceback = format_exception(etype, eval, etr)
+                            report_crash(self.procs[jobid], traceback=traceback)
+                            runner._clean_queue(jobid, graph)
+                            runner.proc_pending[jobid] = False
+                            continue
+                        if num_subnodes > 1:
+                            submit = runner._submit_mapnode(jobid)
+                            if not submit:
+                                continue
+                    # change job status in appropriate queues
+                    self.proc_done[jobid] = True
+                    self.proc_pending[jobid] = True
+                    self.available_procs -= node_threads_est
+                    self.available_memory_gb -= node_mem_gb_est
+
+                    # Send job to task manager and add to pending tasks
+                    if self._status_callback:
+                        self._status_callback(node, 'start')
+                    if str2bool(node.config['execution']['local_hash_check']):
+                        logger.debug('checking hash locally')
+                        try:
+                            hash_exists, _, _, _ = node.hash_exists()
+                            logger.debug('Hash exists %s' % str(hash_exists))
+                            if (hash_exists and (node.overwrite == False or \
+                                                 (node.overwrite == None and \
+                                                  not node._interface.always_run))):
+                                self._task_finished_cb(jobid) # TODO: gotta look into this
+                                runner._remove_node_dirs()
+                                continue
+                        except Exception:
+                            etype, eval, etr = sys.exc_info()
+                            traceback = format_exception(etype, eval, etr)
+                            report_crash(self.procs[jobid], traceback=traceback)
+                            runner._clean_queue(jobid, graph)
+                            runner.proc_pending[jobid] = False
+                            continue
+                    logger.debug('Finished checking hash')
+
+                    if node.run_without_submitting:
+                        logger.debug('Running node %s on master thread' \
+                                     % node.name)
+                        try:
+                            node.run()
+                        except Exception:
+                            etype, eval, etr = sys.exc_info()
+                            traceback = format_exception(etype, eval, etr)
+                            report_crash(node, traceback=traceback)
+                        self._task_finished_cb(jobid) # TODO: gotta look into this
+                        runner._remove_node_dirs()
+
+                    else:
+                        logger.debug('submitting %s' % str(jobid))
+                        tid = runner._submit_job(deepcopy(node), updatehash=updatehash)
+                        if tid is None:
+                            runner.proc_done[jobid] = False
+                            runner.proc_pending[jobid] = False
+                        else:
+                            runner.pending_tasks.insert(0, (tid, jobid))
+
+            logger.debug('No jobs waiting to execute')
 
 
     def _wait(self):
