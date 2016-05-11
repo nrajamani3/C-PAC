@@ -116,6 +116,11 @@ class BundlerMetaPlugin(object):
             self.status_callback = plugin_args['status_callback']
         else:
             self.status_callback = None
+        # Max workflows in parallel
+        if plugin_args.has_key('max_parallel'):
+            self.max_parallel = plugin_args['max_parallel']
+        else:
+            self.max_parallel = self.processors//2
 
     def _update_queues_and_resources(self):
         '''
@@ -150,7 +155,7 @@ class BundlerMetaPlugin(object):
         # If there is available resources and pending workflows
         # add workflow to running queue
         if self.free_memory_gb > 0 and self.free_procs > 0 and \
-           len(self.pending_wfs) > 0:
+           len(self.pending_wfs) > 0 and len(self.running_wfs) <= self.max_parallel:
             args, kwargs = self.pending_wfs.pop()
             wflow = self.function_handle(*args, **kwargs)
             runner, execgraph = wflow._prep(self.plugin)
