@@ -155,7 +155,7 @@ class BundlerMetaPlugin(object):
         # If there is available resources and pending workflows
         # add workflow to running queue
         if self.free_memory_gb > 0 and self.free_procs > 0 and \
-           len(self.pending_wfs) > 0 and len(self.running_wfs) <= self.max_parallel:
+           len(self.pending_wfs) > 0 and len(self.running_wfs) < self.max_parallel:
             args, kwargs = self.pending_wfs.pop()
             wflow = self.function_handle(*args, **kwargs)
             runner, execgraph = wflow._prep(self.plugin)
