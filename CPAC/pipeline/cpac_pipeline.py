@@ -5768,20 +5768,22 @@ def prep_workflow(sub_dict, c, pipeline_timing_info=None, p_name=None):
 
     # Dummy end of pipeline - merge leaf nodes
     leaf_nodes = {}
+    arg_names = []
     merge_func_str = 'def merge_leafs('
     for num, strat in enumerate(strat_list):
         leaf_node, leaf_out = strat.get_leaf_properties()
         arg_name = 'leaf_file%s' % num
+        arg_names.append(arg_name)
         leaf_nodes[leaf_node] = leaf_out
         merge_func_str = merge_func_str + arg_name + ', '
 
     merge_func_str = merge_func_str + '): return "merged_leafs!"'
-    merge_leafs_node = pe.Node(util.Function(input_names=leaf_nodes.values(),
+    merge_leafs_node = pe.Node(util.Function(input_names=arg_names,
                                              output_names=['merged']),
                                name='merge_leafs')
     merge_leafs_node.inputs.function_str = merge_func_str
     for num, (leaf_node, leaf_out) in enumerate(leaf_nodes.items()):
-        arg = arg_name[num]
+        arg = arg_names[num]
         workflow.connect(leaf_node, leaf_out, merge_leafs_node, arg)
 
     # Connect in upload logs if S3 output enabled
@@ -5817,9 +5819,9 @@ def prep_workflow(sub_dict, c, pipeline_timing_info=None, p_name=None):
                                     name='qc_pages_%d' % pip_num)
 
             qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_a
-            qc_pages_node.inputs.qc_montage_id_a = qc_montage_id_s
-            qc_pages_node.inputs.qc_montage_id_a = qc_plot_id
-            qc_pages_node.inputs.qc_montage_id_a = qc_hist_id
+            qc_pages_node.inputs.qc_montage_id_s = qc_montage_id_s
+            qc_pages_node.inputs.qc_plot_id = qc_plot_id
+            qc_pages_node.inputs.qc_hist_id = qc_hist_id
             qc_pages_node.inputs.base_dir = pipeline_out_base
             qc_pages_node.inputs.subject_id = subject_id
             workflow.connect(merge_leafs_node, 'merged',
