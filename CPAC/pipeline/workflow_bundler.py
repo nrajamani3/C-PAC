@@ -23,9 +23,9 @@ from nipype.pipeline.plugins.multiproc \
 
 # Init logger
 logger = logging.getLogger('workflow')
-# from nipype import config
-# config.enable_debug_mode()
-# logging.update_logging(config)
+from nipype import config
+config.enable_debug_mode()
+logging.update_logging(config)
 
 
 def create_cpac_arg_list(sublist_filepath, config_filepath):
