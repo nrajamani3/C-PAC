@@ -224,6 +224,7 @@ class BundlerMetaPlugin(object):
 
         # If node estimated resources are less than what is free,
         # try and submit the node for run
+        logger.debug('free memory: %.3f, free procs: %d' % (self.free_memory_gb, self.free_procs))
         if node_threads_est <= self.free_procs and \
            node_mem_gb_est <= self.free_memory_gb:
             logger.info('Executing: %s ID: %d' %(node._id, jobid))
