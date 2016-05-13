@@ -151,7 +151,7 @@ class BundlerMetaPlugin(object):
                 logger.debug('Runner %s is still busy with %d running jobs' % (str(runner), len(busy_jids)))
                 for jid in busy_jids:
                     node = runner.procs[jid]
-                    logger.debug('node: %s, %d is running...' % (node.name, node._id))
+                    logger.debug('node: %s, %s is running...' % (node.name, node._id))
                     self.free_memory_gb -= node._interface.estimated_memory_gb
                     self.free_procs -= node._interface.num_threads
                     logger.debug('free memory: %.3f, free procs: %d' % (self.free_memory_gb, self.free_procs))
