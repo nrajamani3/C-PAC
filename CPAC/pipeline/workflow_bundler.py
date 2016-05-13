@@ -363,8 +363,8 @@ class BundlerMetaPlugin(object):
                                                                 result=result))
                             else:
                                 runner._task_finished_cb(jobid)
-                                self.free_procs += runner.procs[jobid]._inteface.num_threads
-                                self.free_memory_gb += runner.procs[jobid]._inteface.estimated_memory_gb
+                                self.free_procs += runner.procs[jobid]._interface.num_threads
+                                self.free_memory_gb += runner.procs[jobid]._interface.estimated_memory_gb
                                 runner._remove_node_dirs()
                             runner._clear_task(taskid)
                         else:
