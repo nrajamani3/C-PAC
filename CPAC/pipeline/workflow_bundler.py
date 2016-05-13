@@ -120,7 +120,7 @@ class BundlerMetaPlugin(object):
         if plugin_args.has_key('max_parallel'):
             self.max_parallel = plugin_args['max_parallel']
         else:
-            self.max_parallel = self.processors//2
+            self.max_parallel = self.processors
 
     def _update_queues_and_resources(self):
         '''
@@ -145,6 +145,8 @@ class BundlerMetaPlugin(object):
                 wflow._post_run(execgraph)
                 # Runner level clean-up
                 runner._remove_node_dirs()
+                del self.runner_graph_dict[runner]
+                del runner
             else:
                 busy_jids = np.flatnonzero((runner.proc_pending == True) & \
                             (runner.depidx.sum(axis=0) == 0).__array__())
