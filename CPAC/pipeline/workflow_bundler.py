@@ -138,6 +138,7 @@ class BundlerMetaPlugin(object):
             all_procs_submitted = (runner.proc_done == True).all()
             no_procs_pending = (runner.proc_pending == False).all()
             if all_procs_submitted and no_procs_pending:
+                logger.debug('Removing runner %s from running queue...' % str(runner))
                 self.running_wfs.remove(runner)
                 # Workflow level clean-up
                 wflow, execgraph = self.runner_graph_dict[runner]
@@ -147,15 +148,19 @@ class BundlerMetaPlugin(object):
             else:
                 busy_jids = np.flatnonzero((runner.proc_pending == True) & \
                             (runner.depidx.sum(axis=0) == 0).__array__())
+                logger.debug('Runner %s is still busy with %d running jobs' % (str(runner), len(busy_jids)))
                 for jid in busy_jids:
                     node = runner.procs[jid]
+                    logger.debug('node: %s, %d is running...' % (node.name, node._id))
                     self.free_memory_gb -= node._interface.estimated_memory_gb
                     self.free_procs -= node._interface.num_threads
+                    logger.debug('free memory: %.3f, free procs: %d' % (self.free_memory_gb, self.free_procs))
 
         # If there is available resources and pending workflows
         # add workflow to running queue
         if self.free_memory_gb > 0 and self.free_procs > 0 and \
            len(self.pending_wfs) > 0 and len(self.running_wfs) < self.max_parallel:
+            logger.debug('Pop a new workflow from stack and init!')
             args, kwargs = self.pending_wfs.pop()
             wflow = self.function_handle(*args, **kwargs)
             runner, execgraph = wflow._prep(self.plugin)
@@ -180,6 +185,7 @@ class BundlerMetaPlugin(object):
         # Build a list of (runner, id) tuples of available nodes from
         # running_wf queue
         for runner in self.running_wfs:
+            logger.debug('Now %d runners in running queue' % len(self.running_wfs))
             # Check to see if a job is available
             jobids = np.flatnonzero((runner.proc_done == False) & \
                                     (runner.depidx.sum(axis=0) == 0).__array__())
@@ -192,6 +198,7 @@ class BundlerMetaPlugin(object):
                              (x[0].procs[x[1]]._interface.estimated_memory_gb,
                               x[0].procs[x[1]]._interface.num_threads),
                              reverse=True)
+        logger.debug('Now %d available nodes for execution' % len(self.available_nodes))
 
         # Return available resources
         #return available_nodes
@@ -312,8 +319,10 @@ class BundlerMetaPlugin(object):
 
         # While there are workflows running or pending
         while len(self.running_wfs) > 0 or len(self.pending_wfs) > 0:
+            logger.debug('before update: running wfs: %d, pending wfs: %d' % (len(self.running_wfs), len(self.pending_wfs)))
             # Update queues and get available resources
             self._update_queues_and_resources()
+            logger.debug('after update: running wfs: %d, pending wfs: %d' % (len(self.running_wfs), len(self.pending_wfs)))
 
             # Iterate through the available nodes and submit jobs
             for runner, jobid in self.available_nodes:
@@ -325,13 +334,15 @@ class BundlerMetaPlugin(object):
                     logger.debug('Not submitting')
 
             for runner in self.running_wfs:
+                
                 toappend = []
                 # Get the workflow graph
                 graph = self.runner_graph_dict[runner][1]
-
+                logger.debug('checking pending tasks for %s, pending: %d' % (str(runner), len(runner.pending_tasks)))
                 # trigger callbacks for any pending results
                 while runner.pending_tasks:
                     taskid, jobid = runner.pending_tasks.pop()
+                    logger.debug('pending task: %d, %d for runner: %s' % (taskid, jobid, str(runner)))
                     try:
                         result = runner._get_result(taskid)
                         if result:
