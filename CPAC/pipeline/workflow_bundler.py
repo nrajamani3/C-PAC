@@ -10,6 +10,7 @@ from multiprocessing import Process, Pool, cpu_count, pool
 from traceback import format_exception
 import os
 import sys
+import psutil
 
 import numpy as np
 from copy import deepcopy
@@ -122,9 +123,6 @@ class BundlerMetaPlugin(object):
         else:
             self.max_parallel = self.processors
 
-        self.free_memory_gb = self.memory_gb
-        self.free_procs = self.processors
-
 
     def _update_queues_and_resources(self):
         '''
@@ -133,7 +131,12 @@ class BundlerMetaPlugin(object):
         '''
 
         # Init variables
+        self.free_memory_gb = self.memory_gb
+        self.free_procs = self.processors
         self.available_nodes = []
+        m = psutil.virtual_memory()
+        used = (m.percent/100*m.total)/(1024.**3)
+        logger.debug('Used memory on system: %.3f GB' % used)
 
         # First clean out runners that are finished
         for runner in self.running_wfs:
@@ -149,19 +152,19 @@ class BundlerMetaPlugin(object):
                 runner._remove_node_dirs()
                 del self.runner_graph_dict[runner]
                 del runner
-#             else:
-#                 busy_jids = np.flatnonzero((runner.proc_pending == True) & \
-#                             (runner.depidx.sum(axis=0) == 0).__array__())
-#                 bjids2 = np.flatnonzero((runner.proc_pending==True))
-#                 if len(busy_jids) != len(bjids2):
-#                     raise Exception('differing! %d vs %d' % (len(busy_jids), len(bjids2)))
-#                 logger.debug('Runner %s is still busy with %d running jobs' % (str(runner), len(busy_jids)))
-#                 for jid in busy_jids:
-#                     node = runner.procs[jid]
-#                     logger.debug('node: %s, %s is running...' % (node.name, node._id))
-#                     self.free_memory_gb -= node._interface.estimated_memory_gb
-#                     self.free_procs -= node._interface.num_threads
-#                     logger.debug('free memory: %.3f, free procs: %d' % (self.free_memory_gb, self.free_procs))
+            else:
+                busy_jids = np.flatnonzero((runner.proc_pending == True) & \
+                            (runner.depidx.sum(axis=0) == 0).__array__())
+                bjids2 = np.flatnonzero((runner.proc_pending==True))
+                if len(busy_jids) != len(bjids2):
+                    raise Exception('differing! %d vs %d' % (len(busy_jids), len(bjids2)))
+                logger.debug('Runner %s is still busy with %d running jobs' % (str(runner), len(busy_jids)))
+                for jid in busy_jids:
+                    node = runner.procs[jid]
+                    logger.debug('node: %s, %s is running...' % (node.name, node._id))
+                    self.free_memory_gb -= node._interface.estimated_memory_gb
+                    self.free_procs -= node._interface.num_threads
+                    logger.debug('free memory: %.3f, free procs: %d' % (self.free_memory_gb, self.free_procs))
 
         # If there is available resources and pending workflows
         # add workflow to running queue
@@ -273,8 +276,6 @@ class BundlerMetaPlugin(object):
                                           not node._interface.always_run))):
                         runner._task_finished_cb(jobid)
                         runner._remove_node_dirs()
-                        self.free_procs += node_threads_est
-                        self.free_memory_gb += node_mem_gb_est
                         return
                 except Exception:
                     # Get the workflow graph
@@ -298,8 +299,6 @@ class BundlerMetaPlugin(object):
                     traceback = format_exception(etype, eval, etr)
                     report_crash(node, traceback=traceback)
                 runner._task_finished_cb(jobid)
-                self.free_procs += node_threads_est
-                self.free_memory_gb += node_mem_gb_est
                 runner._remove_node_dirs()
             else:
                 logger.debug('submitting %s' % str(jobid))
@@ -346,7 +345,8 @@ class BundlerMetaPlugin(object):
                     logger.debug('Not submitting')
 
             for runner in self.running_wfs:
-                
+                procs_size = sys.getsizeof(runner.procs)/(1024.**3)
+                logger.debug('runner.procs size: %.3f GB' % procs_size)
                 toappend = []
                 # Get the workflow graph
                 graph = self.runner_graph_dict[runner][1]
@@ -363,8 +363,6 @@ class BundlerMetaPlugin(object):
                                                                 result=result))
                             else:
                                 runner._task_finished_cb(jobid)
-                                self.free_procs += runner.procs[jobid]._interface.num_threads
-                                self.free_memory_gb += runner.procs[jobid]._interface.estimated_memory_gb
                                 runner._remove_node_dirs()
                             runner._clear_task(taskid)
                         else:
@@ -377,6 +375,6 @@ class BundlerMetaPlugin(object):
 
                 if toappend:
                     runner.pending_tasks.extend(toappend)
-                runner._wait()
+                #runner._wait()
 
         report_nodes_not_run(notrun)
