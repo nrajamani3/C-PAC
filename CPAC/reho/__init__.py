@@ -1,6 +1,6 @@
-from reho import create_reho
+from reho import create_reho, create_reho_wf
 
-from afni_interface import Reho
+from afni_interface import RehoCommand
 
 from utils import f_kendall, \
                   compute_reho, \
@@ -8,8 +8,9 @@ from utils import f_kendall, \
 
 
 
-__all__ = ['create_reho',
+__all__ = ['create_reho_wf',
+           'create_reho',
            'f_kendall',
            'getOpString',
            'compute_reho',
-           'Reho']
+           'RehoCommand']

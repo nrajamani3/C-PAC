@@ -1,3 +1,4 @@
+import os
 from nipype.interfaces.afni.base import (AFNICommand, AFNICommandInputSpec,
                                          AFNICommandOutputSpec)
 from nipype.interfaces.base import (traits, File)
@@ -11,7 +12,7 @@ class RehoInputSpec(AFNICommandInputSpec):
 
     in_file = File(desc="input data", argstr="-inset %s", exists=True)
 
-    prefix = File(desc="output file name", argstr="-prefix %s", exists=True)
+    out_file = File(desc="output file name", argstr="-prefix %s")
 
     mask = File(desc='mask file to mask input data', argstr="-mask %s",
                                             exists=True)
@@ -28,7 +29,7 @@ class RehoOutputSpec(AFNICommandOutputSpec):
 
 
 
-class Reho(AFNICommand):
+class RehoCommand(AFNICommand):
     """Performs reho on a 4d dataset using a given maskfile
     via 3dReHo
 
@@ -45,22 +46,21 @@ class Reho(AFNICommand):
     >>> reho.inputs.cluster_size = 27 #can be 7, 19 or 27
     >>> reho.inputs.out_file = 'out.nii'
     >>> reho.cmdline
-    'TODO: 3dDegreeCentrality -sparsity 1 -mask mask.nii -prefix out.nii func_preproc.nii'
+    '3dReHo -nneigh 19 -inset func_preproc.nii -mask mask.nii -prefix out.nii'
     >>> res = reho.run() # doctest: +SKIP
     """
 
     _cmd = '3dReHo'
     input_spec = RehoInputSpec
-    output_spec = RehoOutputSpec
+    output_spec = AFNICommandOutputSpec
 
     # Re-define generated inputs
-    # def _list_outputs(self):
-    #     # Import packages
-    #     import os
+    def _list_outputs(self):
+        outputs = self.output_spec().get()
+        outputs["out_file"] = os.path.abspath(self.inputs.out_file)
+        return outputs
 
-    #     # Update outputs dictionary if oned file is defined
-    #     outputs = super(DegreeCentrality, self)._list_outputs()
-    #     if self.inputs.oned_file:
-    #         outputs['oned_file'] = os.path.abspath(self.inputs.oned_file)
-
-    #     return outputs
+    def aggregate_outputs(self, runtime=None, needed_outputs=None):
+        outputs = self._outputs()
+        outputs.out_file = self.inputs.out_file
+        return outputs
