@@ -12,7 +12,7 @@ import zlib
 import linecache
 import csv
 import pickle
-import pkg_resources as p
+import pkg_resources as p 
 
 # Nipype packages
 import nipype.pipeline.engine as pe
@@ -2561,7 +2561,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     if 1 in c.runReHo:
         for strat in strat_list:
 
-            preproc = create_reho_wf(c.clusterSize)
+            preproc = create_reho_wf(cluster_size=c.clusterSize)
 
             reho = preproc.clone('reho_%d' % num_strat)
 
@@ -2569,7 +2569,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 node, out_file = strat.get_leaf_properties()
                 workflow.connect(node, out_file,
                                  reho, 'inputspec.in_file')
-
                 node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
                 workflow.connect(node, out_file,
                                  reho, 'inputspec.mask')
