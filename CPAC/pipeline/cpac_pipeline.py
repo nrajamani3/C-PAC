@@ -72,6 +72,7 @@ from CPAC.utils.utils import extract_one_d, set_gauss, \
                              get_fisher_zscore, dbg_file_lineno
 from CPAC.vmhc.vmhc import create_vmhc
 from CPAC.reho.reho import create_reho
+from CPAC.reho.reho import create_reho_wf
 from CPAC.alff.alff import create_alff
 from CPAC.sca.sca import create_sca, create_temporal_reg
 
@@ -2560,36 +2561,27 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     if 1 in c.runReHo:
         for strat in strat_list:
 
-            preproc = create_reho()
-            cluster_size = c.clusterSize
-            # Check the cluster size is supported
-            if not (cluster_size == 27 or \
-                    cluster_size == 19 or \
-                    cluster_size == 7):
-                err_msg = 'Cluster size specified: %d, is not supported. '\
-                          'Change to 7, 19, or 27 and try again' % cluster_size
-                raise Exception(err_msg)
-            else:
-                preproc.inputs.inputspec.cluster_size = cluster_size
-                reho = preproc.clone('reho_%d' % num_strat)
+            preproc = create_reho_wf(c.clusterSize)
+
+            reho = preproc.clone('reho_%d' % num_strat)
 
             try:
                 node, out_file = strat.get_leaf_properties()
                 workflow.connect(node, out_file,
-                                 reho, 'inputspec.rest_res_filt')
+                                 reho, 'inputspec.in_file')
 
                 node, out_file = strat.get_node_from_resource_pool('functional_brain_mask')
                 workflow.connect(node, out_file,
-                                 reho, 'inputspec.rest_mask')
+                                 reho, 'inputspec.mask')
             except:
                 logConnectionError('ReHo', num_strat, strat.get_resource_pool(), '0020')
                 raise
 
 
-            strat.update_resource_pool({'raw_reho_map':(reho, 'outputspec.raw_reho_map')})
+            strat.update_resource_pool({'raw_reho_map':(reho, 'outputspec.out_file')})
             strat.append_name(reho.name)
             
-            create_log_node(reho, 'outputspec.raw_reho_map', num_strat)
+            create_log_node(reho, 'outputspec.out_file', num_strat)
             
             num_strat += 1
     strat_list += new_strat_list
