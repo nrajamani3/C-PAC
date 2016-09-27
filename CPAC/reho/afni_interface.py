@@ -12,7 +12,7 @@ class RehoInputSpec(AFNICommandInputSpec):
 
     in_file = File(desc="input data", argstr="-inset %s", exists=True)
 
-    out_file = File(desc="output file name", argstr="-prefix %s")
+    #out_file = File(desc="output file name", argstr="-prefix %s_reho.nii.gz")
 
     mask = File(desc='mask file to mask input data', argstr="-mask %s",
                                             exists=True)
@@ -55,12 +55,12 @@ class RehoCommand(AFNICommand):
     output_spec = AFNICommandOutputSpec
 
     # Re-define generated inputs
-    def _list_outputs(self):
-        outputs = self.output_spec().get()
-        outputs["out_file"] = os.path.abspath(self.inputs.out_file)
-        return outputs
+    #def _list_outputs(self):
+    #    outputs = self.output_spec().get()
+    #    outputs["out_file"] = os.path.abspath(self.inputs.out_file)
+    #    return outputs
 
-    def aggregate_outputs(self, runtime=None, needed_outputs=None):
-        outputs = self._outputs()
-        outputs.out_file = self.inputs.out_file
-        return outputs
+   # def aggregate_outputs(self, runtime=None, needed_outputs=None):
+   #     outputs = self._outputs()
+   #     outputs.out_file = self.inputs.out_file
+   #     return outputs
