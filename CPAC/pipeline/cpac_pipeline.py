@@ -71,7 +71,6 @@ from CPAC.utils.utils import extract_one_d, set_gauss, \
                              create_output_mean_csv, get_zscore, \
                              get_fisher_zscore, dbg_file_lineno
 from CPAC.vmhc.vmhc import create_vmhc
-from CPAC.reho.reho import create_reho
 from CPAC.reho.reho import create_reho_wf
 from CPAC.alff.alff import create_alff
 from CPAC.sca.sca import create_sca, create_temporal_reg
