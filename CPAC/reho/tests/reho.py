@@ -15,12 +15,10 @@ def test_cluster_size_raise_exception():
 
     tempdir = mkdtemp()
     filename1 = os.path.join(tempdir, 'func.nii')
-    filename2 = os.path.join(tempdir, 'out.nii')
     f = Nifti1Image(np.random.rand(10, 10, 10, 200), np.eye(4)).to_filename(filename1)
 
     wf = create_reho_wf(cluster_size=1)
     wf.inputs.inputspec.in_file = f
-    wf.inputs.inputspec.out_file = filename2
     wf.run()
 
     rmtree(tempdir)
@@ -30,13 +28,11 @@ def test_cluster_size():
 
     tempdir = mkdtemp()
     filename1 = os.path.join(tempdir, 'func.nii')
-    filename2 = os.path.join(tempdir, 'out.nii')
     Nifti1Image(np.random.rand(10, 10, 10, 200), np.eye(4)).to_filename(filename1)
 
     wf = create_reho_wf()
     wf.inputs.inputspec.in_file = filename1
     wf.inputs.inputspec.cluster_size = 27
-    wf.inputs.inputspec.out_file = filename2
     wf.run()
     assert True
 
@@ -49,16 +45,13 @@ def test_output_is_nii():
 
     tempdir = mkdtemp()
     filename1 = os.path.join(tempdir, 'func.nii')
-    filename2 = os.path.join(tempdir, 'out.nii.gz')
     Nifti1Image(np.random.rand(10, 10, 10, 200), np.eye(4)).to_filename(filename1)
 
     wf = create_reho_wf()
     wf.inputs.inputspec.in_file = filename1
     wf.inputs.inputspec.cluster_size = 7
-    wf.inputs.inputspec.out_file = filename2
     res = wf.run()
-
-    assert filename2.endswith('.nii.gz')
+    assert os.path.isfile(os.path.join(res.nodes()[0].base_dir, 'reho_wf/reho/reho.nii.gz'))
 
     rmtree(tempdir)
 
@@ -68,7 +61,6 @@ def test_output_shape():
     #but is 3d instead of 4d
     tempdir = mkdtemp()
     filename1 = os.path.join(tempdir, 'func.nii')
-    filename2 = os.path.join(tempdir, 'out.nii.gz')
     Nifti1Image(np.random.rand(10, 10, 10, 200), np.eye(4)).to_filename(filename1)
 
     after = nb.load(filename1).shape
@@ -76,17 +68,15 @@ def test_output_shape():
     wf = create_reho_wf()
     wf.inputs.inputspec.in_file = filename1
     wf.inputs.inputspec.cluster_size = 7
-    wf.inputs.inputspec.out_file = filename2
-    wf.run()
+    res = wf.run()
 
-    out = filename2
+    out = os.path.join(res.nodes()[0].base_dir, 'reho_wf/reho/reho.nii.gz')
     before = nb.load(out).shape
 
     #file still has the same shape
     assert after[:3] == before[:3]
 
     #and it is a 3d file
-    print before, after
     assert len(before) == 3
 
     rmtree(tempdir)
