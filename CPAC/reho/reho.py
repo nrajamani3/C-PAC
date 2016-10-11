@@ -50,8 +50,8 @@ def create_reho_wf(wf_name='reho_wf', cluster_size=27):
 
     in_node.inputs.cluster_size = cluster_size
 
-    reho_node = pe.Node(RehoCommand(), name='reho',output_names=['out_file'])
-    #reho_node.inputs.out_file = os.path.join(os.path.curdir, 'reho.nii.gz')
+    reho_node = pe.Node(RehoCommand(), name='reho')
+    reho_node.inputs.out_file = 'reho.nii.gz'
 
     wf.connect(in_node, 'in_file', reho_node, 'in_file')
     wf.connect(in_node, 'mask', reho_node, 'mask')
