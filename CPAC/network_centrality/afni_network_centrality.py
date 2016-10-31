@@ -39,12 +39,10 @@ def create_degree_centrality_wf(wf_name, threshold_option, threshold,
     import CPAC.network_centrality.utils as utils
 
     # Check the centrality parameters
-    test_thresh = threshold
+    t = threshold
     if threshold_option == 'sparsity':
-        test_thresh = threshold/100.0
-    method_option, threshold_option = \
-        utils.check_degree_centrality_params(threshold_option, test_thresh)
-
+        t = threshold/100.0
+    method_option, threshold_option = utils.check_degree_centrality_params(threshold_option, t)
     # Init variables
     wf = pe.Workflow(name=wf_name)
 

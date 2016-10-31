@@ -537,7 +537,7 @@ def check_degree_centrality_params(threshold_option, threshold):
 
     if threshold_option not in acceptable_thresholds:
         err_msg = 'Threshold option: %s not supported for degree centrality; '\
-                  'allowed values are: significance, sparsity or correlation'
+                  'allowed values are: significance, sparsity or correlation'\
                   % (str(threshold_option), str(method_option))
         raise ValueError(err_msg)
 
@@ -555,6 +555,7 @@ def check_degree_centrality_params(threshold_option, threshold):
                       'less than or equal to 1.\n Current it is set at %f'\
                       % threshold
             raise ValueError(err_msg)
+    return threshold_option, threshold
     # else:
     #     err_msg = 'Threshold option: %s not supported for network centrality '\
     #               'measure: %s; fix this in the pipeline config'\
@@ -583,7 +584,7 @@ def check_centrality_params(method_option, threshold_option, threshold):
     elif type(method_option) is not str:
         err_msg = 'Method option must be a string, but type: %s provided' \
                   % str(type(method_option))
-            raise TypeError(err_msg)
+        raise TypeError(err_msg)
 
     # Check threshold option
     if type(threshold_option) is list:
