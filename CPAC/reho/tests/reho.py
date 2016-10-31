@@ -18,7 +18,7 @@ def test_cluster_size_raise_exception():
     f = Nifti1Image(np.random.rand(10, 10, 10, 200), np.eye(4)).to_filename(filename1)
 
     wf = create_reho_wf(cluster_size=1)
-    wf.inputs.inputspec.in_file = f
+    wf.inputs.inputspec.in_file = filename1
     wf.run()
 
     rmtree(tempdir)
