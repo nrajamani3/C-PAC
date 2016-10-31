@@ -504,6 +504,65 @@ def parse_and_return_mats(one_d_file, mask_arr):
     return b_similarity_matrix, w_similarity_matrix
 
 
+
+
+
+
+
+def check_degree_centrality_params(threshold_option, threshold):
+    '''
+    Function to check the degree centrality parameters
+    '''
+     # Check threshold option
+    if type(threshold_option) is list:
+        threshold_option = threshold_option[0]
+    if type(threshold_option) is int:
+        if threshold_option == 0:
+            threshold_option = 'significance'
+        elif threshold_option == 1:
+            threshold_option = 'sparsity'
+        elif threshold_option == 2:
+            threshold_option = 'correlation'
+        else:
+            err_msg = 'Threshold option: %s not supported for degree centrality; '\
+                      'allowed values are: 0, 1 and 2'\
+                      % (str(threshold_option))
+            raise ValueError(err_msg)
+    elif type(threshold_option) is not str:
+        err_msg = 'Threshold option must be a string, but type: %s provided' \
+                  % str(type(threshold_option))
+        raise TypeError(err_msg)
+
+    acceptable_thresholds = ['significance', 'sparsity', 'correlation']
+
+    if threshold_option not in acceptable_thresholds:
+        err_msg = 'Threshold option: %s not supported for degree centrality; '\
+                  'allowed values are: significance, sparsity or correlation'
+                  % (str(threshold_option), str(method_option))
+        raise ValueError(err_msg)
+
+    # If it's significance/sparsity thresholding, check for (0,1]
+    if threshold_option == 'significance' or threshold_option == 'sparsity':
+        if threshold <= 0 or threshold > 1:
+            err_msg = 'Threshold value must be a positive number greater than '\
+                      '0 and less than or equal to 1.\nCurrently it is set '\
+                      'at %f' % threshold
+            raise ValueError(err_msg)
+    # If it's correlation, check for [-1,1]
+    elif threshold_option == 'correlation':
+        if threshold < -1 or threshold > 1:
+            err_msg = 'Threshold value must be greater than or equal to -1 and '\
+                      'less than or equal to 1.\n Current it is set at %f'\
+                      % threshold
+            raise ValueError(err_msg)
+    # else:
+    #     err_msg = 'Threshold option: %s not supported for network centrality '\
+    #               'measure: %s; fix this in the pipeline config'\
+    #               % (str(threshold_option), str(method_option))
+    #     raise Exception(err_msg)
+
+
+
 # Check centrality parameters
 def check_centrality_params(method_option, threshold_option, threshold):
     '''
@@ -524,6 +583,7 @@ def check_centrality_params(method_option, threshold_option, threshold):
     elif type(method_option) is not str:
         err_msg = 'Method option must be a string, but type: %s provided' \
                   % str(type(method_option))
+            raise TypeError(err_msg)
 
     # Check threshold option
     if type(threshold_option) is list:
