@@ -20,7 +20,7 @@ def test_correlation_generates_output():
 	wf.inputs.inputspec.in_file = filename1
 	wf.inputs.inputspec.template = filename2
 	res = wf.run()
-        
+        print res.nodes()[-1].base_dir
 	assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_correlation/sep_nifti_subbriks/degree_centrality_binarize.nii.gz'))
         assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_correlation/sep_nifti_subbriks/degree_centrality_weighted.nii.gz'))
 
@@ -40,7 +40,7 @@ def test_sparsity_generates_output():
         wf.inputs.inputspec.in_file = filename1
         wf.inputs.inputspec.template = filename2
         res = wf.run()
-        
+        print res.nodes()[-1].base_dir       
         assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_sparsity/sep_nifti_subbriks/degree_centrality_binarize.nii.gz'))
         assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_sparsity/sep_nifti_subbriks/degree_centrality_weighted.nii.gz'))
 
@@ -60,7 +60,7 @@ def test_significance_generates_output():
         wf.inputs.inputspec.in_file = filename1
         wf.inputs.inputspec.template = filename2
         res = wf.run()
-        
+        print res.nodes()[-1].base_dir
         assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_significance/sep_nifti_subbriks/degree_centrality_binarize.nii.gz'))
         assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'dc_significance/sep_nifti_subbriks/degree_centrality_weighted.nii.gz'))
 
