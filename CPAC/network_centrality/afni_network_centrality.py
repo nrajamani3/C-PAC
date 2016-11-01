@@ -114,6 +114,110 @@ def create_degree_centrality_wf(wf_name, threshold_option, threshold,
     return wf
 
 
+# Return the afni eigenvector centrality workflow
+def create_eigenvector_centrality_wf(wf_name, threshold_option,
+                              threshold, num_threads=1, memory_gb=1.0):
+    '''
+    Function to create the afni-based Eigenvector centrality workflow
+
+    Parameters
+    ----------
+    wf_name : string
+        the name of the workflow
+    threshold_option : string
+        'significance', 'sparsity', or 'correlation'
+    threshold : float
+        the threshold value for thresholding the similarity matrix
+    num_threads : integer (optional); default=1
+        the number of threads to utilize for centrality computation
+    memory_gb : float (optional); default=1.0
+        the amount of memory the centrality calculation will take (GB)
+
+    Returns
+    -------
+    wf : nipype Workflow
+        the initialized nipype workflow for the afni eigenvector centrality command
+    '''
+
+    # Import packages
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as util
+    import CPAC.network_centrality.utils as utils
+
+    # Check the centrality parameters
+    t = threshold
+    if threshold_option == 'sparsity':
+        t = threshold/100.0
+    #uses the same validations as degree centrality
+    method_option, threshold_option = utils.check_degree_centrality_params(threshold_option, t)
+
+    # Init variables
+    wf = pe.Workflow(name=wf_name)
+
+    # Create inputspec node
+    in_node = pe.Node(util.IdentityInterface(fields=['in_file', 'template',
+                                                        'threshold']),
+                         name='inputspec')
+
+    in_node.inputs.threshold = threshold
+
+    # Define main input/function node
+
+    eig_centrality = pe.Node(ECM(environ={'OMP_NUM_THREADS': str(num_threads)}),
+            name='afni_centrality')
+    eig_centrality.inputs.out_file = 'eigenvector_centrality_merged.nii.gz'
+    eig_centrality.inputs.memory = memory_gb # 3dECM input only
+    out_names = ('eigenvector_centrality_binarize',
+                 'eigenvector_centrality_weighted')
+    
+    # Limit its num_threads and memory via MultiProc plugin
+    eig_centrality.interface.num_threads = num_threads
+    eig_centrality.interface.estimated_memory_gb = memory_gb
+
+    # Connect input image and mask tempalte
+    wf.connect(in_node, 'in_file', eig_centrality, 'in_file')
+    wf.connect(in_node, 'template', eig_centrality, 'mask')
+
+    # If we're doing significan thresholding, convert to correlation
+    if threshold_option == 'significance':
+        # Check and (possibly) conver threshold
+        convert_thr= = pe.Node(util.Function(input_names=['datafile',
+                                                              'p_value',
+                                                              'two_tailed'],
+                                                 output_names=['rvalue_threshold'],
+                                                 function=utils.convert_pvalue_to_r),
+                                   name='convert_threshold')
+        # Wire workflow to connect in conversion node
+        wf.connect(in_node, 'in_file', convert_thr, 'datafile')
+        wf.connect(in_node, 'threshold', convert_thr, 'p_value')
+        wf.connect(convert_thr, 'rvalue_threshold', eig_centrality, 'thresh')
+
+    # Correlation thresholding
+    elif threshold_option == 'correlation':
+        centrality_wf.connect(in_node, 'threshold', eig_centrality, 'thresh')
+
+    # Need to seprate sub-briks
+    sep_subbriks = \
+        pe.Node(util.Function(input_names=['nifti_file', 'out_names'],
+                              output_names=['output_niftis'],
+                              function=utils.sep_nifti_subbriks),
+                name='sep_nifti_subbriks')
+    sep_subbriks.inputs.out_names = out_names
+
+    # Connect the degree centrality output image to seperate subbriks node
+    wf.connect(eig_centrality, 'out_file', ep_subbriks, 'nifti_file')
+
+    # Define outputs node
+    out_node = pe.Node(util.IdentityInterface(fields=['outfile_list',
+                                                         'oned_output']),
+                          name='outputspec')
+
+    wf.connect(sep_subbriks, 'output_niftis', out_node, 'outfile_list')
+
+    # Return the eigenvector centrality workflow
+    return wf
+
+
 
 
 
