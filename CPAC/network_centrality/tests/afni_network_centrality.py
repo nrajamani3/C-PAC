@@ -70,7 +70,7 @@ def test_degree_significance_generates_output():
 
 
 from CPAC.network_centrality.afni_network_centrality import create_eigenvector_centrality_wf
-def test_eigenvector():
+def test_correlation_eigenvector():
     #check if wf runs ok with correlation threshold option
     #and check if the 2 nii outputs of eigenvector centrality exist
     tempdir = mkdtemp()
@@ -88,4 +88,44 @@ def test_eigenvector():
     print res.nodes()[-1].base_dir
     assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_correlation/sep_nifti_subbriks/eigenvector_centrality_binarize.nii.gz'))
     assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_correlation/sep_nifti_subbriks/eigenvector_centrality_weighted.nii.gz'))
+    rmtree(tempdir)
+
+def test_sparsity_eigenvector():
+    #check if wf runs ok with correlation threshold option
+    #and check if the 2 nii outputs of eigenvector centrality exist
+    tempdir = mkdtemp()
+    filename1 = os.path.join(tempdir, 'func.nii')
+    f = Nifti1Image(np.random.rand(10, 10, 10, 50), np.eye(4)).to_filename(filename1)
+
+    filename2 = os.path.join(tempdir, 'mask.nii')
+    f2 = Nifti1Image(np.ones((10, 10, 10)), np.eye(4)).to_filename(filename2)
+
+    wf = create_degree_centrality_wf('ec_sparsity','sparsity', 0.5)
+    wf.inputs.inputspec.in_file = filename1
+    wf.inputs.inputspec.template = filename2
+    res = wf.run()
+
+    print res.nodes()[-1].base_dir
+    assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_sparsity/sep_nifti_subbriks/eigenvector_centrality_binarize.nii.gz'))
+    assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_sparsity/sep_nifti_subbriks/eigenvector_centrality_weighted.nii.gz'))
+    rmtree(tempdir)
+
+def test_significance_eigenvector():
+    #check if wf runs ok with correlation threshold option
+    #and check if the 2 nii outputs of eigenvector centrality exist
+    tempdir = mkdtemp()
+    filename1 = os.path.join(tempdir, 'func.nii')
+    f = Nifti1Image(np.random.rand(10, 10, 10, 50), np.eye(4)).to_filename(filename1)
+
+    filename2 = os.path.join(tempdir, 'mask.nii')
+    f2 = Nifti1Image(np.ones((10, 10, 10)), np.eye(4)).to_filename(filename2)
+
+    wf = create_degree_centrality_wf('ec_significance','significance', 0.2)
+    wf.inputs.inputspec.in_file = filename1
+    wf.inputs.inputspec.template = filename2
+    res = wf.run()
+
+    print res.nodes()[-1].base_dir
+    assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_significance/sep_nifti_subbriks/eigenvector_centrality_binarize.nii.gz'))
+    assert os.path.isfile(os.path.join(res.nodes()[-1].base_dir, 'ec_significance/sep_nifti_subbriks/eigenvector_centrality_weighted.nii.gz'))
     rmtree(tempdir)

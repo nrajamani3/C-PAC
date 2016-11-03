@@ -166,7 +166,7 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
     eig_centrality = pe.Node(ECM(environ={'OMP_NUM_THREADS': str(num_threads)}),
             name='afni_centrality')
     eig_centrality.inputs.out_file = 'eigenvector_centrality_merged.nii.gz'
-    eig_centrality.inputs.memory = memory_gb # 3dECM input only
+    eig_centrality.inputs.memory = memory_gb
     out_names = ('eigenvector_centrality_binarize',
                  'eigenvector_centrality_weighted')
     
@@ -180,8 +180,8 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
 
     # If we're doing significan thresholding, convert to correlation
     if threshold_option == 'significance':
-        # Check and (possibly) conver threshold
-        convert_thr= = pe.Node(util.Function(input_names=['datafile',
+        # Check and (possibly) convert threshold
+        convert_thr = pe.Node(util.Function(input_names=['datafile',
                                                               'p_value',
                                                               'two_tailed'],
                                                  output_names=['rvalue_threshold'],
@@ -191,6 +191,10 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
         wf.connect(in_node, 'in_file', convert_thr, 'datafile')
         wf.connect(in_node, 'threshold', convert_thr, 'p_value')
         wf.connect(convert_thr, 'rvalue_threshold', eig_centrality, 'thresh')
+
+    # Sparsity thresholding
+    elif threshold_option == 'sparsity':
+        centrality_wf.connect(in_node, 'threshold', eig_centrality, 'sparsity')
 
     # Correlation thresholding
     elif threshold_option == 'correlation':
@@ -204,8 +208,8 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
                 name='sep_nifti_subbriks')
     sep_subbriks.inputs.out_names = out_names
 
-    # Connect the degree centrality output image to seperate subbriks node
-    wf.connect(eig_centrality, 'out_file', ep_subbriks, 'nifti_file')
+    # Connect the degree centrality output image to separate subbriks node
+    wf.connect(eig_centrality, 'out_file', sep_subbriks, 'nifti_file')
 
     # Define outputs node
     out_node = pe.Node(util.IdentityInterface(fields=['outfile_list',
