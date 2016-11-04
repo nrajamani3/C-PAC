@@ -503,12 +503,6 @@ def parse_and_return_mats(one_d_file, mask_arr):
     # Return the symmetric matrices and affine
     return b_similarity_matrix, w_similarity_matrix
 
-
-
-
-
-
-
 def check_degree_centrality_params(threshold_option, threshold):
     '''
     Function to check the degree centrality parameters
@@ -538,7 +532,7 @@ def check_degree_centrality_params(threshold_option, threshold):
     if threshold_option not in acceptable_thresholds:
         err_msg = 'Threshold option: %s not supported for degree centrality; '\
                   'allowed values are: significance, sparsity or correlation'\
-                  % (str(threshold_option), str(method_option))
+                  % (str(threshold_option))
         raise ValueError(err_msg)
 
     # If it's significance/sparsity thresholding, check for (0,1]
@@ -556,13 +550,61 @@ def check_degree_centrality_params(threshold_option, threshold):
                       % threshold
             raise ValueError(err_msg)
     return threshold_option, threshold
-    # else:
-    #     err_msg = 'Threshold option: %s not supported for network centrality '\
-    #               'measure: %s; fix this in the pipeline config'\
-    #               % (str(threshold_option), str(method_option))
-    #     raise Exception(err_msg)
 
 
+def check_lfcd_params(threshold_option, threshold):
+    '''
+    Function to check the lfcd parameters
+    '''
+    # Check threshold option
+    if type(threshold_option) is list:
+        threshold_option = threshold_option[0]
+    if type(threshold_option) is int:
+        if threshold_option == 0:
+            threshold_option = 'significance'
+        elif threshold_option == 1:
+            threshold_option = 'correlation'
+        else:
+            err_msg = 'Threshold option: %s not supported for lfcd; '\
+                      'allowed values are: 0 and 1'\
+                      % (str(threshold_option))
+            raise ValueError(err_msg)
+    elif type(threshold_option) is not str:
+        err_msg = 'Threshold option must be a string, but type: %s provided' \
+                  % str(type(threshold_option))
+        raise TypeError(err_msg)
+
+    # Init lists of acceptable strings
+    acceptable_thresholds = ['significance', 'correlation']
+
+    # Format input strings
+    method_option = method_option.lower().replace('centrality', '').rstrip(' ')
+    threshold_option = threshold_option.lower().replace('threshold', '').rstrip(' ')
+
+    # Check for strings properly formatted
+    if threshold_option not in acceptable_thresholds:
+        err_msg = 'Threshold option: %s not supported for lfcd; '\
+                  'allowed values are: significance or correlation'\
+                  % (str(threshold_option))
+        raise ValueError(err_msg)
+
+    # If it's significance thresholding, check for (0,1]
+    if threshold_option == 'significance':
+        if threshold <= 0 or threshold > 1:
+            err_msg = 'Threshold value must be a positive number greater than '\
+                      '0 and less than or equal to 1.\nCurrently it is set '\
+                      'at %f' % threshold
+            raise ValueError(err_msg)
+    # If it's correlation, check for [-1,1]
+    elif threshold_option == 'correlation':
+        if threshold < -1 or threshold > 1:
+            err_msg = 'Threshold value must be greater than or equal to -1 and '\
+                      'less than or equal to 1.\n Current it is set at %f'\
+                      % threshold
+            raise ValueError(err_msg)
+
+    # Return valid method and threshold options
+    return method_option, threshold_option
 
 # Check centrality parameters
 def check_centrality_params(method_option, threshold_option, threshold):
