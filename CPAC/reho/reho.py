@@ -23,10 +23,9 @@ def create_reho_wf(wf_name='reho_wf', cluster_size=27):
     Examples
     --------
     >>> from CPAC import reho
-    >>> wf = reho.create_reho_wf()
+    >>> wf = reho.create_reho_wf(cluster_size=27)
     >>> wf.inputs.inputspec.in_file = 'rest.nii.gz'
     >>> wf.inputs.inputspec.mask = 'mask.nii.gz'
-    >>> wf.inputs.inputspec.cluster_size = 27
     >>> wf.run()
     '''
 
