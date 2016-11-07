@@ -47,7 +47,7 @@ def create_degree_centrality_wf(wf_name, threshold_option, threshold,
     t = threshold
     if threshold_option == 'sparsity':
         t = threshold/100.0
-    method_option, threshold_option = utils.check_degree_centrality_params(threshold_option, t)
+    threshold_option, threshold = utils.check_degree_centrality_params(threshold_option, t)
     # Init variables
     wf = pe.Workflow(name=wf_name)
 
@@ -148,7 +148,7 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
     if threshold_option == 'sparsity':
         t = threshold/100.0
     #uses the same validations as degree centrality
-    method_option, threshold_option = utils.check_degree_centrality_params(threshold_option, t)
+    threshold_option, threshold = utils.check_degree_centrality_params(threshold_option, t)
 
     # Init variables
     wf = pe.Workflow(name=wf_name)
@@ -193,11 +193,11 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
 
     # Sparsity thresholding
     elif threshold_option == 'sparsity':
-        centrality_wf.connect(in_node, 'threshold', eig_centrality, 'sparsity')
+        wf.connect(in_node, 'threshold', eig_centrality, 'sparsity')
 
     # Correlation thresholding
     elif threshold_option == 'correlation':
-        centrality_wf.connect(in_node, 'threshold', eig_centrality, 'thresh')
+        wf.connect(in_node, 'threshold', eig_centrality, 'thresh')
 
     # Need to separate sub-briks
     sep_subbriks = \
@@ -246,7 +246,7 @@ def create_lfcd_wf(wf_name, threshold_option,
     wf : nipype Workflow
         the initialized nipype workflow for the afni lfcd command
     '''
-    method_option, threshold_option = \
+    threshold_option, threshold = \
         utils.check_lfcd_params(threshold_option, threshold)
 
     # Init variables

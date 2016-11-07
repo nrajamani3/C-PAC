@@ -578,7 +578,6 @@ def check_lfcd_params(threshold_option, threshold):
     acceptable_thresholds = ['significance', 'correlation']
 
     # Format input strings
-    method_option = method_option.lower().replace('centrality', '').rstrip(' ')
     threshold_option = threshold_option.lower().replace('threshold', '').rstrip(' ')
 
     # Check for strings properly formatted
@@ -603,8 +602,8 @@ def check_lfcd_params(threshold_option, threshold):
                       % threshold
             raise ValueError(err_msg)
 
-    # Return valid method and threshold options
-    return method_option, threshold_option
+    # Return threshold option and threshold value
+    return threshold_option, threshold
 
 # Check centrality parameters
 def check_centrality_params(method_option, threshold_option, threshold):

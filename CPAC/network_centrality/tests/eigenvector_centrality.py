@@ -16,7 +16,7 @@ def test_correlation_eigenvector():
     filename2 = os.path.join(tempdir, 'mask.nii')
     f2 = Nifti1Image(np.ones((10, 10, 10)), np.eye(4)).to_filename(filename2)
 
-    wf = create_eigenvector_centrality_wf('ec_correlation','correlation', 0.8)
+    wf = create_eigenvector_centrality_wf('ec_correlation','correlation', 0.3)
     wf.inputs.inputspec.in_file = filename1
     wf.inputs.inputspec.template = filename2
     res = wf.run()
