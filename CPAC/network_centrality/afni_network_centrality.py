@@ -42,6 +42,14 @@ def create_degree_centrality_wf(wf_name, threshold_option, threshold,
     -------
     degree_centrality_wf : nipype Workflow
         the initialized nipype workflow for the afni degree centrality command
+
+        Example
+    --------
+    >>> from CPAC.network_centrality import afni_network_centrality as nc
+    >>> wf = nc.create_degree_centrality_wf('degree', 'sparsity', 0.5)
+    >>> wf.inputs.inputspec.in_file = 'func.nii'
+    >>> wf.inputs.inputspec.template = 'mask.nii'
+    >>> wf.run()
     '''
     # Check the centrality parameters
     t = threshold
@@ -142,6 +150,14 @@ def create_eigenvector_centrality_wf(wf_name, threshold_option,
     -------
     wf : nipype Workflow
         the initialized nipype workflow for the afni eigenvector centrality command
+
+    Example
+    --------
+    >>> from CPAC.network_centrality import afni_network_centrality as nc
+    >>> wf = nc.create_eigenvector_centrality_wf('eig', 'significance', 0.5)
+    >>> wf.inputs.inputspec.in_file = 'func.nii'
+    >>> wf.inputs.inputspec.template = 'mask.nii'
+    >>> wf.run()
     '''
     # Check the centrality parameters
     t = threshold
@@ -245,6 +261,14 @@ def create_lfcd_wf(wf_name, threshold_option,
     -------
     wf : nipype Workflow
         the initialized nipype workflow for the afni lfcd command
+
+    Example
+    --------
+    >>> from CPAC.network_centrality import afni_network_centrality as nc
+    >>> wf = nc.create_lfcd_wf('lfcd', 'correlation', 0.5)
+    >>> wf.inputs.inputspec.in_file = 'func.nii'
+    >>> wf.inputs.inputspec.template = 'mask.nii'
+    >>> wf.run()
     '''
     threshold_option, threshold = \
         utils.check_lfcd_params(threshold_option, threshold)
