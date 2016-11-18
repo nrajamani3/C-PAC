@@ -27,6 +27,18 @@ def get_opt_string(mask):
     """
     return " -stdev -mask %s" %mask
 
+def check_params(high_pass, low_pass):
+    #check if is list of float
+    if type(high_pass) is not list:
+        raise TypeError('high_pass must be list of float')
+    if type(low_pass) is not list:
+        raise TypeError('low_pass must be list of float')
+
+    #check if lists have same size
+    if len(high_pass) != len(low_pass):
+        raise ValueError('high_pass and low_pass lists must have same lenght')
+
+
 def create_alff_wf(wf_name, high_pass, low_pass):
     """
     Calculate Amplitude of low frequency oscillations(ALFF) map
@@ -99,7 +111,7 @@ def create_alff_wf(wf_name, high_pass, low_pass):
                                                       'lp']),
                         name='inputspec')
 
-    #TODO: check if hp and lp params are ok
+    check_params(high_pass, low_pass)
     in_node.iterables =  [('hp', high_pass), ('lp', low_pass)]
     out_node = pe.Node(util.IdentityInterface(fields=[ 'alff_img']),
                           name='outputspec')
