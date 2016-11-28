@@ -4384,8 +4384,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     """""""""""""""""""""""""""""""""""""""""""""""""""
      QUALITY CONTROL - to be re-implemented later
     """""""""""""""""""""""""""""""""""""""""""""""""""
-
-    '''
     if 1 in c.generateQualityControlImages:
 
         #register color palettes
@@ -4740,9 +4738,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 raise
 
 
-
-
-
             # QA pages function
             def QA_montages(measure, idx):
 
@@ -4785,138 +4780,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 except Exception as e:
                     print "[!] Creation of QA montages for %s has failed.\n" % measure
                     print "Error: %s" % e
-                    pass                    
-
-
-
-            # ALFF and f/ALFF QA montages
-            if 1 in c.runALFF:
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('alff_to_standard', 7)
-                    QA_montages('falff_to_standard', 8)
-
-                    if c.fwhm != None:
-                        QA_montages('alff_to_standard_smooth', 9)
-                        QA_montages('falff_to_standard_smooth', 10)
-
-                    if 1 in c.runZScoring:
-
-                        if c.fwhm != None:
-                            QA_montages('alff_to_standard_smooth_zstd', 11)
-                            QA_montages('falff_to_standard_smooth_zstd', 12)
-
-                        else:
-                            QA_montages('alff_to_standard_zstd', 13)
-                            QA_montages('falff_to_standard_zstd', 14)
- 
-
-            # ReHo QA montages
-            if 1 in c.runReHo:
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('reho_to_standard', 15)
-
-                    if c.fwhm != None:
-                        QA_montages('reho_to_standard_smooth', 16)
-
-                    if 1 in c.runZScoring:
-
-                        if c.fwhm != None:
-                            QA_montages('reho_to_standard_smooth_fisher_zstd', 17)
-
-                        else:
-                            QA_montages('reho_to_standard_fisher_zstd', 18)
-
-
-            
-            # SCA ROI QA montages
-            if (1 in c.runSCA) and (1 in c.runROITimeseries):
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('sca_roi_to_standard', 19)
-
-                    if c.fwhm != None:
-                        QA_montages('sca_roi_to_standard_smooth', 20)
-
-                    if 1 in c.runZScoring:
-
-                        if c.fwhm != None:
-                            QA_montages('sca_roi_to_standard_smooth_fisher_zstd', 22)
-
-                        else:
-                            QA_montages('sca_roi_to_standard_fisher_zstd', 21)
-            
-
-
-            # SCA Seed QA montages
-            if (1 in c.runSCA) and ("Voxel" in ts_analysis_dict.keys()): #(1 in c.runVoxelTimeseries):
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('sca_seed_to_standard', 23)
-
-                    if c.fwhm != None:
-                        QA_montages('sca_seed_to_standard_smooth', 24)
-
-                    if 1 in c.runZScoring:
-
-                        if c.fwhm != None:
-                            QA_montages('sca_seed_to_standard_smooth_fisher_zstd', 26)
-
-                        else:
-                            QA_montages('sca_seed_to_standard_fisher_zstd', 25)
-
-
-            # SCA Multiple Regression
-            if "MultReg" in sca_analysis_dict.keys(): #(1 in c.runMultRegSCA) and (1 in c.runROITimeseries):
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('sca_tempreg_maps_files', 27)
-                    QA_montages('sca_tempreg_maps_zstat_files', 28)
-
-                    if c.fwhm != None:
-                        QA_montages('sca_tempreg_maps_files_smooth', 29)
-                        QA_montages('sca_tempreg_maps_zstat_files_smooth', 30)
-
-
-            
-            # Dual Regression QA montages
-            if (1 in c.runDualReg) and (1 in c.runSpatialRegression):
-
-                QA_montages('dr_tempreg_maps_files', 31)
-                QA_montages('dr_tempreg_maps_zstat_files', 32)
-
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('dr_tempreg_maps_files_to_standard', 33)
-                    QA_montages('dr_tempreg_maps_zstat_files_to_standard', 34)
-
-                    if c.fwhm != None:
-                        QA_montages('dr_tempreg_maps_files_to_standard_smooth', 35)
-                        QA_montages('dr_tempreg_maps_zstat_files_to_standard_smooth', 36)
-            
-
-
-            # VMHC QA montages
-            if 1 in c.runVMHC:
-
-                QA_montages('vmhc_raw_score', 37)
-                QA_montages('vmhc_fisher_zstd', 38)
-                QA_montages('vmhc_fisher_zstd_zstat_map', 39)
-
-
-            # Network Centrality QA montages
-            if 1 in c.runNetworkCentrality:
-
-                QA_montages('centrality_outputs', 40)
-                QA_montages('centrality_outputs_zstd', 41)
-
-                if c.fwhm != None:
-                    QA_montages('centrality_outputs_smoothed', 42)
-                    QA_montages('centrality_outputs_smoothed_zstd', 43)
-
+                    pass                           
 
             num_strat += 1
-    '''
                 
     logger.info('\n\n' + 'Pipeline building completed.' + '\n\n')
 
@@ -5361,7 +5227,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 create_log_node(None, None, count, scan).run()
 
         # If QC is enabled
-        '''
         if 1 in c.generateQualityControlImages:
             # For each pipeline ID, generate the QC pages
             for pip_id in pip_ids:
@@ -5373,7 +5238,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                                 qc_montage_id_s, qc_plot_id, qc_hist_id)
                 # Automatically generate QC index page
                 create_all_qc.run(pipeline_out_base)
-        '''
+
 
         # pipeline timing code starts here
 
