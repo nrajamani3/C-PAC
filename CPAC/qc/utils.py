@@ -305,7 +305,7 @@ def organize(dict_, all_ids, png_, new_dict):
     return  all_ids
 
 
-def grp_pngs_by_id(pngs_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id):
+def grp_pngs_by_id(pngs_, qc_montage_id_a, qc_montage_id_s, qc_plot_id):
 
     """
     Groups pngs by their ids
@@ -326,10 +326,6 @@ def grp_pngs_by_id(pngs_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_
 
     qc_plot_id : dictionary
           dictionary of plot pngs key : id no
-          value is list of png types
-
-    qc_hist_id : dictionary
-          dictionary of histogram pngs key : id no
           value is list of png types
 
 
@@ -361,7 +357,6 @@ def grp_pngs_by_id(pngs_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_
     # Init variables
     dict_a = {}
     dict_s = {}
-    dict_hist = {}
     dict_plot = {}
     all_ids = []
 
@@ -370,9 +365,8 @@ def grp_pngs_by_id(pngs_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_
         all_ids = organize(qc_montage_id_a, all_ids, png_, dict_a)
         all_ids = organize(qc_montage_id_s, all_ids, png_, dict_s)
         all_ids = organize(qc_plot_id, all_ids, png_, dict_plot)
-        all_ids = organize(qc_hist_id, all_ids, png_, dict_hist)
 
-    return dict(dict_a), dict(dict_s), dict(dict_hist),\
+    return dict(dict_a), dict(dict_s),\
            dict(dict_plot), list(all_ids)
 
 
@@ -532,10 +526,6 @@ def feed_line_nav(id_,
         image_readable = 'Visual Result of Skull Strip'
     if image_name == 'csf_gm_wm':
         image_readable = 'Grey Matter, White Matter & CSF'
-    if image_name == 'snr':
-        image_readable = 'Signal to Noise Ratio'
-    if image_name.find('snr_hist') > -1:
-        image_readable = 'Histogram of Signal to Noise Ratio'
     if image_name.find('mni_normalized') > -1:
         image_readable = 'MNI Edge Overlapped on Normalized Anatomical'
     if image_name == 'mean_func_with_t1_edge':
@@ -548,34 +538,6 @@ def feed_line_nav(id_,
         image_readable = 'Head Rotation Plot'
     if image_name.find('fd_plot') > -1:
         image_readable = 'Framewise Displacement Plot'
-    if image_name == 'sca_roi_smooth':
-        image_readable = 'Seed-based Correlation Analysis'
-    if image_name == 'sca_roi_smooth_hist':
-        image_readable = 'Histogram of Seed-based Correlation Analysis'
-    if image_name == 'centrality_smooth':
-        image_readable = 'Network Centrality'
-    if image_name == 'centrality_smooth_hist':
-        image_readable = 'Histogram of Network Centrality'
-    if image_name == 'temporal_dual_regression_smooth':
-        image_readable = 'Temporal Dual Regression'
-    if image_name == 'temporal_dual_regression_smooth_hist':
-        image_readable = 'Histogram of Temporal Dual Regression'
-    if image_name == 'vmhc_smooth':
-        image_readable = 'Voxel-Mirrored Homotopic Connectivity'
-    if image_name == 'vmhc_smooth_hist':
-        image_readable = 'Histogram of Voxel-Mirrored Homotopic Connectivity'
-    if image_name == 'reho_smooth':
-        image_readable = 'Regional Homogeneity'
-    if image_name == 'reho_smooth_hist':
-        image_readable = 'Histogram of Regional Homogeneity'
-    if image_name == 'alff_smooth':
-        image_readable = 'Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'alff_smooth_hist':
-        image_readable = 'Histogram of Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'falff_smooth':
-        image_readable = 'fractional Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'falff_smooth_hist':
-        image_readable = 'Histogram of fractional Amplitude of Low-Frequency Fluctuation' 
 
     print >>f_html_0, "<li><a href='%s#%s'> %s </a></li>" % (f_html_1.name, \
         anchor, image_readable)   ###
@@ -615,10 +577,6 @@ def feed_line_body(image_name, anchor, image, f_html_1):
         image_readable = 'Visual Result of Skull Strip'
     if image_name == 'csf_gm_wm':
         image_readable = 'Grey Matter, White Matter & CSF'
-    if image_name == 'snr':
-        image_readable = 'Signal to Noise Ratio'
-    if image_name.find('snr_hist') > -1:
-        image_readable = 'Histogram of Signal to Noise Ratio'
     if image_name.find('mni_normalized') > -1:
         image_readable = 'MNI Edge Overlapped on Normalized Anatomical'
     if image_name == 'mean_func_with_t1_edge':
@@ -631,35 +589,6 @@ def feed_line_body(image_name, anchor, image, f_html_1):
         image_readable = 'Head Rotation Plot'
     if image_name.find('fd_plot') > -1:
         image_readable = 'Framewise Displacement Plot'
-    if image_name == 'sca_roi_smooth':
-        image_readable = 'Seed-based Correlation Analysis'
-    if image_name == 'sca_roi_smooth_hist':
-        image_readable = 'Histogram of Seed-based Correlation Analysis'
-    if image_name == 'centrality_smooth':
-        image_readable = 'Network Centrality'
-    if image_name == 'centrality_smooth_hist':
-        image_readable = 'Histogram of Network Centrality'
-    if image_name == 'temporal_dual_regression_smooth':
-        image_readable = 'Temporal Dual Regression'
-    if image_name == 'temporal_dual_regression_smooth_hist':
-        image_readable = 'Histogram of Temporal Dual Regression'
-    if image_name == 'vmhc_smooth':
-        image_readable = 'Voxel-Mirrored Homotopic Connectivity'
-    if image_name == 'vmhc_smooth_hist':
-        image_readable = 'Histogram of Voxel-Mirrored Homotopic Connectivity'
-    if image_name == 'reho_smooth':
-        image_readable = 'Regional Homogeneity'
-    if image_name == 'reho_smooth_hist':
-        image_readable = 'Histogram of Regional Homogeneity'
-    if image_name == 'alff_smooth':
-        image_readable = 'Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'alff_smooth_hist':
-        image_readable = 'Histogram of Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'falff_smooth':
-        image_readable = 'fractional Amplitude of Low-Frequency Fluctuation'
-    if image_name == 'falff_smooth_hist':
-        image_readable = 'Histogram of fractional Amplitude of Low-Frequency Fluctuation' 
-
 
     print >>f_html_1, "<h3><a name='%s'>%s</a> <a href='#reverse'>TOP</a></h3>" %(anchor, image_readable)   ###
 
@@ -690,22 +619,10 @@ def get_map_id(str_, id_):
     map_id : string
         proper name for a map
     """
-    map_id = None
-
-    if 'centrality' in id_:
-        str_ = str_.split('_centrality_a.png')[0]
-        type_, str_ = str_.split(id_)
-        str_ = str_.split('_')[0]
-
-        type_ = type_.replace('_', '')
-        map_id = '_'.join([type_, id_, str_])
-        return map_id
-
-    else:
-        str_ = str_.split(id_)[1]
-        str_ = str_.split('_')[0]
-        map_id = '_'.join([id_, str_])
-        return map_id
+    str_ = str_.split(id_)[1]
+    str_ = str_.split('_')[0]
+    map_id = '_'.join([id_, str_])
+    return map_id
 
 
 def get_map_and_measure(png_a):
@@ -743,34 +660,6 @@ def get_map_and_measure(png_a):
         measure_name = os.path.basename(os.path.dirname((png_a)))
 
     str_ = os.path.basename(png_a)
-
-    if 'sca_seeds' in png_a:
-        map_name = 'seed'
-
-    if 'sca_roi' in png_a:
-
-        map_name = get_map_id(str_, 'ROI_number_')
-
-    if 'temporal_regression_sca' in png_a:
-
-        map_name = get_map_id(str_, 'roi_')
-
-    if 'temporal_dual_regression' in png_a:
-
-        map_name = get_map_id(str_, 'map_z_')
-
-    if 'centrality' in png_a:
-
-        try:
-            map_name = get_map_id(str_, 'centrality_')
-        except:
-            pass
-
-        try:
-            map_name = get_map_id(str_, 'lFCD_')
-        except:
-            pass
-
 
     return map_name, measure_name
 
@@ -898,10 +787,6 @@ def feed_lines_html(id_,
                     image_readable = 'Visual Result of Skull Strip'
                 if image_name_a_nav == 'csf_gm_wm':
                     image_readable = 'Grey Matter, White Matter & CSF'
-                if image_name_a_nav == 'snr':
-                    image_readable = 'Signal to Noise Ratio'
-                if image_name_a_nav == 'snr_hist':
-                    image_readable = 'Histogram of Signal to Noise Ratio'
                 if image_name_a_nav == 'mean_func_with_t1_edge':
                     image_readable = 'T1 Edge Overlapped on Mean Functional Image'
                 if image_name_a_nav == 'mean_func_with_mni_edge':
@@ -911,35 +796,7 @@ def feed_lines_html(id_,
                 if image_name_a_nav == 'movement_rot_plot':
                     image_readable = 'Head Rotation Plot'
                 if image_name_a_nav == 'fd_plot':
-                    image_readable = 'Framewise Displacement Plot'
-                if image_name_a_nav == 'sca_roi_smooth':
-                    image_readable = 'Seed-based Correlation Analysis'
-                if image_name_a_nav == 'sca_roi_smooth_hist':
-                    image_readable = 'Histogram of Seed-based Correlation Analysis'
-                if image_name_a_nav == 'centrality_smooth':
-                    image_readable = 'Network Centrality'
-                if image_name_a_nav == 'centrality_smooth_hist':
-                    image_readable = 'Histogram of Network Centrality'
-                if image_name_a_nav == 'temporal_dual_regression_smooth':
-                    image_readable = 'Temporal Dual Regression'
-                if image_name_a_nav == 'temporal_dual_regression_smooth_hist':
-                    image_readable = 'Histogram of Temporal Dual Regression'
-                if image_name_a_nav == 'vmhc_smooth':
-                    image_readable = 'Voxel-Mirrored Homotopic Connectivity'
-                if image_name_a_nav == 'vmhc_smooth_hist':
-                    image_readable = 'Histogram of Voxel-Mirrored Homotopic Connectivity'
-                if image_name_a_nav == 'reho_smooth':
-                    image_readable = 'Regional Homogeneity'
-                if image_name_a_nav == 'reho_smooth_hist':
-                    image_readable = 'Histogram of Regional Homogeneity'
-                if image_name_a_nav == 'alff_smooth':
-                    image_readable = 'Amplitude of Low-Frequency Fluctuation'
-                if image_name_a_nav == 'alff_smooth_hist':
-                    image_readable = 'Histogram of Amplitude of Low-Frequency Fluctuation'
-                if image_name_a_nav == 'falff_smooth':
-                    image_readable = 'fractional Amplitude of Low-Frequency Fluctuation'
-                if image_name_a_nav == 'falff_smooth_hist':
-                    image_readable = 'Histogram of fractional Amplitude of Low-Frequency Fluctuation'      
+                    image_readable = 'Framewise Displacement Plot'   
 
                 feed_line_nav(id_, \
                             image_name_a_nav, \
@@ -1055,8 +912,8 @@ def make_page(file_, qc_montage_id_a, qc_montage_id_s, qc_plot_id, qc_hist_id):
         f_html_1 = open(html_f_name_1, 'wb')
 
 
-        dict_a, dict_s, dict_hist, dict_plot, all_ids = grp_pngs_by_id(pngs_, qc_montage_id_a, \
-                                            qc_montage_id_s, qc_plot_id, qc_hist_id)
+        dict_a, dict_s, dict_plot, all_ids = grp_pngs_by_id(pngs_, qc_montage_id_a, \
+                                            qc_montage_id_s, qc_plot_id)
 
         #for k, v in dict_plot.items():
         #        print '_a~~~> ', k, v
@@ -2037,10 +1894,7 @@ def make_montage_axial(overlay, underlay, png_name, cbar_name):
     fig = plt.figure(1)
     max_ = np.max(np.abs(Y))
 
-    if ('snr' in png_name) or  ('reho' in png_name) or ('vmhc' in png_name) or ('sca_' in png_name) or ('alff' in png_name) or ('centrality' in png_name) or ('temporal_regression_sca' in png_name)  or ('temporal_dual_regression' in png_name):
-        grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, cbar_mode="single", cbar_pad=0.2, direction="row")
-    else:
-        grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, direction="row")
+    grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, direction="row")
 
     zz = z1
     for i in range(6*3):
@@ -2078,12 +1932,6 @@ def make_montage_axial(overlay, underlay, png_name, cbar_name):
         zz += spacing
 
     cbar = grid.cbar_axes[0].colorbar(im)
-
-    if 'snr' in png_name:
-        cbar.ax.set_yticks(drange(0, max_))
-
-    elif  ('reho' in png_name) or ('vmhc' in png_name) or ('sca_' in png_name) or ('alff' in png_name) or ('centrality' in png_name) or ('temporal_regression_sca' in png_name) or ('temporal_dual_regression' in png_name):
-        cbar.ax.set_yticks(drange(-max_, max_))
 
 
 #    plt.show()
@@ -2206,10 +2054,7 @@ def make_montage_sagittal(overlay, underlay, png_name, cbar_name):
     fig = plt.figure(1)
     max_ = np.max(np.abs(Y))
 
-    if ('snr' in png_name) or  ('reho' in png_name) or ('vmhc' in png_name) or ('sca_' in png_name) or ('alff' in png_name) or ('centrality' in png_name) or ('temporal_regression_sca' in png_name)  or ('temporal_dual_regression' in png_name):
-        grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, cbar_mode="single", cbar_pad=0.5, direction="row")
-    else:
-        grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, cbar_mode="None", direction="row")
+    grid = ImageGrid(fig, 111, nrows_ncols=(3, 6), share_all=True, aspect=True, cbar_mode="None", direction="row")
 
     xx = x1
     for i in range(6*3):
@@ -2242,13 +2087,6 @@ def make_montage_sagittal(overlay, underlay, png_name, cbar_name):
             im = grid[i].imshow(np.rot90(X[xx, :, :]), cmap=cm.get_cmap(cbar_name), alpha=0.82, vmin=- max_, vmax=max_)   
         xx += spacing
     cbar = grid.cbar_axes[0].colorbar(im)
-
-    if 'snr' in png_name:
-        cbar.ax.set_yticks(drange(0, max_))
-
-    elif  ('reho' in png_name) or ('vmhc' in png_name) or ('sca_' in png_name) or ('alff' in png_name) or ('centrality' in png_name) or ('temporal_regression_sca' in png_name)  or ('temporal_dual_regression' in png_name):
-        cbar.ax.set_yticks(drange(-max_, max_))
-
 
 #    plt.show()
     plt.axis("off")

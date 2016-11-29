@@ -4405,111 +4405,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         name='histogram')
 
         for strat in strat_list:
-
             nodes = getNodeList(strat)
-
-            #make SNR plot
-
-            try:
-
-                hist_ = hist.clone('hist_snr_%d' % num_strat)
-                hist_.inputs.measure = 'snr'
-
-                drop_percent = pe.Node(util.Function(input_names=['measure_file',
-                                                   'percent_'],
-                                    output_names=['modified_measure_file'],
-                                    function=drop_percent_),
-                                    name='dp_snr_%d' % num_strat)
-                drop_percent.inputs.percent_ = 99
-
-                preproc, out_file = strat.get_node_from_resource_pool('preprocessed')
-                brain_mask, mask_file = strat.get_node_from_resource_pool('functional_brain_mask')
-                func_to_anat_xfm, xfm_file = strat.get_node_from_resource_pool('functional_to_anat_linear_xfm')
-                anat_ref, ref_file = strat.get_node_from_resource_pool('anatomical_brain')
-                mfa, mfa_file = strat.get_node_from_resource_pool('mean_functional_in_anat')
-
-                std_dev = pe.Node(util.Function(input_names=['mask_', 'func_'],
-                                                output_names=['new_fname'],
-                                                    function=gen_std_dev),
-                                    name='std_dev_%d' % num_strat)
-
-                std_dev_anat = pe.Node(util.Function(input_names=['func_',
-                                                                    'ref_',
-                                                                    'xfm_',
-                                                                    'interp_'],
-                                                        output_names=['new_fname'],
-                                                        function=gen_func_anat_xfm),
-                                        name='std_dev_anat_%d' % num_strat)
-
-                snr = pe.Node(util.Function(input_names=['std_dev', 'mean_func_anat'],
-                                            output_names=['new_fname'],
-                                            function=gen_snr),
-                                name='snr_%d' % num_strat)
-
-                ###
-                snr_val = pe.Node(util.Function(input_names=['measure_file'],
-                                            output_names=['snr_storefl'],
-                                            function=cal_snr_val),
-                                name='snr_val%d' % num_strat)
-
-
-                std_dev_anat.inputs.interp_ = 'trilinear'
-
-                montage_snr = create_montage('montage_snr_%d' % num_strat,
-                                'red_to_blue', 'snr')
-
-
-                workflow.connect(preproc, out_file,
-                                    std_dev, 'func_')
-
-                workflow.connect(brain_mask, mask_file,
-                                  std_dev, 'mask_')
-
-                workflow.connect(std_dev, 'new_fname',
-                                    std_dev_anat, 'func_')
-
-                workflow.connect(func_to_anat_xfm, xfm_file,
-                                 std_dev_anat, 'xfm_')
-
-                workflow.connect(anat_ref, ref_file,
-                                 std_dev_anat, 'ref_')
-
-                workflow.connect(std_dev_anat, 'new_fname',
-                                 snr, 'std_dev')
-
-                workflow.connect(mfa, mfa_file,
-                                 snr, 'mean_func_anat')
-
-                workflow.connect(snr, 'new_fname',
-                                 hist_, 'measure_file')
-
-                workflow.connect(snr, 'new_fname',
-                                 drop_percent, 'measure_file')
-
-                workflow.connect(snr, 'new_fname',
-                                 snr_val, 'measure_file')   ###
-
-
-                workflow.connect(drop_percent, 'modified_measure_file',
-                                 montage_snr, 'inputspec.overlay')
-
-                workflow.connect(anat_ref, ref_file,
-                                 montage_snr, 'inputspec.underlay')
-
-
-                strat.update_resource_pool({'qc___snr_a': (montage_snr, 'outputspec.axial_png'),
-                                            'qc___snr_s': (montage_snr, 'outputspec.sagittal_png'),
-                                            'qc___snr_hist': (hist_, 'hist_path'),
-                                            'qc___snr_val': (snr_val, 'snr_storefl')})   ###
-                if not 3 in qc_montage_id_a:
-                    qc_montage_id_a[3] = 'snr_a'
-                    qc_montage_id_s[3] = 'snr_s'
-                    qc_hist_id[3] = 'snr_hist'
-
-            except:
-                logStandardError('QC', 'unable to get resources for SNR plot', '0051')
-                raise
-
 
             #make motion parameters plot
 
@@ -4631,9 +4527,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
             # make QC montages for CSF WM GM
-
             if 'seg_preproc' in nodes:
-
                 try:
                     anat_underlay, out_file = strat.get_node_from_resource_pool('anatomical_brain')
                     csf_overlay, out_file_csf = strat.get_node_from_resource_pool('anatomical_csf_mask')
@@ -4668,7 +4562,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
             # make QC montage for Mean Functional in T1 with T1 edge
-
             try:
                 anat, out_file = strat.get_node_from_resource_pool('anatomical_brain')
                 m_f_a, out_file_mfa = strat.get_node_from_resource_pool('mean_functional_in_anat')
@@ -4704,7 +4597,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 raise
 
             # make QC montage for Mean Functional in MNI with MNI edge
-
             try:
                 m_f_i, out_file = strat.get_node_from_resource_pool('mean_functional_in_mni')
 
@@ -4724,7 +4616,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
                 montage_mfi.inputs.inputspec.overlay = p.resource_filename('CPAC','resources/templates/MNI152_Edge_AllTissues.nii.gz')
 
-
                 strat.update_resource_pool({'qc___mean_func_with_mni_edge_a': (montage_mfi, 'outputspec.axial_png'),
                                             'qc___mean_func_with_mni_edge_s': (montage_mfi, 'outputspec.sagittal_png')})
 
@@ -4742,7 +4633,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             def QA_montages(measure, idx):
 
                 try:
-
                     histogram = hist.clone('hist_%s_%d' % (measure, num_strat))
                     histogram.inputs.measure = measure
 
