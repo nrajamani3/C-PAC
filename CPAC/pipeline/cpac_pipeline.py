@@ -285,6 +285,33 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         check_ants = False
     check_system_deps(check_ants)
 
+    # check if the user has write permissions to the directories before
+    # kicking off Nipype
+    if not os.access(c.logDirectory, os.W_OK):
+        err = "\n\n[!] You do not have write permissions to the log " \
+              "directory you specified! Double-check this and try again.\n" \
+              "Log directory: %s" % c.logDirectory
+        logger.error(err)
+        raise Exception(err)
+    if not os.access(c.workingDirectory, os.W_OK):
+        err = "\n\n[!] You do not have write permissions to the working " \
+              "directory you specified! Double-check this and try again.\n" \
+              "Working directory: %s" % c.workingDirectory
+        logger.error(err)
+        raise Exception(err)
+    if not os.access(c.outputDirectory, os.W_OK):
+        err = "\n\n[!] You do not have write permissions to the output " \
+              "directory you specified! Double-check this and try again.\n" \
+              "Output directory: %s" % c.outputDirectory
+        logger.error(err)
+        raise Exception(err)
+    if not os.access(c.crashDirectory, os.W_OK):
+        err = "\n\n[!] You do not have write permissions to the crash " \
+              "directory you specified! Double-check this and try again.\n" \
+              "Crash directory: %s" % c.crashDirectory
+        logger.error(err)
+        raise Exception(err)
+
     '''
     workflow preliminary setup
     '''
