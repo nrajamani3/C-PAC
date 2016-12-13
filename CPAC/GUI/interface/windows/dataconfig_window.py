@@ -288,14 +288,15 @@ class DataConfig(wx.Frame):
 
         # Import error if CPAC not available
         except ImportError as exc:
-            wx.MessageBox("Error importing CPAC. Unable to run extract data tool.", "Error") 
-            print "Error importing CPAC"
+            wx.MessageBox("Error importing a necessary library. Unable to run extract data tool.", "Error") 
+            print "Error importing a library"
             print exc
             return -1
         # Problem reading in data from disk
         except IOError as exc:
             print "Error loading data config file", exc
             return -1
+        
         # Catch any other exceptions
         #except Exception as exc:
         #    dlg2 = wx.MessageDialog(self, "Error Creating CPAC Subject List.\n%s"%exc,
@@ -491,7 +492,7 @@ class DataConfig(wx.Frame):
                               'file. It might be a subject list file.'
                     raise Exception(err_msg)
 
-                # Populate GUI fields
+                # Populate GUI fields               
                 for ctrl in self.page.get_ctrl_list():
                     name = ctrl.get_name()
                     value = config_map.get(name)
@@ -506,7 +507,11 @@ class DataConfig(wx.Frame):
                     else:
                         val = value
 
-                    ctrl.set_value(str(val))
+                    if (val is None) or val == "":
+                        ctrl.set_value(str(" "))
+                    else:
+                        ctrl.set_value(str(val))
+                
 
             # There was an error loading parameters, report it
             except Exception as exc:
