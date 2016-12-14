@@ -245,6 +245,35 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
     pipeline_config_map = c.return_config_elements()
 
+    # ensure only parameters related to features that are enabled in the
+    # current run are tested for filepath accuracy
+    params_to_test = []
+    if "FSL" in c.regOption:
+        params_to_test.append("configFileTwomm")
+        params_to_test.append("ref_mask")
+    if 1 in c.runSegmentationPreprocessing:
+        params_to_test.append("PRIORS_CSF")
+        params_to_test.append("PRIORS_GRAY")
+        params_to_test.append("PRIORS_WHITE")
+    if 1 in c.runBBReg:
+        params_to_test.append("boundaryBasedRegistrationSchedule")
+    if 1 in c.runRegisterFuncToMNI:
+        params_to_test.append("template_brain_only_for_func")
+        params_to_test.append("template_skull_for_func")
+        params_to_test.append("identityMatrix")
+    if 1 in c.runNuisance:
+        params_to_test.append("lateral_ventricles_mask")
+    if 1 in c.runROITimeseries:
+        params_to_test.append("tsa_roi_paths")
+    if 1 in c.runSCA:
+        params_to_test.append("sca_roi_paths")
+    if 1 in c.runVMHC:
+        params_to_test.append("template_symmetric_brain_only")
+        params_to_test.append("template_symmetric_skull")
+        params_to_test.append("dilated_symmetric_brain_mask")
+    if 1 in c.runNetworkCentrality:
+        params_to_test.append("templateSpecificationFile")
+
     wrong_filepath_list = []
 
     for config_item in pipeline_config_map:
@@ -252,14 +281,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         label = config_item[0]
         val = config_item[1]
 
-        # ensures it is only checking file paths
-        if isinstance(val, str) and '/' in val:
-            if ('.txt' in val) or ('.nii' in val) or ('.nii.gz' in val) \
-                or ('.mat' in val) or ('.cnf' in val) or ('.sch' in val):
-                    
-                if not os.path.isfile(val):
-                    wrong_filepath_list.append((label, val))
+        if label in params_to_test:
+            # ensures it is only checking file paths
+            if isinstance(val, str) and '/' in val:
+                if ('.txt' in val) or ('.nii' in val) or ('.nii.gz' in val) \
+                    or ('.mat' in val) or ('.cnf' in val) or ('.sch' in val):
+                    if not os.path.isfile(val):
+                        wrong_filepath_list.append((label, val))
 
+            # for TS extraction and SCA filepath dictionaries
+            if isinstance(val, list) and "Regressors" not in label:
+                if len(val) > 0:
+                    if isinstance(val[0], dict):
+                        for filepath in val[0].keys():
+                            if not os.path.isfile(filepath):
+                                wrong_filepath_list.append((label, val))
 
     if len(wrong_filepath_list) > 0:
 
@@ -305,10 +341,10 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
               "Output directory: %s" % c.outputDirectory
         logger.error(err)
         raise Exception(err)
-    if not os.access(c.crashDirectory, os.W_OK):
+    if not os.access(c.crashLogDirectory, os.W_OK):
         err = "\n\n[!] You do not have write permissions to the crash " \
               "directory you specified! Double-check this and try again.\n" \
-              "Crash directory: %s" % c.crashDirectory
+              "Crash directory: %s" % c.crashLogDirectory
         logger.error(err)
         raise Exception(err)
 
