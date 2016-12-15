@@ -114,7 +114,15 @@ class AnatToFuncRegistration(wx.ScrolledWindow):
                      control=control.CHOICE_BOX,
                      name='runBBReg', 
                      type=dtype.LSTR, 
-                     comment="Run Functional to Anatomical Registration with BB Register", 
+                     comment="Use Boundary-Based Registration in the " \
+                             "functional-to-anatomical registration " \
+                             "process. This uses the anatomical " \
+                             "segmentation outputs to improve the " \
+                             "co-registration of functional images to the " \
+                             "anatomical. However, this may not be the best "\
+                             "option if your anatomical images feature low " \
+                             "contrast, resulting in segmentation which may "\
+                             "not be of high quality.", 
                      values=["On","Off","On/Off"],
                      wkf_switch = True)
        
