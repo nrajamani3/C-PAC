@@ -340,7 +340,8 @@ class DataConfig(wx.Frame):
                     if value.startswith('%s'):
                         display(win, "Template cannot start with %s")
                         
-                if '/' in value and 'Template' not in name:
+                if '/' in value and 'Template' not in name and \
+                    'bidsBaseDir' not in name:
                     if not os.path.exists(value):
                         display(win,"%s field contains incorrect path. Please update the path!"%ctrl.get_name())
          
@@ -361,7 +362,8 @@ class DataConfig(wx.Frame):
                     err.Destroy()
                     return
 
-                elif not os.path.exists(config_dict["bidsBaseDir"][0]):
+                elif "s3://" not in config_dict["bidsBaseDir"][0] and \
+                    not os.path.exists(config_dict["bidsBaseDir"][0]):
                     err = wx.MessageDialog(self, "Data format is set to " \
                                                  "BIDS, but no BIDS base " \
                                                  "directory is set, or the " \
@@ -420,6 +422,7 @@ class DataConfig(wx.Frame):
             return
             
         else:
+            import CPAC
 
             dlg = wx.FileDialog(
                 self, message="Save file as ...", 
@@ -432,6 +435,11 @@ class DataConfig(wx.Frame):
                 path = dlg.GetPath()
                 dlg.Destroy()
                 f = open(path, 'w')
+
+                # print CPAC version to participant list file
+                print >>f, "# CPAC Data Configuration YAML File"
+                print >>f, "# version %s\n" % CPAC.__version__
+
                 for ctrl_name in config_dict.keys():
         
                     val = config_dict[ctrl_name][0]

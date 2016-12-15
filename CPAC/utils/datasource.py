@@ -18,11 +18,12 @@ def create_func_datasource(rest_dict, wf_name='func_datasource'):
 
     selectrest = pe.Node(util.Function(input_names=['scan', 'rest_dict'],
                                        output_names=['rest'],
-                        function=get_rest),
+                         function=get_rest),
                          name='selectrest')
     selectrest.inputs.rest_dict = rest_dict
 
-    check_s3_node = pe.Node(util.Function(input_names=['file_path', 'creds_path',
+    check_s3_node = pe.Node(util.Function(input_names=['file_path', 
+                                                       'creds_path',
                                                        'img_type'],
                                           output_names=['local_path'],
                                           function=check_for_s3),
@@ -46,7 +47,12 @@ def create_func_datasource(rest_dict, wf_name='func_datasource'):
 
 
 def get_rest(scan, rest_dict):
-    return rest_dict[scan]
+    if isinstance(rest_dict[scan], dict):
+        # in case this is from the participant list dictionary
+        return rest_dict[scan]["filepath"]
+    else:
+        # if this is being run by select_mask or select_spatial_map
+        return rest_dict[scan]
 
 
 # Check if passed in file is on S3

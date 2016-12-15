@@ -1494,10 +1494,10 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
 
     def check(val, throw_exception):
 
-        if isinstance(subject_map['scan_parameters'][val], dict):
-            ret_val = subject_map['scan_parameters'][val][scan]
+        if isinstance(subject_map["func"][scan]["scan_parameters"][val], dict):
+            ret_val = subject_map["func"][scan]["scan_parameters"][val][scan]
         else:
-            ret_val = subject_map['scan_parameters'][val]
+            ret_val = subject_map["func"][scan]['scan_parameters'][val]
 
         if ret_val == 'None':
             if throw_exception:
@@ -1520,26 +1520,17 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
     first_tr=''
     last_tr=''
 
-    if 'scan_parameters' in subject_map.keys():
-        if len(subject_map['scan_parameters']) > 0:
-            # get details from the configuration
-            TR = float(check('tr', False))
-            pattern = str(check('acquisition', False))
-            ref_slice = int(check('reference', False))
-            first_tr = check2(check('first_tr', False))
-            last_tr = check2(check('last_tr', False))
-
-    # if values are still empty, override with GUI config
-    if TR == '':
+    # provide values from GUI config
+    if TR == '' or TR == None:
         if tr:
             TR = float(tr)
         else:
             TR = None
 
-    if first_tr == '':
+    if first_tr == '' or first_tr == None:
         first_tr = start_indx
 
-    if last_tr == '':
+    if last_tr == '' or last_tr == None:
         last_tr = stop_indx
 
     unit = 's'
@@ -1549,10 +1540,20 @@ def get_scan_params(subject, scan, subject_map, start_indx, stop_indx, tr, tpatt
     if "Use NIFTI Header" in tpattern:
         pattern = ''
     else:
-    # otherwise he slice acquisition pattern in the subject file takes precedence, but if it 
-    # isn't set we use the value in the configuration file
-        if pattern == '':
+        # but if it isn't set we use the value in the configuration file
+        if pattern == '' or pattern == None:
             pattern = tpattern
+
+    # if the scan params are provided by the participant data file, then 
+    # over-ride here
+    if 'scan_parameters' in subject_map["func"][scan].keys():
+        if len(subject_map["func"][scan]['scan_parameters']) > 0:
+            # get details from the configuration
+            TR = float(check('tr', False))
+            pattern = str(check('acquisition', False))
+            ref_slice = int(check('reference', False))
+            first_tr = check2(check('first_tr', False))
+            last_tr = check2(check('last_tr', False))
 
     # pattern can be one of a few keywords, a filename, or blank which indicates that the 
     # images header information should be used

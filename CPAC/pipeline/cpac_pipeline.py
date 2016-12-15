@@ -323,30 +323,34 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
     # check if the user has write permissions to the directories before
     # kicking off Nipype
-    if not os.access(c.logDirectory, os.W_OK):
-        err = "\n\n[!] You do not have write permissions to the log " \
-              "directory you specified! Double-check this and try again.\n" \
-              "Log directory: %s" % c.logDirectory
-        logger.error(err)
-        raise Exception(err)
-    if not os.access(c.workingDirectory, os.W_OK):
-        err = "\n\n[!] You do not have write permissions to the working " \
-              "directory you specified! Double-check this and try again.\n" \
-              "Working directory: %s" % c.workingDirectory
-        logger.error(err)
-        raise Exception(err)
-    if not os.access(c.outputDirectory, os.W_OK):
-        err = "\n\n[!] You do not have write permissions to the output " \
-              "directory you specified! Double-check this and try again.\n" \
-              "Output directory: %s" % c.outputDirectory
-        logger.error(err)
-        raise Exception(err)
-    if not os.access(c.crashLogDirectory, os.W_OK):
-        err = "\n\n[!] You do not have write permissions to the crash " \
-              "directory you specified! Double-check this and try again.\n" \
-              "Crash directory: %s" % c.crashLogDirectory
-        logger.error(err)
-        raise Exception(err)
+    if os.path.exists(c.logDirectory):
+        if not os.access(c.logDirectory, os.W_OK):
+            err = "\n\n[!] You do not have write permissions to the log " \
+                  "directory you specified! Double-check this and try again" \
+                  ".\nLog directory: %s" % c.logDirectory
+            logger.error(err)
+            raise Exception(err)
+    if os.path.exists(c.workingDirectory):
+        if not os.access(c.workingDirectory, os.W_OK):
+            err = "\n\n[!] You do not have write permissions to the working "\
+                  "directory you specified! Double-check this and try again" \
+                  ".\nWorking directory: %s" % c.workingDirectory
+            logger.error(err)
+            raise Exception(err)
+    if os.path.exists(c.outputDirectory):
+        if not os.access(c.outputDirectory, os.W_OK):
+            err = "\n\n[!] You do not have write permissions to the output " \
+                  "directory you specified! Double-check this and try again."\
+                  "\nOutput directory: %s" % c.outputDirectory
+            logger.error(err)
+            raise Exception(err)
+    if os.path.exists(c.crashLogDirectory):
+        if not os.access(c.crashLogDirectory, os.W_OK):
+            err = "\n\n[!] You do not have write permissions to the crash " \
+                  "directory you specified! Double-check this and try again."\
+                  "\nCrash directory: %s" % c.crashLogDirectory
+            logger.error(err)
+            raise Exception(err)
 
     '''
     workflow preliminary setup
@@ -1153,7 +1157,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         num_strat += 1
 
 
-
     """
     Truncate scan length based on configuration information
     """
@@ -1202,11 +1205,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                     " (%s:%d)" % dbg_file_lineno() )
             raise
 
-   
-        # replace the leaf node with the output from the recently added workflow 
+           # replace the leaf node with the output from the recently added workflow 
         strat.set_leaf_properties(trunc_wf, 'outputspec.edited_func')
         num_strat = num_strat+1
-
 
 
     """
@@ -1237,7 +1238,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 logger.info( "Error  get_leaf_properties failed."+\
                         " (%s:%d)" % dbg_file_lineno() )
                 raise
-
    
             # connect the output of the leaf node as the in_file
             try:

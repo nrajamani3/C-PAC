@@ -281,7 +281,7 @@ def extract_keyword_from_path(filepath, keyword, template):
 
 
 # Extract site-based scan parameters
-def extract_scan_params(scan_params_csv):
+def extract_scan_params(scan_params_csv, delimiter=None):
     '''
     Function to extract the site-based scan parameters from a csv file
     and return a dictionary of their values
@@ -301,20 +301,45 @@ def extract_scan_params(scan_params_csv):
     # Import packages
     import csv
 
-    # Init variables
-    csv_open = open(scan_params_csv, 'r')
     site_dict = {}
 
-    # Init csv dictionary reader
-    reader = csv.DictReader(csv_open)
+    if not delimiter:
+        with open(scan_params_csv,"r") as csv_open:
+            # detect delimiter
+            dialect = csv.Sniffer().sniff(csv_open.read(1024))
+            delim = dialect.delimiter
+    else:
+        delim = delimiter
 
-    # Iterate through the csv and pull in parameters
-    for dict_row in reader:
-        site = dict_row['Site']
-        site_dict[site] = {key.lower() : val for key, val in dict_row.items()\
-                           if key != 'Site'}
-        # Assumes all other fields are formatted properly, but TR might not
-        site_dict[site]['tr'] = site_dict[site].pop('tr (seconds)')
+    with open(scan_params_csv,"r") as csv_open:
+        # Init csv dictionary reader
+        reader = csv.DictReader(csv_open, delimiter=delim)
+        # Iterate through the csv and pull in parameters
+        for dict_row in reader:
+            try:
+                site = dict_row['Site']
+            except KeyError:
+                if delimiter != None:
+                    err = "\n\n[!] The scan parameters CSV file you " \
+                          "provided does not have a recognizable delimiter " \
+                          "- double-check the CSV file format.\nCSV file: " \
+                          "%s\n\n" % scan_params_csv
+                    raise Exception(err)
+                else:
+                    # try with spaces instead
+                    site_dict = extract_scan_params(scan_params_csv, " ")
+                    break
+            site_dict[site] = {key.lower() : val for key, val in \
+                dict_row.items() if key != 'Site'}
+            # Assumes all other fields are formatted properly, except TR
+            try:
+                site_dict[site]['tr'] = site_dict[site].pop('tr (seconds)')
+            except KeyError:
+                pass
+            try:
+                site_dict[site]['tr'] = site_dict[site].pop('tr_(seconds)')
+            except KeyError:
+                pass
 
     # Return site dictionary
     return site_dict
@@ -770,6 +795,7 @@ def build_sublist(data_config_yml):
     import os
     import yaml
 
+    import CPAC
     from CPAC.utils import bids_metadata
     from CPAC.utils.utils import setup_logger
 
@@ -938,8 +964,9 @@ def build_sublist(data_config_yml):
                 continue
 
             # Set the rest dictionary with the scan
-            subj_d['func'][scan] = func
-            subj_d['func']["scan_parameters"] = scan_params
+            subj_d["func"][scan] = {}
+            subj_d['func'][scan]["filepath"] = func
+            subj_d['func'][scan]["scan_parameters"] = scan_params
             # And replace it back in the dictionary
             tmp_dict[tmp_key] = subj_d
     else:
@@ -991,8 +1018,9 @@ def build_sublist(data_config_yml):
                 scan = func_sp[-1].split('.nii')[0]
 
             # Set the rest dictionary with the scan
-            subj_d['func'][scan] = func
-            subj_d['func']["scan_parameters"] = scan_params
+            subj_d["func"][scan] = {}
+            subj_d['func'][scan]["filepath"] = func
+            subj_d['func'][scan]["scan_parameters"] = scan_params
             # And replace it back in the dictionary
             tmp_dict[tmp_key] = subj_d
 
@@ -1012,6 +1040,8 @@ def build_sublist(data_config_yml):
     sublist_out_yml = os.path.join(sublist_outdir,
                                    'CPAC_subject_list_%s.yml' % sublist_name)
     with open(sublist_out_yml, 'w') as out_sublist:
+        print >>out_sublist, "# CPAC Data/Participant List YAML File"
+        print >>out_sublist, "# version %s\n" % CPAC.__version__
         # Make sure YAML doesn't dump aliases (so it's more human read-able)
         noalias_dumper = yaml.dumper.SafeDumper
         noalias_dumper.ignore_aliases = lambda self, data: True
