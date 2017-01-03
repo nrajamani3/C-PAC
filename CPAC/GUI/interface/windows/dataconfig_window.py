@@ -113,15 +113,41 @@ class DataConfig(wx.Frame):
                  style= wx.EXPAND | wx.ALL,
                  size = (532,-1))
         
-        self.page.add(label="Scan Parameters File (Optional) ", 
-                 control=control.COMBO_BOX, 
-                 name = "scanParametersCSV", 
-                 type = dtype.COMBO, 
-                 comment = "Required for Slice Timing Correction.\n\n"
-                           "Path to a .csv file containing information about scan acquisition parameters.\n\n"
-                           "For instructions on how to create this file, see the User Guide.\n\n"
-                           "If 'None' is specified, CPAC will skip Slice Timing Correction.",
-                 values = "None")
+        self.page.add(label= "TR (seconds) ",
+                 control = control.TEXT_BOX,
+                 name = "scanTR",
+                 type = dtype.STR,
+                 comment = "Scan parameter option for TR (optional). {info}" \
+                           "\n\nIf this value is provided, it will over-" \
+                           "ride any TR information that may exist in the input data NIFTI "\
+                           "headers.",
+                 values ="",
+                 style= wx.EXPAND | wx.ALL,
+                 size = (532,-1))
+
+        self.page.add(label= "Reference ",
+                 control = control.TEXT_BOX,
+                 name = "scanReference",
+                 type = dtype.STR,
+                 comment = "Scan parameter option for Reference (optional)." \
+                           "\n\nIf this value is provided, it will over-" \
+                           "ride any Reference information that may exist in the input data NIFTI "\
+                           "headers.",
+                 values ="",
+                 style= wx.EXPAND | wx.ALL,
+                 size = (532,-1))
+
+        self.page.add(label= "Acquisition ",
+                 control = control.TEXT_BOX,
+                 name = "scanAcquisition",
+                 type = dtype.STR,
+                 comment = "Scan parameter option for Acquisition (optional)." \
+                           "\n\nIf this value is provided, it will over-" \
+                           "ride any Acquisition information that may exist in the input data NIFTI "\
+                           "headers.",
+                 values ="",
+                 style= wx.EXPAND | wx.ALL,
+                 size = (532,-1))
 
         # Add AWS credentials path
         self.page.add(label='AWS credentials file (Optional) ',

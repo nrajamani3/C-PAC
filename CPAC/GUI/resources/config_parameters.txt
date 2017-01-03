@@ -33,8 +33,6 @@ PRIORS_CSF,CSF Prior Probability Map,Tissue Segmentation
 startIdx,First Timepoint,Time Series Options
 stopIdx,Last Timepoint,Time Series Options
 slice_timing_correction,Slice Timing Correction,Time Series Options
-slice_timing_pattern,Slice Timing Correction Pattern,Time Series Options
-TR,TR,Time Series Options
 runRegisterFuncToAnat,Run Functional to Anatomical Registration,Functional to Anatomical Registration
 runBBReg,Using BB Register,Functional to Anatomical Registration
 boundaryBasedRegistrationSchedule,Boundary Based Registration Scheduler,Functional to Anatomical Registration

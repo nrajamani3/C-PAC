@@ -15,19 +15,10 @@ class FunctionalPreProcessing(wx.html.HtmlWindow):
         self.counter = counter
         
         self.LoadFile(p.resource_filename('CPAC', 'GUI/resources/html/func.html'))
-        
-#        try:
-#            code = urlopen("http://fcp-indi.github.io/docs/user/nuisance.html").code
-#            if (code / 100 < 4):
-#                self.LoadPage('http://fcp-indi.github.io/docs/user/nuisance.html')
-#            else:
-#                self.LoadFile('html/functional.html')
-#        except:
-#            self.LoadFile('html/functional.html')
-            
-            
+                  
     def get_counter(self):
         return self.counter
+
 
 class TimeSeriesOptions(wx.ScrolledWindow):
     
@@ -36,7 +27,6 @@ class TimeSeriesOptions(wx.ScrolledWindow):
         
         self.page = GenericClass(self, "Time Series Options")
         self.counter = counter 
-                
                 
         self.page.add(label= "First Timepoint ",
                  control=control.INT_CTRL, 
@@ -53,14 +43,6 @@ class TimeSeriesOptions(wx.ScrolledWindow):
                  validator = CharValidator("no-alpha"),
                  comment="Last timepoint to include in analysis.\n\nDefault is None or End (end of timeseries).")
         
-        self.page.add(label= "TR ",
-                 control=control.TEXT_BOX, 
-                 name='TR', 
-                 type=dtype.NUM, 
-                 values= "None",
-                 validator = CharValidator("no-alpha"),
-                 comment="Specify the TR at which images were acquired.\n\nDefault is None (TR information is read from image file header)")
-
         self.page.add(label="Perform Slice Time Correction:", 
                      control=control.CHOICE_BOX, 
                      name='slice_timing_correction', 
@@ -69,24 +51,11 @@ class TimeSeriesOptions(wx.ScrolledWindow):
                      values=["On","Off","On/Off"],
                      wkf_switch = True)
 
-        self.page.add(label="Slice Acquisition Pattern:", 
-                     control=control.CHOICE_BOX, 
-                     name='slice_timing_pattern', 
-                     type=dtype.LSTR, 
-                     comment="Acquisition strategy for acquiring image slices.", 
-                     values=["Use NIFTI Header","alt+z","alt+z2","alt-z","alt-z2","seq+z","seq-z"],
-                     wkf_switch = True)
-        
-        
-    
         self.page.set_sizer() 
         parent.get_page_list().append(self)
 
     def get_counter(self):
         return self.counter
-
-
-
 
     
 class AnatToFuncRegistration(wx.ScrolledWindow):
@@ -159,6 +128,7 @@ class AnatToFuncRegistration(wx.ScrolledWindow):
         
     def get_counter(self):
         return self.counter
+    
     
 class FuncToMNIRegistration(wx.ScrolledWindow):
     def __init__(self, parent, counter = 0):

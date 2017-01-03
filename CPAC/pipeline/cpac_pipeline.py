@@ -898,7 +898,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         winsorize_upper_quantile = 0.99
                     ants_reg_anat_symm_mni.inputs.inputspec. \
                         metric = ['MI','MI','CC']
-                    ants_reg_anat_symm_mni.inputs.inputspec.metric_weight = [1,1,1]
+                    ants_reg_anat_symm_mni.inputs.inputspec.metric_weight = \
+                        [1,1,1]
                     ants_reg_anat_symm_mni.inputs.inputspec. \
                         radius_or_number_of_bins = [32,32,4]
                     ants_reg_anat_symm_mni.inputs.inputspec. \
@@ -1251,7 +1252,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             logger.info("connected input to slc")
             # we might prefer to use the TR stored in the NIFTI header
             # if not, use the value in the scan_params node
-            logger.info( "TR %s" %c.TR)
             if c.TR:
                 try:
                     workflow.connect(scan_params, 'tr',

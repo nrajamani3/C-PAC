@@ -20,6 +20,55 @@ def read_subj_txtfile(filepath):
     return sub_ids
 
 
+def read_json(json_filename):
+    """Read the contents of a JSON file into a dictionary.
+
+    Parameters: ::
+      json_filename -- [string] the path to the JSON file
+
+    Returns: ::
+      json_dict -- [Python dictionary] dictionary containing the info from the
+                   JSON file
+    """
+
+    import os
+    import json
+    from qap.workflow_utils import raise_smart_exception
+
+    if not os.path.exists(json_filename):
+        err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
+              "%s\n\n" % json_filename
+        raise Exception(err)
+
+    with open(json_filename, "r") as f:
+        json_dict = json.load(f)
+
+    return json_dict
+
+
+def retrieve_S3_bucket(path_template, creds_path=None):
+
+    from indi_aws import fetch_creds
+
+    if "s3://" not in path_template:
+        err = "\n\n[!] This is not an S3 path! There is no s3:// prefix.\n\n"
+        raise Exception(err)
+
+    # Init variables
+    bucket_name = path_template.split('/')[2]
+
+    # Attempt to get bucket
+    try:
+        bucket = fetch_creds.return_bucket(creds_path, bucket_name)
+    except Exception as exc:
+        err_msg = 'There was an error in retrieving S3 bucket: %s.\nError: ' \
+                  '%s' %(bucket_name, exc)
+        logger.error(err_msg)
+        raise Exception(err_msg)
+
+    return bucket
+
+
 # Check for glob-style patterns
 def check_for_glob_patterns(delim, filepath, suffix_flag=False):
     '''
@@ -89,7 +138,7 @@ def check_for_glob_patterns(delim, filepath, suffix_flag=False):
 # Check format of filepath templates
 def check_template_format(file_template, site_kw, ppant_kw, sess_kw, ser_kw):
     '''
-    Function to validate the file templalte contains all required
+    Function to validate the file template contains all required
     keywords
 
     Parameters
@@ -482,48 +531,6 @@ def filter_sub_paths(sub_paths, include_sites, include_subs, exclude_subs,
     return keep_subj_paths
 
 
-# Get site, ppant, session-level directory indicies
-def return_dir_indices(path_template):
-    '''
-    Function to return the site, participant, and session-level
-    directory indicies based on splitting the path template by
-    directory seperation '/'
-    Parameters
-    ----------
-    path_template : string
-        filepath template in the form of:
-        's3://bucket_name/base_dir/{site}/{participant}/{session}/..
-        ../file.nii.gz'
-    Returns
-    -------
-    site_idx : integer
-        the directory level of site folders
-    ppant_idx : integer
-        the directory level of participant folders
-    sess_idx : integer
-        the directory level of the session folders
-    '''
-
-    # Get folder level indices of site and subject - anat
-    fp_split = path_template.split('/')
-    # Session level isn't required, but recommended
-    sess_idx = None
-    sess_extra = None
-    for dir_level in fp_split:
-        if "{site}" in dir_level:
-            site_idx = fp_split.index(dir_level)
-            site_extra = filter(bool,dir_level.split("{site}"))
-        if "{participant}" in dir_level:
-            ppant_idx = fp_split.index(dir_level)
-            ppant_extra = filter(bool,dir_level.split("{participant}"))
-        if "{session}" in dir_level:
-            sess_idx = fp_split.index(dir_level)
-            sess_extra = filter(bool,dir_level.split("{session}"))
-
-    # Return extra characters
-    return site_idx, ppant_idx, sess_idx, site_extra, ppant_extra, sess_extra
-
-
 # Return matching filepaths
 def return_local_filepaths(path_template, bids_flag=False):
     '''
@@ -589,8 +596,86 @@ def return_local_filepaths(path_template, bids_flag=False):
     return matched_paths
 
 
+# Get the pattern that captures scan type
+def return_bids_template(base_dir, scan_type, creds_path=None):
+    '''
+    Function that returns the path template of the desired scan type
+    from a BIDS dataset
+
+    Parameters
+    ----------
+    base_dir : string
+        base directory of the BIDS dataset
+    scan_type : string
+        type of scan; e.g. 'anat', 'func', etc.
+    creds_path : string (optional); default=None
+        filepath to a set of AWS credentials to access a BIDS dataset
+        stored on S3 that isn't public
+
+    Returns
+    -------
+    file_template : string
+        regular expression-compatible file template indicating data
+        path organization
+    '''
+
+    # Import packages
+    import os
+    from indi_aws import fetch_creds
+
+    # Init variables
+    s3_str = 's3://'
+    file_path = None
+
+    # If base directory is in S3
+    if base_dir.startswith(s3_str):
+        s3_prefix = '/'.join(base_dir.split('/')[:3])
+
+        # Extract base prefix to search through in S3
+        prefix = base_dir.split('*')[0].replace(s3_prefix, '').lstrip('/')
+        bucket = retrieve_S3_bucket(base_dir, creds_path)
+
+        # Get filepaths from S3 with prefix
+        print 'Checking files on S3 to determine BIDS data template...'
+        for s3_obj in bucket.objects.filter(Prefix=prefix):
+            file_path = s3_obj.key
+            scan_dir = file_path.split('/')[-2]
+            if file_path.endswith('.nii.gz') and scan_dir == scan_type:
+                break
+    # Else, the base directory is locally stored
+    else:
+        for root, dirs, files in os.walk(base_dir):
+            if file_path:
+                break
+            for fil in files:
+                file_path = os.path.join(root, fil)
+                scan_dir = file_path.split('/')[-2]
+                if fil.endswith('.nii.gz') and scan_dir == scan_type:
+                    break
+                else:
+                    file_path = None
+
+    # Now replace file_path intermediate dirs with *
+    if file_path:
+        rel_path = file_path.replace(prefix, '').lstrip('/')
+        interm_dirs = rel_path.split('/')[:-2]
+        for imd in interm_dirs:
+            file_path = file_path.replace(imd, '*')
+    else:
+        err_msg = 'Could not find any files in directory, check files!'
+        raise Exception(err_msg)
+
+    # Set template as any file *
+    file_template = os.path.join(s3_str, bucket.name, \
+        os.path.dirname(file_path), '*.nii.gz')
+
+    # Return file pattern template
+    return file_template
+
+
 # Return matching filepaths
-def return_s3_filepaths(path_template, creds_path=None, bids_flag=False):
+def return_s3_filepaths(path_template, scan_type, creds_path=None, 
+    bids_flag=False):
     '''
     Function to return the filepaths from an S3 bucket given a file
     pattern template and, optionally, credentials
@@ -602,6 +687,8 @@ def return_s3_filepaths(path_template, creds_path=None, bids_flag=False):
         's3://bucket_name/base_dir/{site}/{participant}/{session}/..
         ../file.nii.gz'; if bids_flag is set, path_template is just the
         base directory of the BIDS data set
+    scan_type : string
+        'anat' or 'func'
     creds_path : string (optional); default=None
         filepath to a credentials file containing the AWS credentials
         to access the S3 bucket objects
@@ -645,13 +732,7 @@ def return_s3_filepaths(path_template, creds_path=None, bids_flag=False):
         prefix = path_template.split('{site}')[0].replace(s3_prefix, '').lstrip('/')
 
     # Attempt to get bucket
-    try:
-        bucket = fetch_creds.return_bucket(creds_path, bucket_name)
-    except Exception as exc:
-        err_msg = 'There was an error in retrieving S3 bucket: %s.\nError: %s'\
-                  %(bucket_name, exc)
-        logger.error(err_msg)
-        raise Exception(err_msg)
+    bucket = retrieve_S3_bucket(path_template, creds_path)
 
     # Get filepaths from S3 with prefix
     logger.info('Gathering files from S3 to parse...')
@@ -662,20 +743,32 @@ def return_s3_filepaths(path_template, creds_path=None, bids_flag=False):
     # Prepend 's3://bucket_name/' on found paths
     s3_filepaths = [os.path.join(s3_prefix, s3_fp) for s3_fp in s3_filepaths]
 
+    if len(s3_filepaths) == 0:
+        err = "\n\n[!] No S3 filepaths were retrieved using the path " \
+              "provided.\nBucket name: %s\nPrefix: %s\n\n" \
+              % (bucket_name, s3_prefix)
+        raise Exception(err)
+
     # File pattern filter
     if bids_flag:
-        file_pattern = path_template
+        file_pattern = return_bids_template(path_template, scan_type)
+        filtered_s3_filepaths = fnmatch.filter(s3_filepaths, file_pattern)
     else:
         file_pattern = path_template.replace('{site}', '*').\
                        replace('{participant}', '*').replace('{session}', '*')
+        # Get only matching s3 paths
+        filtered_s3_filepaths = fnmatch.filter(s3_filepaths, file_pattern)
 
-    # Get only matching s3 paths
-    s3_filepaths = fnmatch.filter(s3_filepaths, file_pattern)
+    if len(filtered_s3_filepaths) == 0:
+        err = "\n\nLocals: %s\n\n[!] No filepaths were found after " \
+              "filtering the retrieved S3 filepaths with the file pattern.\n"\
+              "File pattern: %s\n\n" % (str(locals()), str(file_pattern))
+        raise Exception(err)
 
     # Restrict filepaths and pattern to be of same directory depth
     # as fnmatch will expand /*/ recursively to .../*/*/...
     matched_s3_paths = []
-    for s3fp in s3_filepaths:
+    for s3fp in filtered_s3_filepaths:
         s3_split = s3fp.split('/')
         fp_split = file_pattern.split('/')
         if len(s3_split) == len(fp_split):
@@ -683,94 +776,73 @@ def return_s3_filepaths(path_template, creds_path=None, bids_flag=False):
 
     # Print how many found
     num_s3_files = len(matched_s3_paths)
+    if num_s3_files == 0:
+        err = "\n\n[!] No filepaths were left after filtering the retrieved "\
+              "S3 filepaths with the file pattern lengths.\ns3 split: %s\n" \
+              "fp split: %s\n\n" % (str(s3_split), str(fp_split))
+        raise Exception(err)
     logger.info('Found %d files!' % num_s3_files)
 
     # Return the filepaths as a list
     return matched_s3_paths
 
 
-# Get the pattern that captures scan type
-def return_bids_template(base_dir, scan_type, creds_path=None):
-    '''
-    Function that returns the path template of the desired scan type
-    from a BIDS dataset
+def extract_BIDS_S3_scan_params(bids_base_dir, creds_path=None):
+    """Return the scan parameters from the BIDS JSONs stored on an S3 bucket.
 
-    Parameters
-    ----------
-    base_dir : string
-        base directory of the BIDS dataset
-    scan_type : string
-        type of scan; e.g. 'anat', 'func', etc.
-    creds_path : string (optional); default=None
-        filepath to a set of AWS credentials to access a BIDS dataset
-        stored on S3 that isn't public
+    Parameters: ::
+    bids_base_dir : [string]
+        the path to the BIDS base directory; should be an S3 link
+    creds_path : [string]
+        default: None. path to the AWS S3 credentials file
 
-    Returns
-    -------
-    file_template : string
-        regular expression-compatible file template indicating data
-        path organization
-    '''
+    Returns: ::
+    params_dict : [dictionary]
+        a dictionary matching the sites or scans to scan parameter information
+    """
 
-    # Import packages
     import os
-    from indi_aws import fetch_creds
+    import json
+    import logging
 
-    # Init variables
-    s3_str = 's3://'
-    file_path = None
+    # Get logger
+    logger = logging.getLogger('sublist_builder')
 
-    # If base directory is in S3
-    if base_dir.startswith(s3_str):
-        bucket_name = base_dir.split('/')[2]
-        s3_prefix = '/'.join(base_dir.split('/')[:3])
+    # Attempt to get bucket
+    bucket = retrieve_S3_bucket(bids_base_dir, creds_path)
+    data_prefix = '/'.join(bids_base_dir.split('/')[3:])
 
-        # Extract base prefix to search through in S3
-        prefix = base_dir.split('*')[0].replace(s3_prefix, '').lstrip('/')
+    params_dict = {}
 
-        # Attempt to get bucket
-        try:
-            bucket = fetch_creds.return_bucket(creds_path, bucket_name)
-        except Exception as exc:
-            err_msg = 'There was an error in retrieving S3 bucket: %s.\nError: %s'\
-                      %(bucket_name, exc)
-            raise Exception(err_msg)
+    # Get filepaths from S3 with prefix
+    #logger.info('Gathering scan param JSON files from S3 to parse...')
+    s3_filepaths = []
+    for s3_obj in bucket.objects.filter(Prefix=data_prefix):
+        filepath = str(s3_obj.key)
+        if len(filepath.split("/")) == 8 and \
+            filepath.split("/")[-2] == "func" and ".json" in filepath:
 
-        # Get filepaths from S3 with prefix
-        print 'Gathering files from S3 to parse...'
-        for s3_obj in bucket.objects.filter(Prefix=prefix):
-            file_path = s3_obj.key
-            scan_dir = file_path.split('/')[-2]
-            if scan_dir == scan_type:
-                break
-    # Else, the base directory is locally stored
-    else:
-        for root, dirs, files in os.walk(base_dir):
-            if file_path:
-                break
-            for fil in files:
-                file_path = os.path.join(root, fil)
-                scan_dir = file_path.split('/')[-2]
-                if fil.endswith('.nii.gz') and scan_dir == scan_type:
-                    break
-                else:
-                    file_path = None
+            # put the prefix back
+            s3_filepath = "/".join(["s3:/", bucket.name, filepath])
+            s3_filepaths.append(s3_filepath)
 
-    # Now replace file_path intermediate dirs with *
-    if file_path:
-        rel_path = file_path.replace(base_dir, '').lstrip('/')
-        interm_dirs = rel_path.split('/')[:-2]
-        for imd in interm_dirs:
-            file_path = file_path.replace(imd, '*')
-    else:
-        err_msg = 'Could not find any files in directory, check files!'
-        raise Exception(err_msg)
+            # parse filename, make local filepath
+            filename = filepath.split("/")[-1]
+            file_key_tuple = tuple(filename.split("_"))
+            localfile = os.path.join(os.getcwd(),filename)
 
-    # Set template as any file *
-    file_template = os.path.join(os.path.dirname(file_path), '*.nii.gz')
+            # download and read
+            bucket.download_file(Key=filepath,Filename=localfile)
+            json_dict = read_json(localfile)
+            params_dict[file_key_tuple] = json_dict
+            
+            # delete localfile
+            try:
+                os.remove(localfile)
+            except OSError:
+                pass
 
-    # Return file pattern template
-    return file_template
+    return params_dict
 
 
 # Build the C-PAC subject list
@@ -847,8 +919,8 @@ def build_sublist(data_config_yml):
     # Get dataformat if BIDS or not
     if data_format == 'BIDS':
         bids_flag = True
-        anat_template = return_bids_template(bids_base_dir, 'anat')
-        func_template = return_bids_template(bids_base_dir, 'func')
+        anat_template = bids_base_dir
+        func_template = bids_base_dir
     else:
         bids_flag = False
 
@@ -857,14 +929,23 @@ def build_sublist(data_config_yml):
        s3_str in bids_base_dir:
         # Get anatomical filepaths from s3
         print 'Fetching anatomical files...'
-        anat_paths = return_s3_filepaths(anat_template, creds_path, bids_flag)
+        anat_paths = return_s3_filepaths(anat_template, "anat", creds_path, \
+            bids_flag)
         # Get functional filepaths from s3
         print 'Fetching functional files...'
-        func_paths = return_s3_filepaths(func_template, creds_path, bids_flag)
+        func_paths = return_s3_filepaths(func_template, "func", creds_path, \
+            bids_flag)
+        # Get scan params JSONs, if they exist
+        '''json_paths = return_s3_filepaths(json_template, creds_path, bids_flag)'''
+
+        # update templates for BIDS
+        if bids_flag:
+            pass
+            
 
     # If one is in S3 and the other is not, raise error - not supported
     elif (s3_str in anat_template.lower() and s3_str not in func_template.lower()) or \
-         (s3_str not in anat_template.lower() and s3_str in func_template.lower()):
+        (s3_str not in anat_template.lower() and s3_str in func_template.lower()):
         err_msg = 'Both anatomical and functional files should either be '\
                   'on S3 or local. Separating the files is currently not '\
                   'supported.'
@@ -881,6 +962,7 @@ def build_sublist(data_config_yml):
 
     # Get directory indicies
     # If data is BIDS
+    """
     if bids_flag:
         anat_site_idx = func_site_idx = None
         anat_path_dirs = anat_template.split('/')
@@ -889,6 +971,7 @@ def build_sublist(data_config_yml):
         # If session index is ppant index, then no session dir
         if anat_ppant_idx == anat_sess_idx:
             anat_sess_idx = func_sess_idx = None
+    """
 
     # Filter out unwanted anat and func filepaths
     logger.info('Filtering anatomical files...')
@@ -904,8 +987,8 @@ def build_sublist(data_config_yml):
     # If all data is filtered out, raise exception
     if len(anat_paths) == 0 or len(func_paths) == 0:
         err_msg = 'Unable to find any files after filtering sites and '\
-                  'subjects! Check site and subject inclusion fields as well '\
-                  'as filepaths and template pattern!'
+                  'subjects! Check site and subject inclusion fields as ' \
+                  'well as filepaths and template pattern!'
         logger.error(err_msg)
         raise Exception(err_msg)
 
@@ -959,8 +1042,8 @@ def build_sublist(data_config_yml):
             try:
                 subj_d = tmp_dict[tmp_key]
             except KeyError as exc:
-                logger.info('Unable to find anatomical image for %s. Skipping...'\
-                            % tmp_key)
+                logger.info('Unable to find anatomical image for %s. ' \
+                            'Skipping...' % tmp_key)
                 continue
 
             # Set the rest dictionary with the scan

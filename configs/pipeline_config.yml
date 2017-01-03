@@ -25,25 +25,37 @@ parallelEnvironment :  cpac
 queue :  all.q
 
 
-# Number of cores (on a single machine) or slots on a node (cluster/grid) per
-# subject. Slots are cores on a cluster/grid node.
-# IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to
-# Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration
-# (ANTS only)' must not be greater than the total number of cores.
-numCoresPerSubject :  1
+# The maximum amount of memory each participant's workflow can allocate. Use 
+# this to place an upper bound of memory usage. Warning: 'Memory Per 
+# Participant' multiplied by 'Number of Participants to Run Simultaneously' 
+# must not be more than the total amount of RAM. Conversely, using too little 
+# RAM can impede the speed of a pipeline run. It is recommended that you set 
+# this to a value that when multiplied by 'Number of Participants to Run 
+# Simultaneously' is as much RAM you can safely allocate.
+maximumMemoryPerParticipant :  2
 
 
-# This number depends on computing resources.
-# IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to
-# Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration
-# (ANTS only)' must not be greater than the total number of cores.
-numSubjectsAtOnce :  1
+# The maximum amount of cores (on a single machine) or slots on a node (on a 
+# cluster/grid) to allocate per participant. Setting this above 1 will 
+# parallelize each participant's workflow where possible. If you wish to 
+# dedicate multiple cores to ANTS-based anatomical registration (below), this 
+# value must be equal or higher than the amount of cores provided to ANTS. 
+# The maximum number of cores your run can possibly employ will be this 
+# setting multiplied by the number of participants set to run in parallel 
+# (the 'Number ofParticipants to Run Simultaneously' setting).
+maxCoresPerParticipant :  1
 
 
-# This number depends on computing resources.
-# IMPORTANT: 'Number of Cores Per Subject' multiplied by 'Number of Subjects to
-# Run Simultaneously' multiplied by 'Number of Cores for Anatomical Registration
-# (ANTS only)' must not be greater than the total number of cores.
+# The number of participant workflows to run at the same time. The maximum 
+# number of cores your run can possibly employ will be this setting 
+# multiplied by the number of cores dedicated to each participant (the 
+# 'Maximum Number of Cores Per Participant' setting).
+numParticipantsAtOnce :  1
+
+
+# The number of cores to allocate to ANTS-based anatomical registration per 
+# participant. Multiple cores can greatly speed up this preprocessing step. 
+# This number cannot be greater than the number of cores per participant.
 num_ants_threads :  1
 
 
@@ -169,23 +181,6 @@ regWithSkull :  [0]
 runSegmentationPreprocessing :  [1]
 
 
-# Only voxels with a White Matter probability greater than this value will be
-# classified as White Matter. Can be a single value or a list of values
-# separated by commas.
-whiteMatterThreshold : [0.98]
-
-
-# Only voxels with a Gray Matter probability greater than this value will be
-# classified as Gray Matter. Can be a single value or a list of values separated
-# by commas.
-grayMatterThreshold : [0.7]
-
-
-# Only voxels with a CSF probability greater than this value will be classified
-# as CSF. Can be a single value or a list of values separated by commas.
-cerebralSpinalFluidThreshold : [0.98]
-
-
 # Full path to a directory containing binarized prior probability maps.
 # These maps are included as part of the 'Image Resource Files' package
 # available on the Install page of the User Guide. It is not necessary to
@@ -221,17 +216,8 @@ startIdx :  0
 stopIdx :  None
 
 
-# Specify the TR at which images were acquired.
-# Default is None (TR information is read from image file header)
-TR :  None
-
-
 # Interpolate voxel time courses so they are sampled at the same time points.
 slice_timing_correction :  [0]
-
-
-# Acquisition strategy for acquiring image slices.
-slice_timing_pattern :  ['Use NIFTI Header']
 
 
 # Run Functional to Anatomical Registration
@@ -371,152 +357,27 @@ numRemovePrecedingFrames :  1
 numRemoveSubsequentFrames :  2
 
 
-# If you wish to specify new seeds (for use in Time Series Extraction and/or
-# Seed-based Correlation Analysis), this field should contain the full path to
-# a text file containing seed definitions.
-# If you do not wish to specify new seeds, this field should be set to None.
-# Seeds are defined by providing a seed label number, x/y/z coordinates in MNI
-# space, seed radius (in mm), and resolution.
-# Example:
-# 1 -28 -40 -12 2 3mm
-# 2 -4 48 24 3 2mm
-# If multiple seeds are specified with the same resolution, they will be grouped
-# into a single file containing multiple seeds, with the values within each seed
-# ROI set to the seed label number.
-# Note that CPAC does not check for overlapping seeds. In the event that a voxel
-# is present in multiple seeds defined here, the value of that voxel will be set
-# to the sum of the two seed label numbers (effectively resulting in a new
-# seed).Users should confirm the seeds they define do not overlap before running
-# CPAC.
-seedSpecificationFile :  None
+# Enter paths to region-of-interest (ROI) NIFTI files (.nii or .nii.gz) to be used for time-series extraction, and then select which types of analyses to run.
+# Available analyses: ['Avg', 'Voxel', 'SpatialReg'].
+# Denote which analyses to run for each ROI path by listing the names above. For example, if you wish to run Avg and SpatialReg, you would enter: '/path/to/ROI.nii.gz': Avg, SpatialReg
+tsa_roi_paths:
+  - 
 
 
-# Directory where CPAC should write NIfTI files containing new seeds.
-seedOutputLocation :  /path/to/seed/output
+# By default, extracted time series are written as both a text file and a 1D file. Additional output formats are as a .csv spreadsheet or a Numpy array.
+roiTSOutputs :  [False, False]
 
 
-# It is possible to use the newly generated seeds when running a number of the
-# analyses included in CPAC. Note that these analyses will be run using all new
-# seeds. If you wish to use these new seeds to run Seed-based Correlation
-# Analysis, select ROI Average Timeseries Extraction. If you do not wish to use
-# new seeds in these analyses, select none.
-useSeedInAnalysis :  []
-
-
-# Extract the average time series of one or more ROIs/seeds. Must be enabled if
-# you wish to run Seed-based Correlation Analysis.
-runROITimeseries :  [1]
-
-
-# Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing one or
-# more ROIs. If you only wish to extract time series for newly defined spherical
-# seed ROIs, set this field to None. Note that all ROI masks values are
-# converted to integers within C-PAC.
-roiSpecificationFile :  /path/to/roi/specs
-
-
-# Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing one or
-# more ROIs. If you only wish to extract time series for newly defined spherical
-# seed ROIs, set this field to None. Note that all ROI masks values are
-# converted to integers within C-PAC.
-roiSpecificationFileForSCA :  /path/to/roi/specs
-
-
-# By default, extracted time series are written as both a text file and a 1D
-# file. Additional output formats are as a .csv spreadsheet or a Numpy array.
-roiTSOutputs :  [True, True]
-
-
-# Extract the time series of all voxels within one or more ROIs/seeds.
-runVoxelTimeseries :  [1]
-
-
-# Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing a single
-# ROI. If you only wish to extract time series for newly defined spherical seed
-# ROIs, set this field to None.
-maskSpecificationFile :  /path/to/mask/specs
-
-
-# Full path to a text file containing a list ROI files.
-# Each line in this file should be the path to a NIfTI file containing a single
-# ROI. If you only wish to extract time series for newly defined spherical seed
-# ROIs, set this field to None.
-maskSpecificationFileForSCA :  /path/to/mask/specs
-
-
-# By default, extracted time series are written as both a text file and a 1D
-# file. Additional output formats are as a .csv spreadsheet or a Numpy array.
-voxelTSOutputs :  [True, True]
-
-
-# Register timeseries data to a surface model built by FreeSurfer.
-# Required to run vertex timeseries extraction. CPAC currently doesn't
-# fully support surface extraction. Not Recommended.
-runSurfaceRegistraion :  [0]
-
-
-# Directory where FreeSurfer outputs surface data.
-# This should be the same as SUBJECTS_DIR in .bashrc
-reconSubjectsDirectory :  /path/to/SUBJECTS_DIR
-
-
-# Extract timeseries data for surface vertices.CPAC currently doesn't
-# fully support surface extraction. Not Recommended.
-runVerticesTimeSeries :  [0]
-
-
-# Export vertices timeseries data
-# First value = Output .csv
-# Second value = Output numPy array
-verticesTSOutputs :  [False, False]
-
-
-# Extract the time series from one or more existing spatial maps (such as an
-# ICA map). Required if you wish to run Dual Regression.
-runSpatialRegression :  [1]
-
-
-# Full path to a text file containing a list spatial maps.
-# Each line in this file should be the path to a 4D NIfTI file containing one
-# spatial map per volume.
-spatialPatternMaps :  /path/to/spatial/maps
-
-
-# Demean spatial maps before running spatial regression.
-spatialDemean :  True
-
-
-# For each extracted ROI Average and/or ROI Voxelwise time series, CPAC will
-# generate a whole-brain correlation map. It should be noted that for a given
-# seed/ROI, SCA maps for ROI Average and ROI Voxelwise time series will
-# be the same.
+# For each extracted ROI Average time series, CPAC will generate a whole-brain correlation map.
+# It should be noted that for a given seed/ROI, SCA maps for ROI Average time series will be the same.
 runSCA :  [1]
 
 
-# CPAC will enter all extracted time series from ROI Average TSE, ROI Voxelwise
-# TSE, and Spatial Regression into a single multiple regression model and output
-# a single correlation map.
-runMultRegSCA :  [1]
-
-
-# Demean each time series before running Multiple Regression SCA.
-mrsDemean :  True
-
-
-# Normalize each time series before running Multiple Regression SCA.
-mrsNorm :  True
-
-
-# Run Dual Regression.
-# Requires that Spatial Regression be enabled under Time Series Extraction.
-runDualReg :  [1]
-
-
-# Normalize time series before running Dual Regression.
-drNorm :  True
+# Enter paths to region-of-interest (ROI) NIFTI files (.nii or .nii.gz) to be used for time-series extraction, and then select which types of analyses to run.
+# Available analyses: ['Avg', 'DualReg', 'MultReg'].
+# Denote which analyses to run for each ROI path by listing the names above. For example, if you wish to run Avg and MultReg, you would enter: '/path/to/ROI.nii.gz': Avg, MultReg
+sca_roi_paths:
+  - 
 
 
 # Calculate Voxel-mirrored Homotopic Connectivity (VMHC) for all voxels.
