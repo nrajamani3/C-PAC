@@ -8,6 +8,62 @@ import nipype.interfaces.utility as util
 from CPAC.qc.qc import *
 from CPAC.qc.utils import *
 
+def anat_figure(overlay, underlay, fig_name):
+    import matplotlib.pyplot as plt
+    from nilearn import plotting
+    
+    slices = [x*5 for x in range(-12,12)]
+
+    #x slices
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[0], display_mode='x', cut_coords=slices[:8])
+    display.add_edges(overlay) 
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[1], display_mode='x', cut_coords=slices[8:16])
+    display.add_edges(overlay) 
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[2], display_mode='x', cut_coords=slices[16:])
+    display.add_edges(overlay)
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    #z slices
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[0], display_mode='z', cut_coords=slices[:8])
+    display.add_edges(overlay) 
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[1], display_mode='z', cut_coords=slices[8:16])
+    display.add_edges(overlay) 
+    display = plotting.plot_anat(anat_img=underlay, figure=fig, axes=ax[2], display_mode='z', cut_coords=slices[16:])
+    display.add_edges(overlay) 
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    return fig_name+'_x.png', fig_name+'_z.png'
+
+def subject_html(folder, subject, skullstripx, skullstripz):
+    import shutil
+    #copy qcpages_html to output files, rename it to subject name
+    src = os.join(folder, 'qcpages_html')
+    dst = os.join(folder, 'qc')
+    if os.path.exists(os.join(src)):
+        shutil.rmtree(os.join(src))
+    shutil.copytree('qcpages_html', src)
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.move(src, dst)
+
+    #put qc images on subject_name/assets
+    assets = os.join(dst, 'assets')
+    shutil.copy(skullstripx, assets)
+    shutil.copy(skullstripz, assets)
+
+
+    #change subject name in html
+
+    #done!
+
 
 def create_montage(wf_name, cbar_name, png_name):
 
