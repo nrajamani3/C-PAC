@@ -61,6 +61,7 @@ files_folders_wf = {
     'motion_params':'parameters',
     'power_params':'parameters',
     'scrubbed_preprocessed':'func',
+    'images':'images',
     'itk_func_anat_affine_functional_mni':'func',
     'itk_func_anat_affine_functional_brain_mask_to_standard':'func',
     'itk_func_anat_affine_functional_brain_mask_to_standard_other_resolutions':'func',

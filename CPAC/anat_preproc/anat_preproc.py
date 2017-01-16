@@ -5,7 +5,7 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.afni as afni
 import nipype.interfaces.utility as util
 
-def create_skullstrip_wf():
+def create_skullstrip_wf(qc_figures=False):
     """     
     Raw mprage file is skullstripped.
     
@@ -51,7 +51,10 @@ def create_skullstrip_wf():
     wf = pe.Workflow(name='skullstrip')
     in_node = pe.Node(util.IdentityInterface(fields=['anat']),
                         name='inputspec')
-    out_node = pe.Node(util.IdentityInterface(fields=['skullstrip']),
+    fields = ['skullstrip']
+    if qc_figures:
+        fields += ['x_fig', 'z_fig']
+    out_node = pe.Node(util.IdentityInterface(fields=fields),
                          name='outputspec')
 
     skullstrip = pe.Node(interface=preprocess.SkullStrip(),
@@ -68,10 +71,27 @@ def create_skullstrip_wf():
     wf.connect(skullstrip, 'out_file', intensity, 'in_file_b')
     wf.connect(skullstrip, 'out_file', out_node, 'skullstrip')
 
+    if qc_figures:
+        from CPAC.qc import anat_figure
+
+        fname = os.path.join(os.getcwd(), 'skullstrip')
+        qc = pe.Node(util.Function(input_names=['overlay', 'underlay', 'fig_name'],
+                                                 output_names=['x_fig', 'z_fig'],
+                                                 function=anat_figure),
+                                   name='qc_skullstrip')
+
+        qc.inputs.fig_name = fname
+        wf.connect(in_node, 'anat', qc, 'overlay')
+        wf.connect(skullstrip, 'out_file', qc, 'underlay')
+
+        wf.connect(qc, 'x_fig', out_node, 'x_fig')
+        wf.connect(qc, 'z_fig', out_node, 'z_fig')
+
+
     return wf
 
 
-def create_anat_preprocessing_wf(qc_figures=False):
+def create_anat_preprocessing_wf():
     """     
     Process T1 scans already skullstripped. 
     Raw mprage file is deobliqued and reoriented into RPI.
@@ -114,10 +134,7 @@ def create_anat_preprocessing_wf(qc_figures=False):
     in_node = pe.Node(util.IdentityInterface(fields=['anat']),
                         name='inputspec')
 
-    fields = ['brain']
-    if qc_figures:
-        fields += ['x_fig', 'z_fig']
-    out_node = pe.Node(util.IdentityInterface(fields=fields),
+    out_node = pe.Node(util.IdentityInterface(fields=['brain']),
                          name='outputspec')
 
     deoblique = pe.Node(interface=preprocess.Refit(),
@@ -131,21 +148,5 @@ def create_anat_preprocessing_wf(qc_figures=False):
     reorient.inputs.outputtype = 'NIFTI_GZ'
     wf.connect(deoblique, 'out_file', reorient, 'in_file')
     wf.connect(reorient, 'out_file', out_node, 'brain')
-
-    if qc_figures:
-        from CPAC.qc import anat_figure
-
-        fname = os.path.join(os.getcwd(), 'skullstrip')
-        qc = pe.Node(util.Function(input_names=['overlay', 'underlay', 'fig_name'],
-                                                 output_names=['x_fig', 'z_fig'],
-                                                 function=anat_figure),
-                                   name='qc_skullstrip')
-
-        qc.inputs.fig_name = fname
-        wf.connect(reorient, 'out_file', qc, 'overlay')
-        wf.connect(reorient, 'out_file', qc, 'underlay')
-
-        wf.connect(qc, 'x_fig', out_node, 'x_fig')
-        wf.connect(qc, 'z_fig', out_node, 'z_fig')
 
     return wf    

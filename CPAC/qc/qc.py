@@ -42,23 +42,25 @@ def anat_figure(overlay, underlay, fig_name):
 
     return fig_name+'_x.png', fig_name+'_z.png'
 
-def subject_html(folder, subject, skullstripx, skullstripz):
+def create_subject_html(path, images):
     import shutil
-    #copy qcpages_html to output files, rename it to subject name
-    src = os.join(folder, 'qcpages_html')
-    dst = os.join(folder, 'qc')
-    if os.path.exists(os.join(src)):
-        shutil.rmtree(os.join(src))
-    shutil.copytree('qcpages_html', src)
+    import CPAC
+    #copy qcpages_html to log files
+    src = os.path.join(path, 'qcpages_template')
+    dst = os.path.join(path, 'qc')
+    if os.path.exists(os.path.join(src)):
+        shutil.rmtree(os.path.join(src))
+    r = os.path.realpath(os.path.join(CPAC.__path__[0], 'resources', 'qcpages_template'))
+    shutil.copytree(r, src)
     if os.path.exists(dst):
         shutil.rmtree(dst)
     shutil.move(src, dst)
 
-    #put qc images on subject_name/assets
-    assets = os.join(dst, 'assets')
-    shutil.copy(skullstripx, assets)
-    shutil.copy(skullstripz, assets)
-
+    #put qc images on qc/images
+    images_dst = os.path.join(dst, 'images')
+    print '########################'
+    print images, images_dst
+    shutil.move(images, images_dst)
 
     #change subject name in html
 
