@@ -42,6 +42,46 @@ def anat_figure(overlay, underlay, fig_name):
 
     return fig_name+'_x.png', fig_name+'_z.png'
 
+def segmentation_figure(csf, wm, gm, underlay, fig_name):
+    import matplotlib.pyplot as plt
+    from nilearn import plotting
+
+    csf = nb.load(csf_file).get_data()
+    wm = nb.load(gm_file).get_data()
+    gm = nb.load(wm_file).get_data()
+    affine = nb.load(csf_file).get_affine()
+
+    #change masks values to draw different color for each one
+    gm[gm == 1] = 1
+    wm[wm == 1] = 2
+    csf[csf == 1] = 3
+    segment = nb.Nifti1Image(csf + gm + wm, affine)
+
+    
+    slices = [x*5 for x in range(-12,12)]
+
+    #x slices
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x', cut_coords=slices[:8]) 
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x', cut_coords=slices[8:16])
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x', cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    #z slices
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z', cut_coords=slices[:8])
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z', cut_coords=slices[8:16])
+    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z', cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
+    display.close()
+
+
+
 def create_subject_html(path, images):
     import shutil
     import CPAC

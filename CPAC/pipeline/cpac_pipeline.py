@@ -12,7 +12,7 @@ import zlib
 import linecache
 import csv
 import pickle
-import pkg_resources as p
+import pkg_resources as p 
 
 # Nipype packages
 import nipype.pipeline.engine as pe
@@ -36,7 +36,7 @@ from CPAC.anat_preproc.anat_preproc import create_anat_preprocessing_wf, \
                                         create_skullstrip_wf
 from CPAC.func_preproc.func_preproc import create_func_preproc, \
                                            create_wf_edit_func
-from CPAC.seg_preproc.seg_preproc import create_seg_preproc
+from CPAC.seg_preproc.seg_preproc import wire_segmentation_wf
 
 from CPAC.registration import create_nonlinear_register, \
                               create_register_func_to_anat, \
@@ -912,42 +912,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         for strat in strat_list:
             
             nodes = getNodeList(strat)
-            
-            if 'anat_mni_fnirt_register' in nodes:
-                seg_preproc = create_seg_preproc(False, 'seg_preproc_%d' % num_strat)
-            elif 'anat_mni_ants_register' in nodes:
-                seg_preproc = create_seg_preproc(True, 'seg_preproc_%d' % num_strat)
-
-            try:
-                node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
-                workflow.connect(node, out_file,
-                                 seg_preproc, 'inputspec.brain')
-
-                if 'anat_mni_fnirt_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_mat')
-                elif 'anat_mni_ants_register' in nodes:
-                    node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_init')
-                    node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_rig')
-
-                    node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
-                    workflow.connect(node, out_file,
-                                     seg_preproc, 'inputspec.standard2highres_mat')
-
-
-                seg_preproc.inputs.inputspec.PRIOR_CSF = c.PRIORS_CSF
-                seg_preproc.inputs.inputspec.PRIOR_GRAY = c.PRIORS_GRAY
-                seg_preproc.inputs.inputspec.PRIOR_WHITE = c.PRIORS_WHITE
-
-
-            except:
-                logConnectionError('Segmentation Preprocessing', num_strat, strat.get_resource_pool(), '0004')
-                raise
+            use_ants = 'anat_mni_ants_register' in nodes
+            wire_segmentation_wf(workflow, strat, num_strat, c.PRIORS_CSF, c.PRIORS_GRAY, c.PRIORS_WHITE, use_ants)
 
             if 0 in c.runSegmentationPreprocessing:
                 tmp = strategy()
@@ -958,16 +924,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 strat = tmp
                 new_strat_list.append(strat)
 
-            strat.append_name(seg_preproc.name)
-            strat.update_resource_pool({'anatomical_gm_mask' : (seg_preproc, 'outputspec.gm_mask'),
-                                        'anatomical_csf_mask': (seg_preproc, 'outputspec.csf_mask'),
-                                        'anatomical_wm_mask' : (seg_preproc, 'outputspec.wm_mask'),
-                                        'seg_probability_maps': (seg_preproc, 'outputspec.probability_maps'),
-                                        'seg_mixeltype': (seg_preproc, 'outputspec.mixeltype'),
-                                        'seg_partial_volume_map': (seg_preproc, 'outputspec.partial_volume_map'),
-                                        'seg_partial_volume_files': (seg_preproc, 'outputspec.partial_volume_files')})
 
-            create_log_node(seg_preproc, 'outputspec.partial_volume_map', num_strat)
+            #create_log_node(seg_preproc, 'outputspec.partial_volume_map', num_strat)
             num_strat += 1
 
     strat_list += new_strat_list

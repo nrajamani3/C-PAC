@@ -13,360 +13,114 @@ import nipype.interfaces.ants as ants
 from nipype.interfaces.ants import WarpImageMultiTransform
 from CPAC.seg_preproc.utils import * 
 
+def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHITE, use_ants, qc_figures=False):
+    gm = create_segmentation_wf('seg_preproc_gm_%d' % num_strat, 'gm', use_ants)
+    wm = create_segmentation_wf('seg_preproc_wm_%d' % num_strat, 'wm', use_ants)
+    csf = create_segmentation_wf('seg_preproc_csf_%d'% num_strat, 'csf',use_ants)
+    seg_preprocs = [gm, wm, csf]
 
-def create_gray_matter_seg_wf(use_ants, wf_name ='seg_gm'):
-    wf = pe.Workflow(name = wf_name)
+    #try:
+    node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
+    for seg in seg_preprocs:
+
+        wf.connect(node, out_file, seg, 'inputspec.brain')
+
+        if use_ants:
+            node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm')
+            wf.connect(node, out_file, seg, 'inputspec.standard2highres_init')
+            node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
+            wf.connect(node, out_file, seg, 'inputspec.standard2highres_rig')
+            node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
+            wf.connect(node, out_file, seg, 'inputspec.standard2highres_mat')
+        else:
+            node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm0')
+            wf.connect(node, out_file, seg, 'inputspec.standard2highres_mat')
+
+    csf.inputs.inputspec.PRIOR = PRIORS_CSF
+    gm.inputs.inputspec.PRIOR = PRIORS_GRAY
+    wm.inputs.inputspec.PRIOR = PRIORS_WHITE
+
+    strat.append_name(gm.name)
+    strat.append_name(wm.name)
+    strat.append_name(csf.name)
+    strat.update_resource_pool({'anatomical_gm_mask' : (gm, 'outputspec.gm_mask'),
+                                'anatomical_csf_mask': (csf, 'outputspec.csf_mask'),
+                                'anatomical_wm_mask' : (wm, 'outputspec.wm_mask'),
+                                'seg_probability_maps': (gm, 'outputspec.probability_maps'),
+                                })
+
+    if qc_figures:
+        
+        from CPAC.qc import segmentation_figure
+
+        fname = os.path.join(os.getcwd(), 'segmentation')
+        qc = pe.Node(util.Function(input_names=['csf', 'wm', 'gm', 'underlay', 'fig_name'],
+                                                 output_names=['x_fig', 'z_fig'],
+                                                 function=segmentation_figure),
+                                   name='qc_segmentation')
+
+        qc.inputs.fig_name = fname
+        wf.connect(in_node, 'anat', qc, 'overlay')
+        wf.connect(gm, 'inputspec.brain', qc, 'underlay')
+
+        wf.connect(qc, 'x_fig', out_node, 'x_fig')
+        wf.connect(qc, 'z_fig', out_node, 'z_fig')
+
+    return wf, strat
+
+
+def create_segmentation_wf(name, segmentation_type, use_ants):
+    if segmentation_type not in ('wm', 'gm', 'csf'):
+        raise ValueError('Segmentation type must be wm, gm or csf')
+
+    seg_vals = {'wm': pick_wm_2,
+                'gm': pick_wm_1,
+                'csf': pick_wm_0 }
+
+    wf = pe.Workflow(name=name)
     in_node = pe.Node(util.IdentityInterface(fields=['brain',
                                                        'standard2highres_init',
                                                        'standard2highres_mat',
                                                        'standard2highres_rig',
-                                                       'PRIOR_GRAY']),
+                                                       'PRIOR']),
                         name='inputspec')
 
-    out_node = pe.Node(util.IdentityInterface(fields=['gm_mask',
+    out_node = pe.Node(util.IdentityInterface(fields=[ segmentation_type + '_mask',
                                                         'probability_maps']),
                         name='outputspec')
 
-    segment = pe.Node(interface=fsl.FAST(),
-                          name='segment')
+    segment = pe.Node(interface=fsl.FAST(), name='segment')
     segment.inputs.img_type = 1
     segment.inputs.segments = True
     segment.inputs.probability_maps = True
     segment.inputs.out_basename = 'segment'
     segment.interface.estimated_memory_gb = 1.5
 
-    check_gm = pe.Node(name='check_gm', interface=Function(function=check_if_file_is_empty,
+    check = pe.Node(name='check_'+ segmentation_type, interface=Function(function=check_if_file_is_empty,
      input_names=['in_file'], output_names=['out_file']))
 
     #connections
-    wf.connect(in_node, 'brain',
-                    segment, 'in_files')
-
-    wf.connect(segment, 'probability_maps',
-                    out_node, 'probability_maps')
+    wf.connect(in_node, 'brain', segment, 'in_files')
+    wf.connect(segment, 'probability_maps', out_node, 'probability_maps')
 
     # get binarize thresholded gm mask
-    process_gm = process_segment_map('GM', use_ants)
+    process = process_segment_map(segmentation_type, use_ants)
 
-    if use_ants == True:
+    if use_ants:
         wf.connect(in_node, 'standard2highres_init',
-                        process_gm, 'inputspec.standard2highres_init')
+                        process, 'inputspec.standard2highres_init')
         wf.connect(in_node, 'standard2highres_rig',
-                        process_gm, 'inputspec.standard2highres_rig')
+                        process, 'inputspec.standard2highres_rig')
 
-    wf.connect(in_node, 'brain',
-                    process_gm, 'inputspec.brain',)
-    wf.connect(in_node, 'PRIOR_GRAY', 
-                    process_gm, 'inputspec.tissue_prior')
-    wf.connect(segment, ('tissue_class_files', pick_wm_1),
-                    process_gm, 'inputspec.probability_map')
-    wf.connect(in_node, 'standard2highres_mat',
-                    process_gm, 'inputspec.standard2highres_mat')
-    wf.connect(process_gm, 'outputspec.segment_mask',
-                    out_node, 'gm_mask')
+    wf.connect(in_node, 'brain', process, 'inputspec.brain',)
+    wf.connect(in_node, 'PRIOR', process, 'inputspec.tissue_prior')
+    wf.connect(segment, ('tissue_class_files', seg_vals[segmentation_type]),
+                    process, 'inputspec.probability_map')
+    wf.connect(in_node, 'standard2highres_mat', process, 'inputspec.standard2highres_mat')
+    wf.connect(process, 'outputspec.segment_mask', out_node, segmentation_type+'_mask')
 
     return wf
 
-def create_seg_preproc(use_ants, wf_name ='seg_preproc'):
-
-
-    """
-    Segment the subject's anatomical brain into cerebral spinal fluids, white matter and gray matter
-    and binarize them.
-
-    Parameters
-    ----------
-
-    wf_name : string
-        name of the workflow
-
-    Returns
-    -------
-
-    seg_preproc : workflow
-
-        Workflow Object for Segmentation Workflow
-    
-
-    Notes
-    -----
-
-    `Source <https://github.com/FCP-INDI/C-PAC/blob/master/CPAC/seg_preproc/seg_preproc.py>`_ 
-
-    Workflow Inputs: ::
-        inputspec.brain : string (existing nifti file)
-            Anatomical image(without skull)
-    
-        inputspec.standard2highres_mat : string (existing affine transformation .mat file)
-            File for transformation from mni space to anatomical space
-    
-        inputspec.PRIOR_CSF : string (existing nifti file)
-            FSL Standard CSF Tissue prior image , binarized with threshold of 0.4 
-    
-        inputspec.PRIOR_GRAY : string (existing nifti file)
-            FSL Standard GRAY Matter Tissue prior image , binarized with threshold of 0.66
-    
-        inputspec.PRIOR_WHITE : string (existing nifti file)
-            FSL Standard White Matter Tissue prior image , binarized with threshold of 0.2
-        
-    Workflow Outputs: ::
-
-        outputspec.csf_mni2t1 : string (nifti file)
-            outputs CSF prior template(in MNI space) registered to anatomical space
-        
-        outputspec.gm_mni2t1 : string (nifti file)
-            outputs gray matter prior template registered to anatomical space
-    
-        outputspec.gm_mask : string (nifti file)
-            outputs image after masking gm_combo with gm prior in t1 space
-    
-        outputspec.wm_mni2t1 : string (nifti file)
-            outputs White Matter prior template(in MNI space) registered to anatomical space
-    
-        outputspec.wm_mask : string (nifti file)
-            outputs image after masking wm_combo with white matter(wm) prior in t1 space
-    
-        outputspec.probability_maps : string (nifti file)
-            outputs individual probability maps (output from brain segmentation using FAST)
-    
-        outputspec.mixeltype : string (nifti file)
-            outputs mixeltype volume file _mixeltype (output from brain segmentation using FAST)
-    
-        outputspec.partial_volume_map : string (nifti file)
-            outputs partial volume file _pveseg (output from brain segmentation using FAST)
-    
-        outputspec.partial_volume_files : string (nifti file)
-            outputs partial volume estimate files _pve_ (output from brain segmentation using FAST)
-
-
-    Order of commands:
-
-    - Segment the Anatomical brain. For details see `fast <http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FAST>`_::
-
-        fast
-        -t 1
-        -g
-        -p
-        -o segment
-        mprage_brain.nii.gz
-    
-    - Register CSF template in MNI space to t1 space. For details see `flirt <http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT>`_::
-    
-        flirt
-        -in PRIOR_CSF
-        -ref mprage_brain.nii.gz
-        -applyxfm
-        -init standard2highres_inv.mat
-        -out csf_mni2t1
-
-    - Threshold and binarize CSF probability map ::
-
-        fslmaths
-        csf_combo.nii.gz
-        -thr 0.4
-        -bin csf_bin.nii.gz
-
-    - Generate CSF csf_mask, by applying csf prior in t1 space to thresholded binarized csf probability map ::
-
-        fslmaths
-        csf_bin.nii.gz
-        -mas csf_mni2t1
-        csf_mask
-
-
-    - Register WM template in MNI space to t1 space ::
-        
-        flirt
-        -in PRIOR_WM
-        -ref mprage_brain.nii.gz
-        -applyxfm
-        -init standard2highres.mat
-        -out wm_mni2t1
-
-    - Threshold and binarize WM probability map ::
-
-        fslmaths
-        wm_combo.nii.gz
-        -thr 0.4
-        -bin wm_bin.nii.gz
-
-    - Generate WM csf_mask, by applying wm_prior in t1 space to thresholded binarized wm probability map ::
-
-        fslmaths
-        wm_bin.nii.gz
-        -mas wm_mni2t1
-        wm_mask
- 
-    - Register GM template in MNI space to t1 space ::
-    
-        flirt
-        -in PRIOR_GM
-        -ref mprage_brain.nii.gz
-        -applyxfm
-        -init standard2highres.mat
-        -out gm_mni2t1
-
-    - Threshold and binarize GM probability map ::
-
-        fslmaths
-        gm_combo.nii.gz
-        -thr 0.4
-        -bin gm_bin.nii.gz
-
-    - Generate GM csf_mask, by applying gm prior in t1 space to thresholded binarized gm probability map ::
-
-        fslmaths
-        gm_bin.nii.gz
-        -mas gm_mni2t1
-        gm_mask
-    
-    
-    Examples
-    --------
-    >>> import CPAC.seg_preproc as seg_wflow
-    >>> seg = seg_wflow.create_seg_preproc()
-    >>> seg.inputs.inputspec.standard2highres_mat = '/home/data/Projects/C-PAC/working_directory/s1001/reg_preproc/standard2highres.mat'
-    >>> seg.inputs.inputspec.PRIOR_CSF = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_csf_bin.nii.gz'
-    >>> seg.inputs.inputspec.PRIOR_WHITE = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_white_bin.nii.gz'
-    >>> seg.inputs.inputspec.PRIOR_GRAY = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_gray_bin.nii.gz'
-    >>> seg.inputs.inputspec.brain = '/home/data/Projects/C-PAC/working_directory/s1001/anat_preproc/mprage_brain.nii.gz'
-    >>> seg_preproc.run() # doctest: +SKIP
-    
-    
-    High Level Graph:
-    
-    .. image:: ../images/seg_preproc.dot.png
-        :width: 1100
-        :height: 480
-        
-    Detailed Graph:
-    
-    .. image:: ../images/seg_preproc_detailed.dot.png
-        :width: 1100
-        :height: 480
-    """
-
-    preproc = pe.Workflow(name = wf_name)
-    inputNode = pe.Node(util.IdentityInterface(fields=['brain',
-                                                       'standard2highres_init',
-                                                       'standard2highres_mat',
-                                                       'standard2highres_rig',
-                                                       'PRIOR_CSF',
-                                                       'PRIOR_GRAY',
-                                                       'PRIOR_WHITE']),
-                        name='inputspec')
-
-    outputNode = pe.Node(util.IdentityInterface(fields=['csf_mni2t1',
-                                                        'csf_mask',
-                                                        'gm_mni2t1',
-                                                        'gm_mask',
-                                                        'wm_mni2t1',
-                                                        'probability_maps',
-                                                        'mixeltype',
-                                                        'partial_volume_map',
-                                                        'partial_volume_files',
-                                                        'wm_mask']),
-                        name='outputspec')
-
-    segment = pe.Node(interface=fsl.FAST(),
-                          name='segment')
-    segment.inputs.img_type = 1
-    segment.inputs.segments = True
-    segment.inputs.probability_maps = True
-    segment.inputs.out_basename = 'segment'
-    segment.interface.estimated_memory_gb = 1.5
-
-    check_wm = pe.Node(name='check_wm', interface=Function(function=check_if_file_is_empty, input_names=['in_file'], output_names=['out_file']))
-    check_gm = pe.Node(name='check_gm', interface=Function(function=check_if_file_is_empty, input_names=['in_file'], output_names=['out_file']))
-    check_csf = pe.Node(name='check_csf', interface=Function(function=check_if_file_is_empty, input_names=['in_file'], output_names=['out_file']))
-
-    #connections
-    preproc.connect(inputNode, 'brain',
-                    segment, 'in_files')
-
-    preproc.connect(segment, 'probability_maps',
-                    outputNode, 'probability_maps')
-    preproc.connect(segment, 'mixeltype',
-                    outputNode, 'mixeltype')
-    preproc.connect(segment, 'partial_volume_files',
-                    outputNode, 'partial_volume_files')
-    preproc.connect(segment, 'partial_volume_map',
-                    outputNode, 'partial_volume_map')
-
-    ##get binarize thresholded csf mask
-    process_csf = process_segment_map('CSF', use_ants)
-
-    if use_ants == True:
-        preproc.connect(inputNode, 'standard2highres_init',
-                        process_csf, 'inputspec.standard2highres_init')
-        preproc.connect(inputNode, 'standard2highres_rig',
-                        process_csf, 'inputspec.standard2highres_rig')
-
-    preproc.connect(inputNode, 'brain',
-                    process_csf, 'inputspec.brain',)
-    preproc.connect(inputNode, 'PRIOR_CSF',
-                    process_csf, 'inputspec.tissue_prior')
-
-    #tissue_class_files = binary segmented volume file one val for each class
-    preproc.connect(segment, ('tissue_class_files', pick_wm_0),
-                    process_csf, 'inputspec.probability_map')
-    
-
-    preproc.connect(inputNode, 'standard2highres_mat',
-                    process_csf, 'inputspec.standard2highres_mat')
-
-
-    preproc.connect(process_csf, 'outputspec.segment_mask',
-                    outputNode, 'csf_mask')
-
-    #get binarize thresholded wm mask
-    process_wm = process_segment_map('WM', use_ants)
-
-    if use_ants == True:
-        preproc.connect(inputNode, 'standard2highres_init',
-                        process_wm, 'inputspec.standard2highres_init')
-        preproc.connect(inputNode, 'standard2highres_rig',
-                        process_wm, 'inputspec.standard2highres_rig')
-
-    preproc.connect(inputNode, 'brain',
-                    process_wm, 'inputspec.brain',)
-    preproc.connect(inputNode, 'PRIOR_WHITE',
-                    process_wm, 'inputspec.tissue_prior')
-    preproc.connect(segment, ('tissue_class_files', pick_wm_2),
-                    process_wm, 'inputspec.probability_map')
-
-    preproc.connect(inputNode, 'standard2highres_mat',
-                    process_wm, 'inputspec.standard2highres_mat')
-
-    preproc.connect(process_wm, 'outputspec.tissueprior_mni2t1',
-                    outputNode, 'wm_mni2t1')
-    preproc.connect(process_wm, 'outputspec.segment_mask',
-                    outputNode, 'wm_mask')
-
-    # get binarize thresholded gm mask
-    process_gm = process_segment_map('GM', use_ants)
-
-    if use_ants == True:
-        preproc.connect(inputNode, 'standard2highres_init',
-                        process_gm, 'inputspec.standard2highres_init')
-        preproc.connect(inputNode, 'standard2highres_rig',
-                        process_gm, 'inputspec.standard2highres_rig')
-
-    preproc.connect(inputNode, 'brain',
-                    process_gm, 'inputspec.brain',)
-    preproc.connect(inputNode, 'PRIOR_GRAY', 
-                    process_gm, 'inputspec.tissue_prior')
-    preproc.connect(segment, ('tissue_class_files', pick_wm_1),
-                    process_gm, 'inputspec.probability_map')
-    preproc.connect(inputNode, 'standard2highres_mat',
-                    process_gm, 'inputspec.standard2highres_mat')
-    
-    preproc.connect(process_gm, 'outputspec.tissueprior_mni2t1',
-                    outputNode, 'gm_mni2t1')
-    preproc.connect(process_gm, 'outputspec.segment_mask',
-                    outputNode, 'gm_mask')
-
-    return preproc
 
 
 def process_segment_map(wf_name, use_ants):
@@ -520,4 +274,4 @@ def process_segment_map(wf_name, use_ants):
         wf.connect(segment_mask, 'out_file',
                         out_node, 'segment_mask')
 
-    return preproc
+    return wf
