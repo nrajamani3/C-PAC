@@ -7,8 +7,8 @@ import nipype.interfaces.io as nio
 import nipype.interfaces.utility as util
 from CPAC.qc.qc import *
 from CPAC.qc.utils import *
-
-def anat_figure(overlay, underlay, fig_name):
+ 
+def edge_figure(overlay, underlay, fig_name):
     import matplotlib.pyplot as plt
     from nilearn import plotting
     
@@ -42,29 +42,34 @@ def anat_figure(overlay, underlay, fig_name):
 
     return fig_name+'_x.png', fig_name+'_z.png'
 
-def segmentation_figure(csf, wm, gm, underlay, fig_name):
+def overlay_figure(overlays, underlay, fig_name):
     import matplotlib.pyplot as plt
     from nilearn import plotting
 
-    csf = nb.load(csf_file).get_data()
-    wm = nb.load(gm_file).get_data()
-    gm = nb.load(wm_file).get_data()
-    affine = nb.load(csf_file).get_affine()
+    affine = nb.load(overlays[0]).get_affine()
+    result = None
+    for i, overlay in overlays:
+        #load data
+        overlay = nb.load(overlay).get_data()
+        #change masks values to draw different color for each one
+        overlay[overlay == 1] = i
 
-    #change masks values to draw different color for each one
-    gm[gm == 1] = 1
-    wm[wm == 1] = 2
-    csf[csf == 1] = 3
-    segment = nb.Nifti1Image(csf + gm + wm, affine)
+        #add overlays together
+        if result is None:
+            result = overlay
+        else:
+            result += overlay
 
+    #create new img
+    result = nb.Nifti1Image(result, affine)
     
     slices = [x*5 for x in range(-12,12)]
 
     #x slices
     fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x', cut_coords=slices[:8]) 
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x', cut_coords=slices[8:16])
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x', cut_coords=slices[16:])
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[:8]) 
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[16:])
 
     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
     fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
@@ -72,14 +77,13 @@ def segmentation_figure(csf, wm, gm, underlay, fig_name):
 
     #z slices
     fig, ax = plt.subplots(nrows=3, ncols=1)
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z', cut_coords=slices[:8])
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z', cut_coords=slices[8:16])
-    display = plotting.plot_roi(overlay, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z', cut_coords=slices[16:])
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[:8])
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=segment, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[16:])
 
     plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
     fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
     display.close()
-
 
 
 def create_subject_html(path, images):
@@ -98,11 +102,18 @@ def create_subject_html(path, images):
 
     #put qc images on qc/images
     images_dst = os.path.join(dst, 'images')
-    print '########################'
-    print images, images_dst
     shutil.move(images, images_dst)
 
-    #change subject name in html
+    #substitute dummy data for real data
+    subhtml = os.path.join(dst, 'index.html')
+    with open(subhtml, 'w')as html_file:
+        html = html_file.read()
+        #change subject name in html
+        sub_name = path.split('/')[-1]
+        html.replace('subjectname', sub_name, 1)
+
+        html_file.write(html)
+
 
     #done!
 

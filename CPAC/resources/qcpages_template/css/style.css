@@ -1,3 +1,5 @@
+.left .carousel-control{top: 50%;}
+
 #myCarousel h3{
 	color: #fff;
 	margin-left: 15px;
@@ -10,3 +12,4 @@
 .nav h5{
 	color: #fff;
 }
+

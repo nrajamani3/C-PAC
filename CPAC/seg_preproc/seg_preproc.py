@@ -1,81 +1,61 @@
-# Import packages
 import os
-import sys
-import commands
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import Function
-import nipype.algorithms.rapidart as ra
-import nipype.interfaces.afni as afni
 import nipype.interfaces.fsl as fsl
-import nipype.interfaces.io as nio
 import nipype.interfaces.utility as util
 import nipype.interfaces.ants as ants
-from nipype.interfaces.ants import WarpImageMultiTransform
 from CPAC.seg_preproc.utils import * 
 
 def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHITE, use_ants, qc_figures=False):
-    gm = create_segmentation_wf('seg_preproc_gm_%d' % num_strat, 'gm', use_ants)
-    wm = create_segmentation_wf('seg_preproc_wm_%d' % num_strat, 'wm', use_ants)
-    csf = create_segmentation_wf('seg_preproc_csf_%d'% num_strat, 'csf',use_ants)
-    seg_preprocs = [gm, wm, csf]
-
-    #try:
+    seg_dict = {'csf':PRIORS_CSF, 'gm':PRIORS_GRAY, 'wm':PRIORS_WHITE}
     node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
-    for seg in seg_preprocs:
 
+    if qc_figures:
+        from CPAC.qc import overlay_figure
+        fname = os.path.join(os.getcwd(), 'segmentation')
+        qc = pe.MapNode(iterfield=['overlays'],interface=util.Function(input_names=['underlay', 'fig_name'],
+                                                 output_names=['x_fig', 'z_fig'], function=overlay_figure),
+                                   name='qc_segmentation')
+        qc.inputs.fig_name = fname
+        wf.connect(node, out_file, qc, 'underlay')
+    
+    for key in seg_dict:
+        seg = create_segmentation_wf('seg_preproc_{seg}_{num}'.format(seg=key,num=num_strat), key,use_ants)
         wf.connect(node, out_file, seg, 'inputspec.brain')
 
         if use_ants:
-            node, out_file = strat.get_node_from_resource_pool('ants_initial_xfm')
-            wf.connect(node, out_file, seg, 'inputspec.standard2highres_init')
-            node, out_file = strat.get_node_from_resource_pool('ants_rigid_xfm')
-            wf.connect(node, out_file, seg, 'inputspec.standard2highres_rig')
-            node, out_file = strat.get_node_from_resource_pool('ants_affine_xfm')
-            wf.connect(node, out_file, seg, 'inputspec.standard2highres_mat')
+            node1, out_file1 = strat.get_node_from_resource_pool('ants_initial_xfm')
+            wf.connect(node1, out_file1, seg, 'inputspec.standard2highres_init')
+            node2, out_file2 = strat.get_node_from_resource_pool('ants_rigid_xfm')
+            wf.connect(node2, out_file2, seg, 'inputspec.standard2highres_rig')
+            node3, out_file3 = strat.get_node_from_resource_pool('ants_affine_xfm')
+            wf.connect(node3, out_file3, seg, 'inputspec.standard2highres_mat')
         else:
-            node, out_file = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm0')
-            wf.connect(node, out_file, seg, 'inputspec.standard2highres_mat')
+            node1, out_file1 = strat.get_node_from_resource_pool('mni_to_anatomical_linear_xfm0')
+            wf.connect(node1, out_file1, seg, 'inputspec.standard2highres_mat')
 
-    csf.inputs.inputspec.PRIOR = PRIORS_CSF
-    gm.inputs.inputspec.PRIOR = PRIORS_GRAY
-    wm.inputs.inputspec.PRIOR = PRIORS_WHITE
+        seg.inputs.inputspec.PRIOR = seg_dict[key]
 
-    strat.append_name(gm.name)
-    strat.append_name(wm.name)
-    strat.append_name(csf.name)
-    strat.update_resource_pool({'anatomical_gm_mask' : (gm, 'outputspec.gm_mask'),
-                                'anatomical_csf_mask': (csf, 'outputspec.csf_mask'),
-                                'anatomical_wm_mask' : (wm, 'outputspec.wm_mask'),
-                                'seg_probability_maps': (gm, 'outputspec.probability_maps'),
-                                })
+        strat.append_name(seg.name)
+        strat.update_resource_pool({'anatomical_{t}_mask'.format(t=key) : (seg, 'outputspec.{t}_mask'.format(t=key))})
+
+        if qc_figures:
+            wf.connect(seg, 'outputspec.{t}_mask'.format(t=key), qc, 'overlays')
+
+    #last segmentation updates probability_maps
+    strat.update_resource_pool({'seg_probability_maps': (seg, 'outputspec.probability_maps')})
 
     if qc_figures:
-        
-        from CPAC.qc import segmentation_figure
-
-        fname = os.path.join(os.getcwd(), 'segmentation')
-        qc = pe.Node(util.Function(input_names=['csf', 'wm', 'gm', 'underlay', 'fig_name'],
-                                                 output_names=['x_fig', 'z_fig'],
-                                                 function=segmentation_figure),
-                                   name='qc_segmentation')
-
-        qc.inputs.fig_name = fname
-        wf.connect(in_node, 'anat', qc, 'overlay')
-        wf.connect(gm, 'inputspec.brain', qc, 'underlay')
-
-        wf.connect(qc, 'x_fig', out_node, 'x_fig')
-        wf.connect(qc, 'z_fig', out_node, 'z_fig')
+        strat.update_resource_pool({'images@segmentationx':(qc, 'outputspec.x_fig')})
+        strat.update_resource_pool({'images.@segmentationz':(qc, 'outputspec.z_fig')})
 
     return wf, strat
-
 
 def create_segmentation_wf(name, segmentation_type, use_ants):
     if segmentation_type not in ('wm', 'gm', 'csf'):
         raise ValueError('Segmentation type must be wm, gm or csf')
 
-    seg_vals = {'wm': pick_wm_2,
-                'gm': pick_wm_1,
-                'csf': pick_wm_0 }
+    seg_vals = {'wm': pick_wm_2, 'gm': pick_wm_1, 'csf': pick_wm_0 }
 
     wf = pe.Workflow(name=name)
     in_node = pe.Node(util.IdentityInterface(fields=['brain',

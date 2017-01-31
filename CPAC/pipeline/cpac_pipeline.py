@@ -913,7 +913,8 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             
             nodes = getNodeList(strat)
             use_ants = 'anat_mni_ants_register' in nodes
-            wire_segmentation_wf(workflow, strat, num_strat, c.PRIORS_CSF, c.PRIORS_GRAY, c.PRIORS_WHITE, use_ants)
+            qc = 1 in c.generateQualityControlImages
+            wire_segmentation_wf(workflow, strat, num_strat, c.PRIORS_CSF, c.PRIORS_GRAY, c.PRIORS_WHITE, use_ants, qc_figures=qc)
 
             if 0 in c.runSegmentationPreprocessing:
                 tmp = strategy()

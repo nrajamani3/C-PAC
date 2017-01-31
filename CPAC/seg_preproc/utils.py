@@ -34,7 +34,7 @@ def check_if_file_is_empty(in_file):
     return in_file
 
 
-def pick_wm_0(probability_maps):
+def pick_wm_0(probability_maps, index):
 
     """
     Returns the csf probability map from the list of segmented probability maps
