@@ -925,7 +925,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 strat = tmp
                 new_strat_list.append(strat)
 
-
             #create_log_node(seg_preproc, 'outputspec.partial_volume_map', num_strat)
             num_strat += 1
 
