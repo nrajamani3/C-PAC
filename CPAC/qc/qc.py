@@ -107,16 +107,16 @@ def create_subject_html(path, images):
 
     #put qc images on qc/images
     images_dst = os.path.join(dst, 'images')
-    shutil.move(images, images_dst)
+    shutil.copytree(images, images_dst)
 
     #substitute dummy data for real data
     subhtml = os.path.join(dst, 'index.html')
-    with open(subhtml, 'w+')as html_file:
+    with open(subhtml, 'r+')as html_file:
         html = html_file.read()
+
         #change subject name in html
         sub_name = path.split('/')[-1]
-        html.replace('subjectname', sub_name, 1)
-
+        html = html.replace('subjectname', sub_name, 1)
         html_file.write(html)
 
 

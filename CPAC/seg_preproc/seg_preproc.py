@@ -21,7 +21,7 @@ def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHIT
         #workaround, don't know how to add csf, gm and wm mask in array
         wrapper = pe.Node(interface=util.Function(input_names=['csf', 'gm', 'wm'],
                                                  output_names=['overlays'], function=qc_segmentation_wrapper),
-                                   name='qc_segmentation_wrapper')
+                                   name='qc_segmentation_wrapper_{num}'.format(num=num_strat))
 
         qc = pe.Node(interface=util.Function(input_names=['overlays','underlay', 'fig_name'],
                                                  output_names=['x_fig', 'z_fig'], function=overlay_figure),
@@ -58,7 +58,10 @@ def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHIT
 
     if qc_figures:
         strat.append_name(qc.name)
-        strat.update_resource_pool({'images.@segmentationx':(qc, 'x_fig')})
+        if 'images' in strat.resource_pool:
+            strat.update_resource_pool({'images.@segmentationx':(qc, 'x_fig')})
+        else:
+            strat.update_resource_pool({'images':(qc, 'x_fig')})
         strat.update_resource_pool({'images.@segmentationz':(qc, 'z_fig')})
 
     return wf, strat

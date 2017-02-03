@@ -479,7 +479,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     
     workflow_bit_id['anat_mni_register'] = workflow_counter
     for strat in strat_list:
-
         if 'FSL' in c.regOption:
 
             # this is to prevent the user from running FNIRT if they are
@@ -912,6 +911,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
         for strat in strat_list:
             
             nodes = getNodeList(strat)
+            print 'aaaaaaaaaaaaaaaaaaaaaaaaaa'
+            print strat.resource_pool
+            print 'aaaaaaaaaaaaaaaaaaaaaaaaaa'
+            print nodes
+            print 'bbbbbbbbbbbbbbbbbbbbbbb'
             use_ants = 'anat_mni_ants_register' in nodes
             qc = 1 in c.generateQualityControlImages
             wire_segmentation_wf(workflow, strat, num_strat, c.PRIORS_CSF, c.PRIORS_GRAY, c.PRIORS_WHITE, use_ants, qc_figures=qc)
@@ -3696,27 +3700,27 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                         iterfield=['in_file'])
 
 
-            try:
+            #try:
 
-                node, out_file = strat.get_node_from_resource_pool('%s_to_' \
-                        'standard' % output_name)
-                
-                workflow.connect(node, out_file, output_to_standard_smooth,
-                        'in_file')
-                
-                workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),
-                        output_to_standard_smooth, 'op_string')
+            node, out_file = strat.get_node_from_resource_pool('%s_to_' \
+                    'standard' % output_name)
+            
+            workflow.connect(node, out_file, output_to_standard_smooth,
+                    'in_file')
+            
+            workflow.connect(inputnode_fwhm, ('fwhm', set_gauss),
+                    output_to_standard_smooth, 'op_string')
 
-                node, out_file = strat.get_node_from_resource_pool('func' \
-                        'tional_brain_mask_to_standard')
-                workflow.connect(node, out_file, output_to_standard_smooth,
-                        'operand_files')
+            node, out_file = strat.get_node_from_resource_pool('func' \
+                    'tional_brain_mask_to_standard')
+            workflow.connect(node, out_file, output_to_standard_smooth,
+                    'operand_files')
 
 
-            except:
-                logConnectionError('%s smooth in MNI' % output_name, \
-                        num_strat, strat.get_resource_pool(), '0028')
-                raise Exception
+            # except:
+            #     logConnectionError('%s smooth in MNI' % output_name, \
+            #             num_strat, strat.get_resource_pool(), '0028')
+            #     raise Exception
 
 
             strat.append_name(output_to_standard_smooth.name)
