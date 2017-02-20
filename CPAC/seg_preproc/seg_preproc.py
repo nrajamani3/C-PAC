@@ -10,7 +10,11 @@ from CPAC.seg_preproc.utils import *
 def qc_segmentation_wrapper(csf, gm, wm):
     return [csf, gm, wm]
 
+
 def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHITE, use_ants, qc_figures=False):
+    """
+    Calls create_segmentation_wf for values 'csf', 'wm' and 'gm'
+    """
     seg_dict = {'csf':PRIORS_CSF, 'gm':PRIORS_GRAY, 'wm':PRIORS_WHITE}
     node, out_file = strat.get_node_from_resource_pool('anatomical_brain')
 
@@ -66,7 +70,81 @@ def wire_segmentation_wf(wf, strat, num_strat,PRIORS_CSF,PRIORS_GRAY,PRIORS_WHIT
 
     return wf, strat
 
+
+
 def create_segmentation_wf(name, segmentation_type, use_ants):
+    """
+    Segment the subject's anatomical brain into cerebral spinal fluids, white matter and gray matter
+    and binarize them.
+    Parameters
+    ----------
+    name : string
+        name of the workflow
+    segmentation_type: string
+        values 'csf', 'gm' or 'wm' 
+    Returns
+    -------
+    seg_preproc : workflow
+        Workflow Object for Segmentation Workflow
+    
+    Notes
+    -----
+    `Source <https://github.com/FCP-INDI/C-PAC/blob/master/CPAC/seg_preproc/seg_preproc.py>`_ 
+    Workflow Inputs: ::
+        inputspec.brain : string (existing nifti file)
+            Anatomical image(without skull)
+    
+        inputspec.standard2highres_mat : string (existing affine transformation .mat file)
+            File for transformation from mni space to anatomical space
+    
+        inputspec.PRIOR : string (existing nifti file)
+            FSL Standard CSF, GRAY Matter or White Matter Tissue prior image
+        
+    Workflow Outputs: ::  
+        outputspec.mask : string (nifti file)
+            outputs image after masking wm, gm or csf prior in t1 space (gm_mask, wm_mask or csf_mask)
+    
+        outputspec.probability_maps : string (nifti file)
+            outputs individual probability maps (output from brain segmentation using FAST)
+    
+    Order of commands:
+    - Segment the Anatomical brain. For details see `fast <http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FAST>`_::
+        fast
+        -t 1
+        -g
+        -p
+        -o segment
+        mprage_brain.nii.gz
+    
+    - Register template in MNI space to t1 space. For details see `flirt <http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT>`_::
+    
+        flirt
+        -in PRIOR_{CSF|GM|WM}
+        -ref mprage_brain.nii.gz
+        -applyxfm
+        -init standard2highres_inv.mat
+        -out {CSF|GM|WM}_mni2t1
+    - Threshold and binarize CSF probability map ::
+        fslmaths
+        {CSF|GM|WM}_combo.nii.gz
+        -bin {CSF|GM|WM}_bin.nii.gz
+    - Generate CSF csf_mask, by applying csf prior in t1 space to thresholded binarized csf probability map ::
+        fslmaths
+        csf_bin.nii.gz
+        -mas csf_mni2t1
+        csf_mask
+    
+    Examples
+    --------
+    >>> import CPAC.seg_preproc as seg_wflow
+    >>> seg = create_segmentation_wf('seg_preproc', 'csf',use_ants)
+    >>> seg.inputs.inputspec.standard2highres_mat = '/home/data/Projects/C-PAC/working_directory/s1001/reg_preproc/standard2highres.mat'
+    >>> seg.inputs.inputspec.PRIOR = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_csf_bin.nii.gz'
+    >>> #seg.inputs.inputspec.PRIOR_WHITE = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_white_bin.nii.gz'
+    >>> #seg.inputs.inputspec.PRIOR_GRAY = '/home/data/Projects/C-PAC/tissuepriors/2mm/avg152T1_gray_bin.nii.gz'
+    >>> seg.inputs.inputspec.brain = '/home/data/Projects/C-PAC/working_directory/s1001/anat_preproc/mprage_brain.nii.gz'
+    >>> seg_preproc.run() # doctest: +SKIP
+    """
     if segmentation_type not in ('wm', 'gm', 'csf'):
         raise ValueError('Segmentation type must be wm, gm or csf')
 
