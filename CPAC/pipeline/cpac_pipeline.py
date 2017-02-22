@@ -33,7 +33,7 @@ import CPAC
 from CPAC import network_centrality
 from CPAC.network_centrality.utils import merge_lists
 from CPAC.anat_preproc.anat_preproc import create_anat_preprocessing_wf, \
-                                        create_skullstrip_wf
+                                        create_skullstrip_wf, wire_skullstrip_wf
 from CPAC.func_preproc.func_preproc import create_func_preproc, \
                                            create_wf_edit_func
 from CPAC.seg_preproc.seg_preproc import wire_segmentation_wf
@@ -417,38 +417,11 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
     workflow_bit_id['anat_preproc'] = workflow_counter
 
     for strat in strat_list:
-        # create a new node, Remember to change its name!
-        anat_preproc = create_anat_preprocessing_wf().clone('anat_preproc_%d' % num_strat) 
-        ss = create_skullstrip_wf(qc_figures=c.generateQualityControlImages).clone('skull_strip_%d' % num_strat)
 
-        try:
-            # connect the new node to the previous leaf
-            node, out_file = strat.get_leaf_properties()
-            workflow.connect(node, out_file, anat_preproc, 'inputspec.anat')
-            if c.already_skullstripped != 1:
-                workflow.connect(anat_preproc, 'outputspec.brain', ss, 'inputspec.anat') 
-        except:
-            logConnectionError('Anatomical Preprocessing No valid Previous for strat', num_strat, strat.get_resource_pool(), '0001')
-            num_strat += 1
-            continue
-
-        # add stuff to resource pool if we need it
-        strat.append_name(anat_preproc.name)
-        
-        strat.update_resource_pool({'anatomical_reorient':(anat_preproc, 'outputspec.brain')})
-        if c.already_skullstripped != 1:
-            strat.append_name(ss.name)
-            strat.update_resource_pool({'anatomical_brain':(ss, 'outputspec.skullstrip')})
-            strat.set_leaf_properties(ss, 'outputspec.skullstrip')
-            if c.generateQualityControlImages:
-                strat.update_resource_pool({'images':(ss, 'outputspec.x_fig')})
-                strat.update_resource_pool({'images.@ssz':(ss, 'outputspec.z_fig')})
-        else:
-            strat.update_resource_pool({'anatomical_brain':(anat_preproc, 'outputspec.brain')})
-            strat.set_leaf_properties(anat_preproc, 'outputspec.brain')
+        workflow, strat = wire_skullstrip_wf(workflow, strat, num_strat, c.already_skullstripped, qc_figures=c.generateQualityControlImages)
            
         # write to log
-        create_log_node(anat_preproc, 'outputspec.brain', num_strat)
+        #create_log_node(anat_preproc, 'outputspec.brain', num_strat)
         num_strat += 1
 
     strat_list += new_strat_list

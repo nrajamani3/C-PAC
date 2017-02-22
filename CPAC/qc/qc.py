@@ -111,14 +111,17 @@ def create_subject_html(path, images):
 
     #substitute dummy data for real data
     subhtml = os.path.join(dst, 'index.html')
+    html = ''
     with open(subhtml, 'r+')as html_file:
         html = html_file.read()
 
         #change subject name in html
         sub_name = path.split('/')[-1]
         html = html.replace('subjectname', sub_name, 1)
-        html_file.write(html)
 
+    #save it again
+    with open(subhtml, 'w') as html_file:
+        html_file.write(html)
 
     #done!
 

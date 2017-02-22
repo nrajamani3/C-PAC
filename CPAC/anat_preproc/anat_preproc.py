@@ -5,6 +5,35 @@ import nipype.pipeline.engine as pe
 import nipype.interfaces.afni as afni
 import nipype.interfaces.utility as util
 
+
+
+def wire_skullstrip_wf(wf, strat, num_strat, already_skullstripped, qc_figures=False):
+    anat_preproc = create_anat_preprocessing_wf().clone('anat_preproc_%d' % num_strat) 
+    ss = create_skullstrip_wf(qc_figures).clone('skull_strip_%d' % num_strat)
+
+    # connect the new node to the previous leaf
+    node, out_file = strat.get_leaf_properties()
+    wf.connect(node, out_file, anat_preproc, 'inputspec.anat')
+    if already_skullstripped != 1:
+        wf.connect(anat_preproc, 'outputspec.brain', ss, 'inputspec.anat') 
+
+    # add stuff to resource pool if we need it
+    strat.append_name(anat_preproc.name)
+    
+    strat.update_resource_pool({'anatomical_reorient':(anat_preproc, 'outputspec.brain')})
+    if already_skullstripped != 1:
+        strat.append_name(ss.name)
+        strat.update_resource_pool({'anatomical_brain':(ss, 'outputspec.skullstrip')})
+        strat.set_leaf_properties(ss, 'outputspec.skullstrip')
+        if qc_figures:
+            strat.update_resource_pool({'images':(ss, 'outputspec.x_fig')})
+            strat.update_resource_pool({'images.@ssz':(ss, 'outputspec.z_fig')})
+    else:
+        strat.update_resource_pool({'anatomical_brain':(anat_preproc, 'outputspec.brain')})
+        strat.set_leaf_properties(anat_preproc, 'outputspec.brain')
+
+    return wf, strat
+
 def create_skullstrip_wf(qc_figures=False):
     """     
     Raw mprage file is skullstripped.
@@ -72,12 +101,12 @@ def create_skullstrip_wf(qc_figures=False):
     wf.connect(skullstrip, 'out_file', out_node, 'skullstrip')
 
     if qc_figures:
-        from CPAC.qc import anat_figure
+        from CPAC.qc import edge_figure
 
         fname = os.path.join(os.getcwd(), 'skullstrip')
         qc = pe.Node(util.Function(input_names=['overlay', 'underlay', 'fig_name'],
                                                  output_names=['x_fig', 'z_fig'],
-                                                 function=anat_figure),
+                                                 function=edge_figure),
                                    name='qc_skullstrip')
 
         qc.inputs.fig_name = fname
