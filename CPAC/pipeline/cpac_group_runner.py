@@ -298,15 +298,15 @@ def create_output_dict_list(nifti_globs, pipeline_output_folder,
             new_row_dict["Series"] = series_id
                                    
             new_row_dict["Filepath"] = filepath
-                        
+
             if get_motion:
                 # if we're including motion measures
-                power_params_file = find_power_params_file(filepath, \
+                power_params_file = find_power_params_file(filepath,
                     resource_id, series_id)
-                power_params_lines = load_text_file(power_params_file, \
+                power_params_lines = load_text_file(power_params_file,
                     "power parameters file")
                 meanfd_p, meanfd_j, meandvars = \
-                    extract_power_params(power_params_lines, \
+                    extract_power_params(power_params_lines,
                                          power_params_file)
                 new_row_dict["MeanFD_Power"] = meanfd_p
                 new_row_dict["MeanFD_Jenkinson"] = meanfd_j
@@ -314,7 +314,7 @@ def create_output_dict_list(nifti_globs, pipeline_output_folder,
 
             if get_raw_score:
                 # grab raw score for measure mean just in case
-                raw_score_path = grab_raw_score_filepath(filepath, \
+                raw_score_path = grab_raw_score_filepath(filepath,
                                                          resource_id)                    
                 new_row_dict["Raw_Filepath"] = raw_score_path
                        
@@ -346,13 +346,13 @@ def create_output_df_dict(output_dict_list, inclusion_list=None):
     return output_df_dict
 
 
-def gather_outputs(pipeline_folder, resource_list, inclusion_list, \
+def gather_outputs(pipeline_folder, resource_list, inclusion_list,
                        get_motion, get_raw_score):
 
     # probably won't have a session list due to subject ID format!
 
     nifti_globs = gather_nifti_globs(pipeline_folder, resource_list)
-    output_dict_list = create_output_dict_list(nifti_globs, pipeline_folder, \
+    output_dict_list = create_output_dict_list(nifti_globs, pipeline_folder,
                            get_motion, get_raw_score)
     output_df_dict = create_output_df_dict(output_dict_list, inclusion_list)
 

@@ -2267,7 +2267,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                                               num_strat))
 
                     try:
-
                         # convert the .mat from linear Func->Anat to
                         # ANTS format
                         node, out_file = strat.get_node_from_resource_pool( \
