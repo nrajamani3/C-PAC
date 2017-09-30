@@ -70,10 +70,8 @@ def get_vectors(strat):
 
 
     dfs(val_list, '')
-    
 
     return paths
-
 
 
 def make_entries(paths, path_iterables):
@@ -110,13 +108,11 @@ def make_entries(paths, path_iterables):
     return entries
 
 
-
-
 def build_strategies(configuration):
 
     import collections
 
-    ### make paths shorter
+    # make paths shorter
     path_iterables = ['_threshold', '_compcor', '_target_angle_deg']
     non_strategy_iterables = ['_fwhm', '_hp', '_lp', '_bandpass_freqs']
 
@@ -124,25 +120,23 @@ def build_strategies(configuration):
                     'nc':'Compcor: Number Of Components = ', '_compcor':'Nuisance Signal Regressors = ',
                     '_target_angle_deg':'Median Angle Correction: Target Angle in Degree = '}
 
-
     config_iterables = {'_threshold': eval('configuration.scrubbingThreshold'), '_compcor': eval('configuration.Regressors'), '_target_angle_deg': eval('configuration.targetAngleDeg')}
 
-
-    ### This is really dirty code and ordering of corrections in 
-    ### in output directory is dependant on the nuisance workflow
-    ### when the workflow is changed , change this section as well
-    corrections_order = ['pc1', 'linear', 'wm', 'global', 'motion', 'quadratic', 'gm', 'compcor', 'csf']
-
+    # This is really dirty code and ordering of corrections in
+    # in output directory is dependant on the nuisance workflow
+    # when the workflow is changed , change this section as well
+    corrections_order = ['Anaticor', 'aCompCor', 'tCompCor', 'WhiteMatter',
+                         'Ventricles', 'GreyMatter', 'GlobalSignal', 'Motion',
+                         'Censor', 'PolyOrt', 'Bandpass']
 
     corrections_dict_list = config_iterables['_compcor']
-
 
     print "corrections dictionary list: "
     print corrections_dict_list
 
     main_all_options = []
 
-    if corrections_dict_list != None:
+    if corrections_dict_list:
 
         for corrections_dict in corrections_dict_list:
             string = ""
@@ -162,11 +156,7 @@ def build_strategies(configuration):
 
             main_all_options.append(str(str(all_options).strip('[]')).strip('\'\''))
 
-
         config_iterables['_compcor'] = main_all_options
-
-
-    ############
 
     try:
         paths = get_vectors(config_iterables)

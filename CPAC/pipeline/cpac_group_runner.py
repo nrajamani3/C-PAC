@@ -716,8 +716,8 @@ def prep_analysis_df_dict(config_file, pipeline_output_folder):
                         # this can be removed/modified once sessions are no
                         # longer integrated in the full unique participant IDs
                         newer_pheno_df, dropped_parts = \
-                            balance_repeated_measures(newer_pheno_df, \
-                                                      group_model.sessions_list, \
+                            balance_repeated_measures(newer_pheno_df,
+                                                      group_model.sessions_list,
                                                       None)
 
                         # unique_resource =

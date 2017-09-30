@@ -5,6 +5,7 @@ from wx.lib.intctrl import IntCtrl
 import wx.lib.intctrl
 import pkg_resources as p
 
+
 class GenericClass(wx.ScrolledWindow):
     
     def __init__(self,parent,title="",no_static=False):
@@ -21,7 +22,6 @@ class GenericClass(wx.ScrolledWindow):
         self.__set_scroll()
         self.switch = None
 
-    
     def __set_scroll(self):
         maxWidth = 1000
         maxHeight = 1000
@@ -33,7 +33,8 @@ class GenericClass(wx.ScrolledWindow):
         hbox= wx.BoxSizer(wx.HORIZONTAL)
         t = wx.StaticText(self.parent, -1, self.title)
         t.SetFont(wx.Font(18, wx.SWISS, wx.NORMAL, wx.BOLD))
-        img_path = p.resource_filename('CPAC', 'GUI/resources/images/cpac_logo_2.jpg')
+        img_path = p.resource_filename('CPAC',
+                                       'GUI/resources/images/cpac_logo_2.jpg')
         img = wx.Image(img_path, wx.BITMAP_TYPE_JPEG).ConvertToBitmap()
 
         bmp = wx.StaticBitmap(self.parent, -1, img)
@@ -45,8 +46,6 @@ class GenericClass(wx.ScrolledWindow):
         
     __add_static = add_static
 
-
-
     def add_pheno_load_panel(self, sizer):
         
         buffer = wx.StaticText(self.parent, label="\t\t\t\t\t\t")
@@ -54,23 +53,20 @@ class GenericClass(wx.ScrolledWindow):
         self.flexSizer.Add(buffer)
         self.flexSizer.Add(sizer)
 
-        
-        
     def add(self, label, control, name, type = 0, 
             comment="", values="", style=0, size= wx.DefaultSize, 
             validator=wx.DefaultValidator, wkf_switch= False,
             validation_req = True, combo_type = None, selections=None):
-        
-            
+
         label = wx.StaticText(self.parent, -1, label)
         hbox= wx.BoxSizer(wx.HORIZONTAL)
         img_path = p.resource_filename('CPAC', 'GUI/resources/images/help.png')
         image1 = wx.Image(img_path, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 
         button = wx.BitmapButton(self.parent, id=-1, bitmap=image1,
-                                 pos=(10, 20), size = (image1.GetWidth()+5, image1.GetHeight()+5))
+                                 pos=(10, 20), size = (image1.GetWidth()+5,
+                                                       image1.GetHeight()+5))
 
-    
         button.Bind(wx.EVT_BUTTON, lambda event: \
                          self.OnShowDoc(event, comment))
         hbox.Add(label)
@@ -126,8 +122,6 @@ class GenericClass(wx.ScrolledWindow):
             self.parent.Bind(wx.EVT_CHECKBOX, lambda event: self.EvtCheckBoxGrid(event,ctrl), id =ctrl.get_id())
             self.flexSizer.Add(ctrl.get_ctrl(), proportion=0)
 
-
-
     def EvtChoice(self, event, ctrl):
         
         if type(event.GetString()) == unicode:
@@ -144,8 +138,7 @@ class GenericClass(wx.ScrolledWindow):
     def TxtEnterCombo(self, event, ctrl):
         ctrl.text_ctrl.SetBackgroundColour("white")
         ctrl.set_selection(ctrl.text_ctrl.GetValue())
-        
-    
+
     def EvtCheckListBox(self, event, ctrl):
         index = event.GetSelection()
         label = ctrl.get_ctrl().GetString(index)
@@ -162,8 +155,7 @@ class GenericClass(wx.ScrolledWindow):
             ctrl.set_selection(label, index)
         else:
             ctrl.set_selection(label,index, True)
-        
-        
+
     '''
     NEEDS DEV!
     '''
@@ -173,27 +165,22 @@ class GenericClass(wx.ScrolledWindow):
         if ctrl.get_ctrl().IsChecked(index):
             ctrl.set_selection(label, index)
         else:
-            ctrl.set_selection(label,index, True)       
-        
+            ctrl.set_selection(label,index, True)
     
     def OnShowDoc(self, event, comment):
             wx.TipWindow(self.parent, comment, 500)
-
 
     def set_sizer(self):
         
         self.mainSizer.Add(self.flexSizer,1,wx.EXPAND|wx.ALL,15)
         self.parent.SetSizer(self.mainSizer)
-        
-    
+
     def get_ctrl_list(self):
         return self.ctrl_list
-
      
     def get_switch(self):    
         return self.switch
 
-        
 
 class Control(wx.Control):
     def __init__(self, parent, name, type, datatype, values,
@@ -243,10 +230,10 @@ class Control(wx.Control):
             self.selection = self.ctrl.GetValue()
             
         elif type ==4:
-            self.ctrl = NumCtrl(parent, id = wx.ID_ANY,
-                                size = size, validator = validator,
-                                style= style, value= values,
-                                integerWidth=2, fractionWidth = 3, 
+            self.ctrl = NumCtrl(parent, id=wx.ID_ANY,
+                                size=size, validator=validator,
+                                style=style, value=values,
+                                integerWidth=2, fractionWidth=3,
                                 allowNegative=False)
             
             self.selection = self.ctrl.GetValue()
@@ -293,11 +280,9 @@ class Control(wx.Control):
                         # this re-checks the user's past contrast option
                         # SELECTIONS (which ones were checked) in the listbox
                         self.selection.append(val)
-                            
            
             self.options = self.ctrl.get_listbox_options()
 
-            
         elif type == 8:
             self.ctrl= TextBoxCombo(parent, id= wx.ID_ANY, 
                                          size=size, style=style,
@@ -307,7 +292,6 @@ class Control(wx.Control):
             self.text_ctrl = self.ctrl.GetTextCtrl()
             self.selection = self.text_ctrl.GetValue()
 
-         
         elif type == 9:
             self.ctrl = CheckBoxGrid(parent, idx= wx.ID_ANY,
                                      selections = selections,
@@ -321,11 +305,10 @@ class Control(wx.Control):
                          "analyses to run for each ROI path by listing the " \
                          "names above. For example, if you wish to run %s " \
                          "and %s, you would enter: '/path/to/ROI.nii.gz': " \
-                         "%s, %s" % (selections, selections[0], \
+                         "%s, %s" % (selections, selections[0],
                          selections[2], selections[0], selections[2])
 
             self.help = self.help + add_string
-
 
         elif type == 10:
             self.ctrl = GPAModelCheckBoxGrid(parent, idx= wx.ID_ANY,
@@ -333,11 +316,8 @@ class Control(wx.Control):
                                              size= wx.DefaultSize)
             
             self.selection = self.ctrl.GetGridSelection()
-            
-                
+
         self.set_id()
-
-
 
     def get_listbox_options(self):
         if self.get_type() == 7:
@@ -353,7 +333,6 @@ class Control(wx.Control):
     def set_design_matrix(self, design_matrix):
         if self.get_type() == 7:
             self.ctrl.set_design_matrix(design_matrix)
-        
         
     def set_id(self):
         if self.id==None:
@@ -398,7 +377,6 @@ class Control(wx.Control):
             else:
                 self.selection.append(value)
 
-                
         elif self.get_type() == 9:
             self.ctrl.onReload_set_selections(value)
 
@@ -414,10 +392,8 @@ class Control(wx.Control):
         else:
             self.selection = value
 
-
         if self.get_type()==7:
             self.listbox_selections = self.selection
-
 
     def get_selection(self):
         return self.selection
@@ -483,4 +459,3 @@ class Control(wx.Control):
     
     def get_help(self):
         return self.help
-        

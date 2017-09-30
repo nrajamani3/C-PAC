@@ -88,7 +88,6 @@ class ModelConfig(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.populateEVs, id=2)
 
-
         self.page.add_pheno_load_panel(load_panel_sizer)
 
         self.page.add(label = "Model Setup ",
@@ -214,10 +213,8 @@ class ModelConfig(wx.Frame):
                       size = (200,100),
                       combo_type = 8)
 
-
         self.page.set_sizer()
-        
-        
+
         if 'group_sep' in self.gpa_settings.keys():
 
             for ctrl in self.page.get_ctrl_list():
@@ -230,7 +227,6 @@ class ModelConfig(wx.Frame):
                         ctrl.set_value('On')
                     elif self.gpa_settings['group_sep'] == False:
                         ctrl.set_value('Off')
-
 
         mainSizer.Add(self.window, 1, wx.EXPAND)
 
@@ -328,7 +324,6 @@ class ModelConfig(wx.Frame):
 
                     ctrl.set_value(new_derlist)
 
-
     def cancel(self, event):
         self.Close()
 
@@ -338,7 +333,6 @@ class ModelConfig(wx.Frame):
         win.SetFocus()
         win.Refresh()
         raise ValueError
-   
 
     ''' button: LOAD SETTINGS '''
     def load(self, event):
@@ -363,8 +357,7 @@ class ModelConfig(wx.Frame):
             # load the group analysis .yml config file (in dictionary form)
             # into the self.gpa_settings dictionary which holds all settings
             self.gpa_settings = config_map
-            
-            
+
             if self.gpa_settings is None:
                 errDlgFileTest = wx.MessageDialog(
                     self, "Error reading file - group analysis " \
@@ -392,7 +385,6 @@ class ModelConfig(wx.Frame):
                     if ctrl.get_name() == 'model_setup':
                         ctrl.set_value(phenoHeaderItems)
                         ctrl.set_selection(self.gpa_settings['ev_selections'])
-
 
             # populate the rest of the controls
             for ctrl in self.page.get_ctrl_list():
@@ -434,12 +426,8 @@ class ModelConfig(wx.Frame):
 
                 elif name != 'model_setup' and name != 'derivative_list':
                     ctrl.set_value(value)
-                
 
             dlg.Destroy()
-
-
-
 
     def read_phenotypic(self, pheno_file, ev_selections):
 
@@ -473,13 +461,10 @@ class ModelConfig(wx.Frame):
                 if 'categorical' in ev_selections.keys():
                     if key in ev_selections['categorical']:
                         pheno_data_dict[key].append(key + str(line[key]))
-
                     else:
                         pheno_data_dict[key].append(line[key])
-
                 else:
                     pheno_data_dict[key].append(line[key])
-
    
             #pheno_dict_list.append(line)
         
@@ -490,10 +475,7 @@ class ModelConfig(wx.Frame):
             
             # these dictionaries are UNORDERED, i.e. header items ARE NOT ORDERED
 
-
         return pheno_data_dict
-
-
           
     ''' button: LOAD PHENOTYPE FILE '''
     def populateEVs(self, event):
@@ -503,14 +485,12 @@ class ModelConfig(wx.Frame):
         if self.gpa_settings is None:
             self.gpa_settings = {}
                
-               
         for ctrl in self.page.get_ctrl_list():
             
             name = ctrl.get_name()
 
             self.gpa_settings[name] = str(ctrl.get_selection())
-            
-                
+
         ### CHECK PHENOFILE if can open etc.
         
         # function for file path checking
@@ -552,8 +532,7 @@ class ModelConfig(wx.Frame):
             errSubID.ShowModal()
             errSubID.Destroy()
             raise Exception
-            
-            
+
         # some more checks
         sub_IDs = subFile.readlines()
         self.subs = []
@@ -577,7 +556,6 @@ class ModelConfig(wx.Frame):
                 for sub in self.subs:  
                     if sub in row:
                         break
-                
 
         for ctrl in self.page.get_ctrl_list():
 
@@ -615,8 +593,6 @@ class ModelConfig(wx.Frame):
 
                 ctrl.set_value(formula_string)
 
-
-
     ''' button: NEXT '''
     def load_next_stage(self, event):
 
@@ -628,8 +604,7 @@ class ModelConfig(wx.Frame):
             name = ctrl.get_name()
 
             self.gpa_settings[name] = str(ctrl.get_selection())
-            
-                
+
         ### CHECK PHENOFILE if can open etc.
         
         # function for file path checking
@@ -649,12 +624,10 @@ class ModelConfig(wx.Frame):
                 errDlgFileTest.ShowModal()
                 errDlgFileTest.Destroy()
                 raise Exception
-                
-        
+
         testFile(self.gpa_settings['participant_list'], 'Participant List')
         testFile(self.gpa_settings['pheno_file'], 'Phenotype/EV File')
 
-     
         phenoFile = open(os.path.abspath(self.gpa_settings['pheno_file']),"rU")
 
         phenoHeaderString = phenoFile.readline().rstrip('\r\n')
@@ -671,8 +644,6 @@ class ModelConfig(wx.Frame):
             errSubID.ShowModal()
             errSubID.Destroy()
             raise Exception
-
-
 
         for ctrl in self.page.get_ctrl_list():
             
@@ -711,7 +682,6 @@ class ModelConfig(wx.Frame):
             else:
                 self.gpa_settings[name] = str(ctrl.get_selection())
 
-
         self.pheno_data_dict = self.read_phenotypic(self.gpa_settings['pheno_file'], \
                                                     self.gpa_settings['ev_selections'])
 
@@ -724,8 +694,6 @@ class ModelConfig(wx.Frame):
             print 'Phenotype file provided: '
             print self.gpa_settings['pheno_file'], '\n\n'
             raise IOError
-
-
 
         # validate design formula and build Available Contrasts list
         var_list_for_contrasts = []
@@ -749,7 +717,6 @@ class ModelConfig(wx.Frame):
         formula_strip = formula_strip.replace('(',' ')
         formula_strip = formula_strip.replace(')',' ')
         EVs_to_test = formula_strip.split()
-
 
         # ensure the design formula only has valid EVs in it
         for EV in EVs_to_test:
@@ -789,7 +756,6 @@ class ModelConfig(wx.Frame):
                 
                             raise Exception
 
-
                 if int_check != 1:
 
                     errmsg = 'CPAC says: The interaction \'%s\' you ' \
@@ -806,7 +772,6 @@ class ModelConfig(wx.Frame):
                 
                     raise Exception
 
-                    
             # ensure these interactions are input correctly
             elif (':' in EV) or ('/' in EV) or ('*' in EV):
 
@@ -818,7 +783,6 @@ class ModelConfig(wx.Frame):
 
                 if '*' in EV:
                     both_EVs_in_interaction = EV.split('*')
-
 
                 for interaction_EV in both_EVs_in_interaction:
 
@@ -866,7 +830,6 @@ class ModelConfig(wx.Frame):
                 
                     raise Exception
 
-
         # design formula/input parameters checks
 
         if "Custom_ROI_Mean" in formula and \
@@ -885,7 +848,6 @@ class ModelConfig(wx.Frame):
             errSubID.Destroy()
 
             raise Exception
-
 
         if "Custom_ROI_Mean" not in formula and \
             (self.gpa_settings['custom_roi_mask'] != None and \
@@ -906,8 +868,7 @@ class ModelConfig(wx.Frame):
             errSubID.Destroy()
 
             raise Exception
-            
-            
+
         # if there is a custom ROI mean mask file provided, and the user
         # includes it as a regressor in their design matrix formula, calculate
         # the number of ROIs in the file and generate the column names so that
@@ -945,7 +906,6 @@ class ModelConfig(wx.Frame):
 
             for num in range(0,num_rois):
                 custom_roi_labels.append("Custom_ROI_Mean_%d" % int(num+1))
-                
 
         # pull in phenotype file
         try:
@@ -956,12 +916,10 @@ class ModelConfig(wx.Frame):
                   "details: %s\n\n" % (self.gpa_settings["pheno_file"], e)
             raise Exception(err)
 
-
         # enforce the sub ID label to "Participant"
         pheno_df.rename(columns={self.gpa_settings["participant_id_label"]:"Participant"}, \
                         inplace=True)   
         pheno_df["Participant"] = pheno_df["Participant"].astype(str)
-
 
         # let's create dummy columns for MeanFD, Measure_Mean, and
         # Custom_ROI_Mask (if included in the Design Matrix Formula) just so we
@@ -990,8 +948,7 @@ class ModelConfig(wx.Frame):
                     add_formula_string = add_formula_string + " + " + col_label
    
 
-            formula = formula.replace("Custom_ROI_Mean",add_formula_string)   
-
+            formula = formula.replace("Custom_ROI_Mean",add_formula_string)
 
         repeated_sessions = False
 
@@ -1010,7 +967,6 @@ class ModelConfig(wx.Frame):
                                     repeated_sessions)
             self.gpa_settings["ev_selections"]["categorical"].append("Series")
             formula = formula + " + Series"
-
 
         # if modeling group variances separately
         if str(self.gpa_settings["group_sep"]) == "On":
@@ -1061,7 +1017,6 @@ class ModelConfig(wx.Frame):
                 errSubID.Destroy()
 
                 raise Exception
-
 
             # get ev list
             ev_list = parse_out_covariates(formula)
@@ -1135,7 +1090,6 @@ class ModelConfig(wx.Frame):
             print "Patsy error: %s\n\n" % e
             raise Exception
 
-
         column_names = dmatrix.design_info.column_names
         
         subFile = open(os.path.abspath(self.gpa_settings['participant_list']))
@@ -1168,6 +1122,5 @@ class ModelConfig(wx.Frame):
         # open the next window!
         modelDesign_window.ModelDesign(self.parent, self.gpa_settings, \
                                        dmatrix, column_names) #var_list_for_contrasts)
-
 
         self.Close()

@@ -1,6 +1,6 @@
 import wx
 import wx.html
-from ..utils.generic_class import GenericClass
+from CPAC.GUI.interface.utils.generic_class import GenericClass
 from ..utils.constants import control, dtype
 from ..utils.validator import CharValidator
 import pkg_resources as p
@@ -18,12 +18,11 @@ class Nuisance(wx.html.HtmlWindow):
             
     def get_counter(self):
         return self.counter
-            
 
 
 class NuisanceRegression(wx.ScrolledWindow):
     
-    def __init__(self, parent, counter = 0):
+    def __init__(self, parent, counter=0):
         wx.ScrolledWindow.__init__(self, parent)
                 
         import os
@@ -33,7 +32,7 @@ class NuisanceRegression(wx.ScrolledWindow):
         fsl = os.environ.get('FSLDIR')
         if not fsl:
             fsl = "$FSLDIR"
-        
+
         self.page = GenericClass(self, "Nuisance Signal Regression Options")
         
         self.page.add(label="Run Nuisance Signal Regression ", 
@@ -41,7 +40,7 @@ class NuisanceRegression(wx.ScrolledWindow):
                  name='runNuisance', 
                  type=dtype.LSTR, 
                  comment="Run Nuisance Signal Regression", 
-                 values=["Off","On","On/Off"],
+                 values=["Off", "On", "On/Off"],
                  wkf_switch = True)
         
         self.page.add(label="Lateral Ventricles Mask (Standard Space) ", 
@@ -50,6 +49,51 @@ class NuisanceRegression(wx.ScrolledWindow):
                      type=dtype.STR, 
                      values = os.path.join(fsl, "data/atlases/HarvardOxford/HarvardOxford-lateral-ventricles-thr25-2mm.nii.gz"),
                      comment="Standard Lateral Ventricles Binary Mask")
+
+        self.page.add(label="Nuisance Regression Strategies ",
+                      control=control.LISTBOX_COMBO,
+                      name="nuisance_strategies",
+                      type=dtype.LSTR,
+                      values=[],
+                      comment="Define your nuisance regression strategies "
+                              "by clicking the + button. Click the ... "
+                              "button to modify an existing strategy, and "
+                              "click the - button to delete an existing "
+                              "strategy.\n\nCPAC will run a version of the "
+                              "pipeline for each nuisance strategy you "
+                              "define. You can set multiple cores per "
+                              "participant in the Computer Settings tab to "
+                              "run multiple nuisance strategies at the same "
+                              "time, for a faster pipeline run.",
+                      size=(200, 100),
+                      combo_type=9)
+
+        self.page.set_sizer()
+        parent.get_page_list().append(self)
+        
+    def get_counter(self):
+        return self.counter
+
+
+class NuisanceStrategy(wx.ScrolledWindow):
+
+    def __init__(self, parent, values, counter=0):
+
+        wx.ScrolledWindow.__init__(self, parent)
+
+        self.counter = counter
+
+        # TODO: have values, if not empty, populate into values below
+
+        self.page = GenericClass(self, "Define your Nuisance Regression "
+                                       "strategy")
+
+        self.page.add(label="Strategy Name ",
+                      control=control.TEXT_BOX,
+                      name="nuisance_strat_name",
+                      type=dtype.LSTR,
+                      values="",
+                      comment="Name your nuisance regression strategy.")
 
         self.page.add(label="Anaticor ",
                       control=control.CHOICE_BOX,
@@ -94,14 +138,14 @@ class NuisanceRegression(wx.ScrolledWindow):
                       type=dtype.LSTR,
                       comment="???????????",
                       values=["False", "True"])
-        
+
         self.page.add(label="      Include Squared ",
                       control=control.CHOICE_BOX,
                       name='aCompCor_squared',
                       type=dtype.LSTR,
                       comment="???????????",
                       values=["False", "True"])
-        
+
         self.page.add(label="      Include Delayed Squared ",
                       control=control.CHOICE_BOX,
                       name='aCompCor_delayed_squared',
@@ -186,7 +230,7 @@ class NuisanceRegression(wx.ScrolledWindow):
                       type=dtype.LSTR,
                       values=['PCA', 'Mean', 'NormMean', 'DetrendNormMean'],
                       comment="")
-        
+
         self.page.add(label="      Number of Components ",
                       control=control.TEXT_BOX,
                       name="white_matter_num_pcs",
@@ -463,11 +507,18 @@ class NuisanceRegression(wx.ScrolledWindow):
                               "removed.")
 
         self.page.set_sizer()
-        parent.get_page_list().append(self)
-        
+
+        # TODO: is this what reports to the whole thing? if so, would need to
+        # TODO: disable this!!!
+        # parent.get_page_list().append(self)
+
+        # TODO: have something put this into a dictionary, map it to the
+        # TODO: user-provided strategy name, and then store it somehow in the
+        # TODO: upper-level page_list etc.
+
+    # TODO: what does this do???
     def get_counter(self):
-            return self.counter
-        
+        return self.counter
 
 
 class MedianAngleCorrection(wx.ScrolledWindow):

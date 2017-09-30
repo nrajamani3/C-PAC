@@ -220,7 +220,6 @@ class ListBox(wx.Frame):
 
         self.Centre()
         self.Show(True)
-        
 
 
     def runAnalysis1(self,pipeline, sublist, p):
@@ -243,7 +242,6 @@ class ListBox(wx.Frame):
             wx.MessageBox("Error importing CPAC. %s"%e, "Error") 
             print "Error importing CPAC"
             print e
-
 
 
     def runIndividualAnalysis(self, event):
