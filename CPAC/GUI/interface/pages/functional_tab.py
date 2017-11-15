@@ -25,7 +25,7 @@ class FunctionalPreProcessing(wx.html.HtmlWindow):
 #        except:
 #            self.LoadFile('html/functional.html')
             
-            
+ ##method to run this: python -m subdirectory1.mod1           
     def get_counter(self):
         return self.counter
 
@@ -85,9 +85,26 @@ class TimeSeriesOptions(wx.ScrolledWindow):
     def get_counter(self):
         return self.counter
 
+class EPI_DistCorr(wx.ScrolledWindow):
+    
+    def __init__(self, parent, counter =0):
+        wx.ScrolledWindow.__init__(self, parent)
+        
+        self.page = GenericClass(self, "EPI Distortion correction options")
+        self.counter = counter 
+                
+                
+        self.page.add(label= "perform distortion correction with fieldmap correction ",
+                 control=control.CHOICE_BOX, 
+                 name='fieldmap correction', 
+                 type=dtype.LSTR, 
+                 comment="perform fieldmap correction using a single phase difference image, a subtraction of the two phase images from each echo..Default scanner for this method is SIEMENS", 
+                 values=["On","Off", "On/Off"])
+        self.page.set_sizer() 
+        parent.get_page_list().append(self)
 
-
-
+    def get_counter(self):
+        return self.counter
     
 class AnatToFuncRegistration(wx.ScrolledWindow):
     def __init__(self, parent, counter = 0):
@@ -222,3 +239,39 @@ class FuncToMNIRegistration(wx.ScrolledWindow):
     def get_counter(self):
         return self.counter
 
+        
+#        self.page.add(label= "Last Timepoint ",
+#                 control=control.TEXT_BOX, 
+#                 name='stopIdx', 
+#                 type=dtype.NUM, 
+#                 values= "End",
+#                 validator = CharValidator("no-alpha"),
+#                 comment="Last timepoint to include in analysis.\n\nDefault is None or End (end of timeseries).")
+#        
+#        self.page.add(label= "TR ",
+#                 control=control.TEXT_BOX, 
+#                 name='TR', 
+#                 type=dtype.NUM, 
+#                 values= "None",
+#                 validator = CharValidator("no-alpha"),
+#                 comment="Specify the TR at which images were acquired.\n\nDefault is None (TR information is read from image file header)")
+#
+#        self.page.add(label="Perform Slice Time Correction:", 
+#                     control=control.CHOICE_BOX, 
+#                     name='slice_timing_correction', 
+#                     type=dtype.LSTR, 
+#                     comment="Interpolate voxel time courses so they are sampled at the same time points.", 
+#                     values=["On","Off","On/Off"],
+#                     wkf_switch = True)
+#
+#        self.page.add(label="Slice Acquisition Pattern:", 
+#                     control=control.CHOICE_BOX, 
+#                     name='slice_timing_pattern', 
+#                     type=dtype.LSTR, 
+#                     comment="Acquisition strategy for acquiring image slices.", 
+#                     values=["Use NIFTI Header","alt+z","alt+z2","alt-z","alt-z2","seq+z","seq-z"],
+#                     wkf_switch = True)
+#        
+#        
+    
+        
