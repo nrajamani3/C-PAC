@@ -1313,6 +1313,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                epi_distcorr = create_EPI_DistCorr(use_BET = True, wf_name='epi_distcorr_%d' % (num_strat))
             else:
                epi_distcorr = create_EPI_DistCorr(use_BET = False, wf_name='epi_distcorr_%d' % (num_strat))
+
             epi_distcorr.inputs.bet_frac_input.bet_frac = c.fmap_distcorr_frac
             epi_distcorr.inputs.deltaTE_input.deltaTE = c.fmap_distcorr_deltaTE
             epi_distcorr.inputs.dwellT_input.dwellT = c.fmap_distcorr_dwell_time
@@ -1355,9 +1356,9 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             strat.update_resource_pool({'despiked_fieldmap':(epi_distcorr,'outputspec.fmap_despiked')})
             strat.update_resource_pool({'fieldmap_mask':(epi_distcorr,'outputspec.fieldmapmask')})
             strat.update_resource_pool({'prepared_fieldmap_map':(epi_distcorr,'outputspec.fieldmap')})
-            strat.update_resource_pool({'segmented_white_matter':(epi_distcorr,'T1_wm_seg')})
            
             num_strat += 1
+
     strat_list += new_strat_list
 
     """
@@ -3401,40 +3402,6 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
     strat_list += new_strat_list
 
-    '''
-    Inserting SCA
-    Workflow for Voxel INPUT
-    '''
-
-    '''
-    new_strat_list = []
-    num_strat = 0
-
-    if 1 in c.runSCA and (1 in c.runVoxelTimeseries):
-        for strat in strat_list:
-
-            sca_seed = create_sca('sca_seed_%d' % num_strat)
-
-            try:
-                node, out_file = strat.get_leaf_properties()
-                workflow.connect(node, out_file,
-                                 sca_seed, 'inputspec.functional_file')
-
-                node, out_file = strat.get_node_from_resource_pool('voxel_timeseries_for_SCA')
-                workflow.connect(node, (out_file, extract_one_d),
-                                 sca_seed, 'inputspec.timeseries_one_d')
-            except:
-                logConnectionError('SCA', num_strat, strat.get_resource_pool(), '0036')
-                raise
-
-
-            strat.update_resource_pool({'sca_seed_correlation_files':(sca_seed, 'outputspec.correlation_files')})
-
-            strat.append_name(sca_seed.name)
-            num_strat += 1
-
-    strat_list += new_strat_list
-    '''
 
     '''
     (Dual Regression) Temporal Regression for Dual Regression
@@ -4891,8 +4858,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
      QUALITY CONTROL - to be re-implemented later
     """""""""""""""""""""""""""""""""""""""""""""""""""
 
-    # TODO - QA pages: re-introduce
-    '''
+
     if 1 in c.generateQualityControlImages:
 
         #register color palettes
@@ -4941,7 +4907,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                                                 output_names=['new_fname'],
                                                     function=gen_std_dev),
                                     name='std_dev_%d' % num_strat)
-
+                                    #all functional calls are in the pipeline figure#
                 std_dev_anat = pe.Node(util.Function(input_names=['func_',
                                                                     'ref_',
                                                                     'xfm_',
@@ -4967,7 +4933,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
                 montage_snr = create_montage('montage_snr_%d' % num_strat,
                                 'red_to_blue', 'snr')
 
-
+#Are you making connections here in the pipeline because there is not inputspec and outputspec in the qc scripts indivually???#
                 workflow.connect(preproc, out_file,
                                     std_dev, 'func_')
 
@@ -5052,16 +5018,16 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             if 'gen_motion_stats' in nodes:
 
                 try:
+                    if c.fdCalc == 'Power':
+                        fd, out_file = strat.get_node_from_resource_pool('frame_wise_displacement_power')
+                    else:
+                        fd, out_file = strat.get_node_from_resource_pool('frame_wise_displacement_jenkinson')
+                    if ("De-Spiking" in c.runMotionSpike and 1 in c.runNuisance):
+                        excluded, out_file_ex = strat.get_node_from_resource_pool('despiking_frames_excluded')
+                    elif ("Scrubbing" in c.runMotionSpike and 1 in c.runNuisance):
+                        excluded, out_file_ex = strat.get_node_from_resource_pool('scrubbing_frames_excluded')
 
-                    fd, out_file = strat.get_node_from_resource_pool('frame_wise_displacement')
-                    excluded, out_file_ex = strat.get_node_from_resource_pool('scrubbing_frames_excluded')
-
-                    fd_plot = pe.Node(util.Function(input_names=['arr',
-                                                                 'ex_vol',
-                                                                 'measure'],
-                                                    output_names=['hist_path'],
-                                                    function=gen_plot_png),
-                                      name='fd_plot_%d' % num_strat)
+                    fd_plot = pe.Node(util.Function(input_names=['arr','ex_vol','measure'],output_names=['hist_path'],function=gen_plot_png),name='fd_plot_%d' % num_strat)
                     fd_plot.inputs.measure = 'FD'
                     workflow.connect(fd, out_file,
                                      fd_plot, 'arr')
@@ -5215,7 +5181,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             # make QC montage for Mean Functional in MNI with MNI edge
 
             try:
-                m_f_i, out_file = strat.get_node_from_resource_pool('mean_functional_in_mni')
+                m_f_i, out_file = strat.get_node_from_resource_pool('mean_functional_to_standard')
 
                 montage_mfi = create_montage('montage_mfi_%d' % num_strat,
                                     'red', 'MNI_edge_on_mean_func_mni')   ###
@@ -5319,21 +5285,21 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
             # ReHo QA montages
-            if 1 in c.runReHo:
+            #if 1 in c.runReHo:
 
-                if 1 in c.runRegisterFuncToMNI:
-                    QA_montages('reho_to_standard', 15)
-
-                    if c.fwhm != None:
-                        QA_montages('reho_to_standard_smooth', 16)
-
-                    if 1 in c.runZScoring:
-
-                        if c.fwhm != None:
-                            QA_montages('reho_to_standard_smooth_fisher_zstd', 17)
-
-                        else:
-                            QA_montages('reho_to_standard_fisher_zstd', 18)
+#    if 1 in c.runRegisterFuncToMNI:
+#                    QA_montages('reho_to_standard', 15)
+#
+#                    if c.fwhm != None:
+#                        QA_montages('reho_to_standard_smooth', 16)
+#
+#                    if 1 in c.runZScoring:
+#
+#                        if c.fwhm != None:
+#                            QA_montages('reho_to_standard_smooth_fisher_zstd', 17)
+#
+#                        else:
+#                            QA_montages('reho_to_standard_fisher_zstd', 18)
 
 
 
@@ -5388,7 +5354,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
             # Dual Regression QA montages
-            if (1 in c.runDualReg) and (1 in c.runSpatialRegression):
+            if ("DualReg" in sca_analysis_dict.keys()) and (1 in c.runSpatialRegression):
 
                 QA_montages('dr_tempreg_maps_files', 31)
                 QA_montages('dr_tempreg_maps_zstat_files', 32)
@@ -5423,7 +5389,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
 
 
             num_strat += 1
-    '''
+    
 
     logger.info('\n\n' + 'Pipeline building completed.' + '\n\n')
 
@@ -5665,10 +5631,7 @@ def prep_workflow(sub_dict, c, strategies, run, pipeline_timing_info=None,
             except Exception as exc:
                 encrypt_data = False
 
-            debugging_outputs = ['anatomical_csf_mask', 'anatomical_gm_mask',
-                                 'anatomical_wm_mask', 'despiked_fieldmap',
-                                 'despiking_frames_excluded',
-                                 'despiking_frames_included',
+            debugging_outputs = ['despiked_fieldmap',
                                  'dr_tempreg_maps_stack',
                                  'dr_tempreg_maps_stack_to_standard',
                                  'dr_tempreg_maps_stack_to_standard_smooth',
